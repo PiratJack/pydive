@@ -1,0 +1,14 @@
+msgid "Dive management"
+msgstr ""
+
+msgid "Load pictures"
+msgstr ""
+
+msgid "Organize pictures"
+msgstr ""
+
+msgid "Pictures"
+msgstr ""
+
+msgid "Settings"
+msgstr ""

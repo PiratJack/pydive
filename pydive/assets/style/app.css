@@ -1,0 +1,14 @@
+QPushButton.imagebutton {
+    border: none;
+    background: transparent;
+}
+
+.validation_error {
+    color: red;
+    font-style: italic;
+}
+
+.validation_warning {
+    color: orange;
+    font-style: italic;
+}
