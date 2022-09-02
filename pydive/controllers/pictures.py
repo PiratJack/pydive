@@ -94,7 +94,7 @@ class PicturesTree  (BaseTreeWidget):
         return trip_widget
 
     def add_picture(self, trip_widget, picture):
-        data = [trip, '', '', '']
+        data = [picture, '', '', '']
         picture_widget = QtWidgets.QTreeWidgetItem(data)
         self.addTopLevelItem(trip_widget)
         ######################

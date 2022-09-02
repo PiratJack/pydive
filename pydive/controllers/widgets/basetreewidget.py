@@ -24,8 +24,6 @@ class BaseTreeWidget(QtWidgets.QTreeWidget, autoresize.AutoResize):
         Columns to display. The name key is the only one used here (for headers)
     parent_controller : *Controller
         The controller in which this class is displayed
-    database : models.database.Database
-        A reference to the application database
 
     Methods
     -------
@@ -45,7 +43,6 @@ class BaseTreeWidget(QtWidgets.QTreeWidget, autoresize.AutoResize):
         """
         super().__init__()
         self.parent_controller = parent_controller
-        self.database = parent_controller.database
 
         self.setColumnCount(len(self.columns))
         self.setHeaderLabels([_(col["name"]) for col in self.columns])

@@ -19,8 +19,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     Attributes
     ----------
-    database : models.database.Database
-        A reference to the application database
     controllers : dict of Controllers
         The different screens of the app
     layout : QtWidgets.QStackedLayout
@@ -28,16 +26,10 @@ class MainWindow(QtWidgets.QMainWindow):
     toolbar : QtWidgets.QToolBar
         The toolbar displayed on the left
     """
-    def __init__(self, database):
+    def __init__(self):
         """Stores subwindows, displays toolbar and creates the layout
-
-        Parameters
-        ----------
-        database : models.database.Database
-            A reference to the application database
         """
         super(MainWindow, self).__init__()
-        self.database = database
 
         self.controllers = {
             "Settings": controllers.settings.SettingsController(self),

@@ -5,20 +5,14 @@ import os
 import PyQt5
 
 import controllers.mainwindow
-import models.database
 
 # Define some constants
-DATABASE_FILE = "data.sqlite"
 LOCALE_FOLDER = "./locale"
 STYLESHEET_FILE = "./assets/style/app.css"
 
 # Setup translation
 gettext.bindtextdomain("messages", LOCALE_FOLDER)
 gettext.translation("messages", localedir=LOCALE_FOLDER).install()
-
-
-# Connect to database
-database = models.database.Database(DATABASE_FILE)
 
 if __name__ == "__main__":
     # Change platform to avoid Wayland-related warning messages
@@ -27,6 +21,6 @@ if __name__ == "__main__":
     with open(STYLESHEET_FILE, "r") as stylesheet:
         app.setStyleSheet(stylesheet.read())
 
-    window = controllers.mainwindow.MainWindow(database)
+    window = controllers.mainwindow.MainWindow()
     window.showMaximized()
     app.exec_()
