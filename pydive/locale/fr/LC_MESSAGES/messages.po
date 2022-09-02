@@ -11,11 +11,20 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.1.1\n"
 
+msgid "Archives"
+msgstr "Archives"
+
 msgid "Dive management"
 msgstr "Gestion de plongées"
 
+msgid "ID"
+msgstr "ID"
+
 msgid "Load pictures"
 msgstr "Charger les photos"
+
+msgid "Name"
+msgstr "Nom"
 
 msgid "Organize pictures"
 msgstr "Organiser les photos"
@@ -23,5 +32,11 @@ msgstr "Organiser les photos"
 msgid "Pictures"
 msgstr "Photos"
 
+msgid "SD Card"
+msgstr "Carte SD"
+
 msgid "Settings"
 msgstr "Paramètres"
+
+msgid "Temporary storage"
+msgstr "Stockage temporaire"

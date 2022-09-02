@@ -1,7 +1,16 @@
+msgid "Archives"
+msgstr ""
+
 msgid "Dive management"
 msgstr ""
 
+msgid "ID"
+msgstr ""
+
 msgid "Load pictures"
+msgstr ""
+
+msgid "Name"
 msgstr ""
 
 msgid "Organize pictures"
@@ -10,5 +19,11 @@ msgstr ""
 msgid "Pictures"
 msgstr ""
 
+msgid "SD Card"
+msgstr ""
+
 msgid "Settings"
+msgstr ""
+
+msgid "Temporary storage"
 msgstr ""
