@@ -23,6 +23,10 @@ msgstr "ID"
 msgid "Load pictures"
 msgstr "Charger les photos"
 
+#, python-brace-format
+msgid "Missing storage location {field}"
+msgstr "Champ manquant: {field} pour lieu de stockage"
+
 msgid "Name"
 msgstr "Nom"
 

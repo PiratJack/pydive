@@ -10,6 +10,10 @@ msgstr ""
 msgid "Load pictures"
 msgstr ""
 
+#, python-brace-format
+msgid "Missing storage location {field}"
+msgstr ""
+
 msgid "Name"
 msgstr ""
 
