@@ -5,6 +5,7 @@ import pydive.models.database as databasemodel
 
 from pydive.models.base import ValidationException
 from pydive.models.storagelocation import StorageLocation
+from pydive.models.storagelocation import StorageLocationType
 
 DATABASE_FILE = "test.sqlite"
 database = databasemodel.Database(DATABASE_FILE)
@@ -20,9 +21,21 @@ class TestSharePrice(unittest.TestCase):
         self.database = databasemodel.Database(DATABASE_FILE)
         self.database.session.add_all(
             [
-                StorageLocation(id=1, name="Camera", path="/.../SD_Card/"),
-                StorageLocation(id=2, name="Temporary", path="/tmp/Pictures/"),
-                StorageLocation(id=3, name="Archive", path="/Archives/"),
+                StorageLocation(
+                    id=1, name="Camera", type="folder", path="/.../SD_Card/"
+                ),
+                StorageLocation(
+                    id=2, name="Temporary", type="folder", path="/tmp/Pictures/"
+                ),
+                StorageLocation(
+                    id=3,
+                    name="Archive",
+                    type=StorageLocationType["folder"],
+                    path="/Archives/",
+                ),
+                StorageLocation(
+                    id=4, name="Dive log", type="file", path="/Archives/test.txt"
+                ),
             ]
         )
         self.database.session.commit()
@@ -37,8 +50,8 @@ class TestSharePrice(unittest.TestCase):
         storage_locations = self.database.storagelocations_get()
         self.assertEqual(
             len(storage_locations),
-            3,
-            "There are 3 storage locations",
+            4,
+            "There are 4 storage locations",
         )
 
         storage_location = self.database.storagelocation_get_by_id(2)
@@ -46,6 +59,11 @@ class TestSharePrice(unittest.TestCase):
             storage_location.id,
             2,
             "There is 1 storage locations with ID = 2",
+        )
+        self.assertEqual(
+            storage_location.type.name,
+            "folder",
+            "The storage location with ID = 2 has type folder",
         )
         # String representation
         self.assertEqual(
@@ -58,20 +76,22 @@ class TestSharePrice(unittest.TestCase):
         storage_locations = self.database.storagelocations_get()
         self.assertEqual(
             len(storage_locations),
-            2,
-            "After deletion, there are 2 storage locations left",
+            3,
+            "After deletion, there are 3 storage locations left",
         )
 
     def test_validations(self):
         storage_location = StorageLocation(
-            id=4,
+            id=45,
             name="USB stick",
+            type="folder",
             path="/usb_stick/",
         )
 
         # Test forbidden values
         forbidden_values = {
             "name": ["", None],
+            "type": ["", None, "guigh", 27],
             "path": ["", None],
         }
 

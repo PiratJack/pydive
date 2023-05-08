@@ -52,26 +52,48 @@ class SettingsController:
             The window displaying this controller
         """
         self.parent_window = parent_window
+        self.database = parent_window.database
         self.ui = {}
-        self.ui['main'] = QtWidgets.QWidget()
-        self.ui['layout'] = QtWidgets.QGridLayout()
+        self.ui["main"] = QtWidgets.QWidget()
+        self.ui["layout"] = QtWidgets.QGridLayout()
 
-        self.ui['main'].setLayout(self.ui['layout'])
-        self.ui['layout'].setHorizontalSpacing(self.ui['layout'].horizontalSpacing() * 3)
+        self.ui["main"].setLayout(self.ui["layout"])
+        self.ui["layout"].setHorizontalSpacing(
+            self.ui["layout"].horizontalSpacing() * 3
+        )
 
-        self.ui['folders'] = {}
-        self.ui['files'] = {}
-        for path in ['SD Card', 'Temporary storage', 'Archive']:
-            self.ui['folders'][path] = PathSelectButton(path, "folder")
-            self.ui['layout'].addWidget(self.ui['folders'][path], len(self.ui['folders']), 0)
-        for path in ['Subsurface dive log']:
-            self.ui['files'][path] = PathSelectButton(path, "file")
-            self.ui['layout'].addWidget(self.ui['files'][path], len(self.ui['folders'])+len(self.ui['files']), 0)
+        # TODO: Allow creation of new paths
+
+        # Paths for data
+        self.ui["paths"] = {}
+        for alias in self.database.storagelocations_get():
+            self.ui["paths"][alias.id] = {}
+            folder = self.ui["paths"][alias.id]
+            folder["button"] = PathSelectButton(alias.name, alias.type.name)
+            folder["display"] = QtWidgets.QLineEdit()
+            folder["model"] = alias
+
+            self.ui["layout"].addWidget(folder["button"], len(self.ui["paths"]), 0)
+            self.ui["layout"].addWidget(folder["display"], len(self.ui["paths"]), 1)
 
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
-        return self.ui['main']
+
+        for alias, folder in self.ui["paths"].items():
+            folder["button"].target = folder["model"].path
+            folder["button"].pathSelected.connect(
+                lambda a, alias=alias: self.set_storagelocation(alias, a)
+            )
+            folder["display"].setText(folder["model"].path)
+            folder["display"].setEnabled(False)
+        return self.ui["main"]
+
+    def set_storagelocation(self, alias_id, path):
+        self.ui["paths"][alias_id]["display"].setText(path)
+        self.ui["paths"][alias_id]["model"].path = path
+        self.database.session.add(self.ui["paths"][alias_id]["model"])
+        self.database.session.commit()
 
     @property
     def toolbar_button(self):
@@ -85,5 +107,9 @@ class SettingsController:
 
     def refresh_display(self):
         """Refreshes the display - update the paths displayed"""
-        #TODO: Implement settings refresh
-        pass
+        # TODO: Implement settings refresh
+
+        # Refresh list of paths
+        for alias, folder in self.ui["paths"].items():
+            folder["button"].target = folder["model"].path
+            folder["display"].setText(folder["model"].path)

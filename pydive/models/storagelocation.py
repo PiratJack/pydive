@@ -8,13 +8,25 @@ StorageLocation
     Folder in which pictures are stored
 """
 import gettext
+import enum
 import sqlalchemy.orm
 
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, Enum
 
 from .base import Base, ValidationException
 
 _ = gettext.gettext
+
+
+class StorageLocationType(enum.Enum):
+    """Either Folder or File"""
+
+    folder = {
+        "name": "folder",
+    }
+    file = {
+        "name": "file",
+    }
 
 
 class StorageLocation(Base):
@@ -41,12 +53,37 @@ class StorageLocation(Base):
     __tablename__ = "storage_locations"
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
+    type = Column(Enum(StorageLocationType, validate_strings=True), nullable=False)
     path = Column(String(250), nullable=False)
 
     @sqlalchemy.orm.validates("name")
     def validate_name(self, key, value):
         self.validate_missing_field(key, value)
         return value
+
+    @sqlalchemy.orm.validates("type")
+    def validate_type(self, key, value):
+        """Ensure the type field is one of the allowed values"""
+        self.validate_missing_field(key, value)
+        if isinstance(value, StorageLocationType):
+            return value
+        if value and isinstance(value, str):
+            try:
+                return StorageLocationType[value]
+            except KeyError as exception:
+                raise ValidationException(
+                    _("Storage location type is invalid"),
+                    self,
+                    key,
+                    value,
+                ) from exception
+
+        raise ValidationException(
+            _("Storage location type is invalid"),
+            self,
+            key,
+            value,
+        )
 
     @sqlalchemy.orm.validates("path")
     def validate_path(self, key, value):

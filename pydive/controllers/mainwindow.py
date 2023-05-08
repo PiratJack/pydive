@@ -14,6 +14,7 @@ import controllers.pictures
 
 _ = gettext.gettext
 
+
 class MainWindow(QtWidgets.QMainWindow):
     """Main window for display. Displays a toolbar to access the different screens
 
@@ -26,10 +27,17 @@ class MainWindow(QtWidgets.QMainWindow):
     toolbar : QtWidgets.QToolBar
         The toolbar displayed on the left
     """
-    def __init__(self):
+
+    def __init__(self, database):
         """Stores subwindows, displays toolbar and creates the layout
+
+        Parameters
+        ----------
+        database : models.database.Database
+            A reference to the application database
         """
         super(MainWindow, self).__init__()
+        self.database = database
 
         self.controllers = {
             "Settings": controllers.settings.SettingsController(self),
