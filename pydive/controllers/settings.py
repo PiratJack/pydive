@@ -37,6 +37,12 @@ class SettingsController:
     -------
     __init__ (parent_window)
         Stores reference to parent window & defines UI elements.
+    on_click_name_change
+        Displays fields to modify the location name
+    on_validate_name_change
+        Saves the storage location name
+    set_storagelocation
+        Saves the storage location path
     refresh_display
         Reloads the paths displayed in the UI
     """
@@ -83,7 +89,6 @@ class SettingsController:
             folder["name_layout"] = QtWidgets.QStackedLayout()
 
             folder["name_label"] = QtWidgets.QLabel()
-            folder["name_label"].setText(folder["model"].name)
 
             folder["name_edit"] = QtWidgets.QLineEdit()
             folder["name_edit"].returnPressed.connect(
@@ -115,27 +120,27 @@ class SettingsController:
 
             # Actual path
             folder["path"] = QtWidgets.QLineEdit()
-            folder["path"].setText(folder["model"].path)
             folder["path"].setEnabled(False)
 
             # Path change
             folder["path_change"] = PathSelectButton(_("Change"), location.type.name)
-            folder["path_change"].target = folder["model"].path
             folder["path_change"].pathSelected.connect(
                 lambda a, location=location: self.set_storagelocation(location.id, a)
             )
 
-            # Delete button
-
+            # Add all to UI
             self.ui["layout"].addWidget(folder["name"], len(self.ui["paths"]), 0)
             self.ui["layout"].addWidget(folder["name_change"], len(self.ui["paths"]), 1)
             self.ui["layout"].addWidget(folder["path"], len(self.ui["paths"]), 2)
             self.ui["layout"].addWidget(folder["path_change"], len(self.ui["paths"]), 3)
+        self.refresh_display()
         return self.ui["main"]
 
     def on_click_name_change(self, location_id):
+        """Displays fields to modify the location name"""
         location = self.ui["paths"][location_id]
-        # Set value of edit field
+
+        # Update display
         location["name_edit"].setText(location["model"].name)
 
         # Make widgets visible
@@ -143,13 +148,14 @@ class SettingsController:
         location["name_change_layout"].setCurrentIndex(1)
 
     def on_validate_name_change(self, location_id):
+        """Saves the storage location name"""
         location = self.ui["paths"][location_id]
         # Save the change
         location["model"].name = location["name_edit"].text()
         self.database.session.add(location["model"])
         self.database.session.commit()
 
-        # Update label value
+        # Update display
         location["name_label"].setText(location["model"].name)
 
         # Make widgets visible
@@ -157,11 +163,16 @@ class SettingsController:
         location["name_change_layout"].setCurrentIndex(0)
 
     def set_storagelocation(self, location_id, path):
+        """Saves the storage location path"""
         location = self.ui["paths"][location_id]
-        location["path"].setText(path)
-        location["model"].path = path
+
+        # Save the change
         self.database.session.add(location["model"])
         self.database.session.commit()
+
+        # Update display
+        location["path"].setText(path)
+        location["model"].path = path
 
     @property
     def toolbar_button(self):
@@ -176,7 +187,8 @@ class SettingsController:
     def refresh_display(self):
         """Refreshes the display - update the paths displayed"""
         # Refresh list of paths
-        for location, folder in self.ui["paths"].items():
-            folder["name"].setText(folder["model"].name)
-            folder["path"].setText(folder["model"].path)
-            folder["path_change"].target = folder["model"].path
+        for id, location in self.ui["paths"].items():
+            location["name_label"].setText(location["model"].name)
+            location["name_edit"].setText(location["model"].name)
+            location["path"].setText(location["model"].path)
+            location["path_change"].target = location["model"].path
