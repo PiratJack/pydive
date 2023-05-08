@@ -1,6 +1,7 @@
 import gettext
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import Qt
 
 _ = gettext.gettext
 
@@ -18,10 +19,9 @@ class PathSelectButton(QtWidgets.QPushButton):
 
     def choose_path(self):
         if self.target_type == "folder":
-            self.target = self.dialog.getExistingDirectory(self,"Choose Directory")
+            self.target = self.dialog.getExistingDirectory(self, "Choose Directory")
         else:
             self.target, _ = self.dialog.getOpenFileName(None, "Choose File")
-        print("PathSelectButton", "target", self.target)
         return self.target
 
     def set_path(self, path):
