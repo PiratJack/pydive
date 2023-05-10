@@ -1,9 +1,9 @@
-"""Settings screen: Define folders for picture storage, Subsurface file, ...
+"""Settings screen: Define locations for picture storage, Subsurface file, ...
 
 Classes
 ----------
 SettingsController
-    Settings screen: Define folders for picture storage, Subsurface file, ...
+    Settings screen: Define locations for picture storage, Subsurface file, ...
 """
 import gettext
 
@@ -15,7 +15,7 @@ _ = gettext.gettext
 
 
 class SettingsController:
-    """Settings screen: Define folders for picture storage, Subsurface file, ...
+    """Settings screen: Define locations for picture storage, Subsurface file, ...
 
     Attributes
     ----------
@@ -44,7 +44,7 @@ class SettingsController:
     set_storagelocation
         Saves the storage location path
     refresh_display
-        Reloads the paths displayed in the UI
+        Reloads the locations displayed in the UI
     """
 
     name = _("Settings")
@@ -70,75 +70,87 @@ class SettingsController:
             self.ui["layout"].horizontalSpacing() * 3
         )
 
-        # TODO: Allow creation of new paths
+        # TODO: Allow creation of new locations
 
-        # Paths for data
-        self.ui["paths"] = {}
+        self.ui["locations"] = {}
 
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
 
-        for location in self.database.storagelocations_get():
-            self.ui["paths"][location.id] = {}
-            folder = self.ui["paths"][location.id]
-            folder["model"] = location
+        for location_model in self.database.storagelocations_get():
+            self.ui["locations"][location_model.id] = {}
+            location = self.ui["locations"][location_model.id]
+            location["model"] = location_model
 
-            # Path name
-            folder["name"] = QtWidgets.QWidget()
-            folder["name_layout"] = QtWidgets.QStackedLayout()
+            # Location name
+            location["name"] = QtWidgets.QWidget()
+            location["name_layout"] = QtWidgets.QStackedLayout()
+            location["name"].setLayout(location["name_layout"])
+            self.ui["layout"].addWidget(location["name"], len(self.ui["locations"]), 0)
 
-            folder["name_label"] = QtWidgets.QLabel()
+            # Location name - Display
+            location["name_label"] = QtWidgets.QLabel()
+            location["name_layout"].insertWidget(0, location["name_label"])
 
-            folder["name_edit"] = QtWidgets.QLineEdit()
-            folder["name_edit"].returnPressed.connect(
+            # Location name - Edit box
+            location["name_edit"] = QtWidgets.QLineEdit()
+            location["name_edit"].returnPressed.connect(
                 lambda: self.on_validate_name_change(location_id)
             )
+            location["name_layout"].insertWidget(1, location["name_edit"])
 
-            folder["name"].setLayout(folder["name_layout"])
-            folder["name_layout"].insertWidget(0, folder["name_label"])
-            folder["name_layout"].insertWidget(1, folder["name_edit"])
+            # Location name - Edit / validate button
+            location["name_change"] = QtWidgets.QWidget()
+            location["name_change_layout"] = QtWidgets.QStackedLayout()
+            location["name_change"].setLayout(location["name_change_layout"])
+            self.ui["layout"].addWidget(
+                location["name_change"], len(self.ui["locations"]), 1
+            )
 
-            # Change path name
-            folder["name_change"] = QtWidgets.QWidget()
-            folder["name_change_layout"] = QtWidgets.QStackedLayout()
-            folder["name_change_start"] = QtWidgets.QPushButton(
+            # Location name - Edit button
+            location["name_change_start"] = QtWidgets.QPushButton(
                 QtGui.QIcon("assets/images/modify.png"), "", self.parent_window
             )
-            folder["name_change_start"].clicked.connect(
+            location["name_change_start"].clicked.connect(
                 lambda: self.on_click_name_change(location.id)
             )
-            folder["name_change_end"] = QtWidgets.QPushButton(
+            location["name_change_layout"].insertWidget(
+                0, location["name_change_start"]
+            )
+
+            # Location name - Validate button
+            location["name_change_end"] = QtWidgets.QPushButton(
                 QtGui.QIcon("assets/images/done.png"), "", self.parent_window
             )
-            folder["name_change_end"].clicked.connect(
+            location["name_change_end"].clicked.connect(
                 lambda: self.on_validate_name_change(location.id)
             )
-            folder["name_change"].setLayout(folder["name_change_layout"])
-            folder["name_change_layout"].insertWidget(0, folder["name_change_start"])
-            folder["name_change_layout"].insertWidget(1, folder["name_change_end"])
+            location["name_change_layout"].insertWidget(1, location["name_change_end"])
 
-            # Actual path
-            folder["path"] = QtWidgets.QLineEdit()
-            folder["path"].setEnabled(False)
+            # Location path
+            location["path"] = QtWidgets.QLineEdit()
+            location["path"].setEnabled(False)
+            self.ui["layout"].addWidget(location["path"], len(self.ui["locations"]), 2)
 
-            # Path change
-            folder["path_change"] = PathSelectButton(_("Change"), location.type.name)
-            folder["path_change"].pathSelected.connect(
-                lambda a, location=location: self.set_storagelocation(location.id, a)
+            # Location path change
+            location["path_change"] = PathSelectButton(
+                _("Change"), location_model.type.name
             )
-
-            # Add all to UI
-            self.ui["layout"].addWidget(folder["name"], len(self.ui["paths"]), 0)
-            self.ui["layout"].addWidget(folder["name_change"], len(self.ui["paths"]), 1)
-            self.ui["layout"].addWidget(folder["path"], len(self.ui["paths"]), 2)
-            self.ui["layout"].addWidget(folder["path_change"], len(self.ui["paths"]), 3)
+            location["path_change"].pathSelected.connect(
+                lambda a, location=location: self.set_storagelocation(
+                    location_model.id, a
+                )
+            )
+            self.ui["layout"].addWidget(
+                location["path_change"], len(self.ui["locations"]), 3
+            )
         self.refresh_display()
         return self.ui["main"]
 
     def on_click_name_change(self, location_id):
         """Displays fields to modify the location name"""
-        location = self.ui["paths"][location_id]
+        location = self.ui["locations"][location_id]
 
         # Update display
         location["name_edit"].setText(location["model"].name)
@@ -149,7 +161,7 @@ class SettingsController:
 
     def on_validate_name_change(self, location_id):
         """Saves the storage location name"""
-        location = self.ui["paths"][location_id]
+        location = self.ui["locations"][location_id]
         # Save the change
         location["model"].name = location["name_edit"].text()
         self.database.session.add(location["model"])
@@ -164,7 +176,7 @@ class SettingsController:
 
     def set_storagelocation(self, location_id, path):
         """Saves the storage location path"""
-        location = self.ui["paths"][location_id]
+        location = self.ui["locations"][location_id]
 
         # Save the change
         self.database.session.add(location["model"])
@@ -185,9 +197,9 @@ class SettingsController:
         return button
 
     def refresh_display(self):
-        """Refreshes the display - update the paths displayed"""
-        # Refresh list of paths
-        for id, location in self.ui["paths"].items():
+        """Refreshes the display - update the locations displayed"""
+        # Refresh list of locations
+        for location in self.ui["locations"].values():
             location["name_label"].setText(location["model"].name)
             location["name_edit"].setText(location["model"].name)
             location["path"].setText(location["model"].path)
