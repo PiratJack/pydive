@@ -44,9 +44,9 @@ class Repository:
 
     def __getattr__(self, attr):
         if attr == "trips":
-            self.trips = {}
+            trips = {}
             for picture in self.pictures:
-                if picture.trip not in self.trips:
-                    self.trips[picture.trip] = []
-                self.trips[picture.trip].append(picture)
-            return self.trips
+                if picture.trip not in trips:
+                    trips[picture.trip] = []
+                trips[picture.trip].append(picture)
+            return trips
