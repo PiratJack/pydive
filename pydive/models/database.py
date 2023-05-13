@@ -58,6 +58,17 @@ class Database:
         """Returns a list of all storage locations"""
         return self.session.query(storagelocation.StorageLocation).all()
 
+    def storagelocations_get_folders(self):
+        """Returns a list of all storage locations"""
+        return (
+            self.session.query(storagelocation.StorageLocation)
+            .filter(
+                storagelocation.StorageLocation.type
+                == storagelocation.StorageLocationType.folder
+            )
+            .all()
+        )
+
     def storagelocation_get_by_id(self, storagelocation_id):
         """Returns a storage location based on its ID"""
         return (

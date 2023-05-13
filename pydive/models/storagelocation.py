@@ -36,6 +36,8 @@ class StorageLocation(Base):
     ----------
     id : int
         Unique ID
+    type : StorageLocationType
+        The type of location (folder or file)
     path : str
         The absolute path of the folder
     name : str
