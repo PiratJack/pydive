@@ -138,7 +138,7 @@ class SettingsController:
                 _("Change"), location_model.type.name
             )
             location["path_change"].pathSelected.connect(
-                lambda a, location=location: self.set_storagelocation(
+                lambda a, location=location: self.on_validate_path_change(
                     location_model.id, a
                 )
             )
@@ -174,9 +174,10 @@ class SettingsController:
         location["name_layout"].setCurrentIndex(0)
         location["name_change_layout"].setCurrentIndex(0)
 
-    def set_storagelocation(self, location_id, path):
+    def on_validate_path_change(self, location_id, path):
         """Saves the storage location path"""
         location = self.ui["locations"][location_id]
+        location["model"].path = path
 
         # Save the change
         self.database.session.add(location["model"])
