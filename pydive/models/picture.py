@@ -13,8 +13,8 @@ class Picture:
             if path[: len(folders[type])] == folders[type]
         ]
         if len(folder) == 1:
-            location_type, folder = folder[0]
-            self.trip = os.path.dirname(path)[len(folder) :]
+            location_type, folder_name = folder[0]
+            self.trip = os.path.dirname(path)[len(folder_name) + 1 :]
             self.location_type = location_type
             self.main_name = os.path.split(path)[-1]
         else:
