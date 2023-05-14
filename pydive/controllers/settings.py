@@ -96,7 +96,7 @@ class SettingsController:
             # Location name - Edit box
             location["name_edit"] = QtWidgets.QLineEdit()
             location["name_edit"].returnPressed.connect(
-                lambda: self.on_validate_name_change(location_id)
+                lambda: self.on_validate_name_change(location_model.id)
             )
             location["name_layout"].insertWidget(1, location["name_edit"])
 
