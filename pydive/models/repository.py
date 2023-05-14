@@ -7,31 +7,31 @@ _ = gettext.gettext
 
 
 class Repository:
-    folders = {}
+    storage_locations = {}
     pictures = []
     raw_extensions = [".cr2"]
     processed_extensions = [".jpg", ".jpeg"]
 
-    def __init__(self, folders=None):
-        if folders:
-            self.folders = folders.copy()
+    def __init__(self, storage_locations=None):
+        if storage_locations:
+            self.storage_locations = storage_locations.copy()
             self.load_pictures()
 
-    def load_pictures(self, folders=None):
+    def load_pictures(self, storage_locations=None):
         pictures = []
-        if folders:
-            self.folders |= folders.copy()
-        for folder in self.folders:
-            pictures += self.read_folder([], folder, self.folders[folder])
+        if storage_locations:
+            self.storage_locations |= storage_locations.copy()
+        for name in self.storage_locations:
+            pictures += self.read_folder([], name, self.storage_locations[name])
         self.pictures = pictures
 
-    def read_folder(self, pictures, path_type, path):
+    def read_folder(self, pictures, location_name, path):
         if not os.path.isdir(path):
             return None
         for element in os.listdir(path):
             full_path = os.path.join(path, element)
             if os.path.isdir(full_path):
-                self.read_folder(pictures, path_type, full_path)
+                self.read_folder(pictures, location_name, full_path)
             else:
                 matching_extension = [
                     ext
@@ -39,7 +39,9 @@ class Repository:
                     if full_path.lower().endswith(ext)
                 ]
                 if matching_extension:
-                    pictures.append(models.picture.Picture(self.folders, full_path))
+                    pictures.append(
+                        models.picture.Picture(self.storage_locations, full_path)
+                    )
         return pictures
 
     def __getattr__(self, attr):
