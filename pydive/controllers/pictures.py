@@ -96,7 +96,7 @@ class PicturesTree(BaseTreeWidget):
     def add_picture(self, trip_widget, picture):
         data = [picture.main_name]
         for column in self.columns[1:]:
-            data.append("OK" if column["name"] == picture.location_type else "KO")
+            data.append("OK" if column["name"] == picture.location_name else "KO")
         picture_widget = QtWidgets.QTreeWidgetItem(data)
         self.addTopLevelItem(trip_widget)
         ######################
