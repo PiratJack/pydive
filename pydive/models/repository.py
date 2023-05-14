@@ -33,7 +33,7 @@ class Repository:
         self.pictures = pictures
 
         # Then group them
-        picture_names = set(picture.main_name for picture in self.pictures)
+        picture_names = set(picture.name for picture in self.pictures)
         picture_names = sorted(picture_names)
         for picture_name in picture_names:
             matching_groups = [
@@ -42,9 +42,7 @@ class Repository:
                 if picture_name.startswith(group.name)
             ]
             pictures = [
-                picture
-                for picture in self.pictures
-                if picture.main_name == picture_name
+                picture for picture in self.pictures if picture.name == picture_name
             ]
 
             if len(matching_groups) == 0:

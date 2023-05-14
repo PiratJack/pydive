@@ -16,22 +16,19 @@ class PictureGroup:
             self.trip = picture.trip
         if picture.trip and picture.trip != self.trip:
             raise ValueError(
-                "Picture "
-                + picture.main_name
-                + " has the wrong trip for group "
-                + self.name
+                "Picture " + picture.name + " has the wrong trip for group " + self.name
             )
 
         # The picture name starts with the group name ==> easy
-        if picture.main_name.startswith(self.name):
-            conversion_type = picture.main_name.replace(self.name, "")
+        if picture.name.startswith(self.name):
+            conversion_type = picture.name.replace(self.name, "")
             if conversion_type not in self.pictures:
                 self.pictures[conversion_type] = []
             self.pictures[conversion_type].append(picture)
         # Otherwise we have to re-convert all images
-        elif self.name.startswith(picture.main_name):
-            prefix_to_add = self.name[len(picture.main_name) :]
-            self.name = picture.main_name
+        elif self.name.startswith(picture.name):
+            prefix_to_add = self.name[len(picture.name) :]
+            self.name = picture.name
             self.pictures = {
                 prefix_to_add + conversion_type: self.pictures[conversion_type]
                 for conversion_type in self.pictures
@@ -39,10 +36,7 @@ class PictureGroup:
             self.pictures[""] = [picture]
         else:
             raise ValueError(
-                "Picture "
-                + picture.main_name
-                + " does not belong to group "
-                + self.name
+                "Picture " + picture.name + " does not belong to group " + self.name
             )
 
         # Update locations

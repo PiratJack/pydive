@@ -27,9 +27,9 @@ class Picture:
             if self.trip.startswith("/"):
                 self.trip = self.trip[1:]
             self.location_name = location_name
-            self.main_name = os.path.basename(path).rsplit(".", 1)[-2]
+            self.name = os.path.basename(path).rsplit(".", 1)[-2]
         else:
             raise StorageLocationCollision("recognition failed", path)
 
     def __repr__(self):
-        return (self.main_name, self.trip, self.location_name, self.path).__repr__()
+        return (self.name, self.trip, self.location_name, self.path).__repr__()
