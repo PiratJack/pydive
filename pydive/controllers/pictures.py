@@ -77,11 +77,10 @@ class PicturesTree(BaseTreeWidget):
 
     def fill_tree(self):
         self.clear()
-
-        for trip, pictures in self.repository.trips.items():
+        for trip, picture_groups in self.repository.trips.items():
             trip_widget = self.add_trip(trip)
-            for picture in pictures:
-                self.add_picture(trip_widget, picture)
+            for picture_group in picture_groups:
+                self.add_picture_group(trip_widget, picture_group)
 
     def add_trip(self, trip):
         data = [trip]
@@ -93,17 +92,12 @@ class PicturesTree(BaseTreeWidget):
 
         return trip_widget
 
-    def add_picture(self, trip_widget, picture):
-        data = [picture.main_name]
+    def add_picture_group(self, trip_widget, picture_group):
+        data = [picture_group.name]
         for column in self.columns[1:]:
-            data.append("OK" if column["name"] == picture.location_name else "KO")
-        picture_widget = QtWidgets.QTreeWidgetItem(data)
-        self.addTopLevelItem(trip_widget)
-        ######################
-        # TODO : Organize per trip THEN per picture name
-        ######################
-
-        trip_widget.addChild(picture_widget)
+            data.append(str(picture_group.locations.get(column["name"], 0)))
+        picture_group_widget = QtWidgets.QTreeWidgetItem(data)
+        trip_widget.addChild(picture_group_widget)
 
 
 class PicturesController:
