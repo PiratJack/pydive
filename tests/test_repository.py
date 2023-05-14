@@ -40,14 +40,14 @@ class TestRepository(unittest.TestCase):
             BASE_FOLDER + "DCIM/IMG001.CR2",
             BASE_FOLDER + "DCIM/IMG002.CR2",
             BASE_FOLDER + "DCIM/IMG010.CR2",
-            BASE_FOLDER + "DCIM/IMG011.CR2",
             BASE_FOLDER + "DCIM/IMG020.CR2",
             BASE_FOLDER + "Temporary/Malta/IMG001.CR2",
             BASE_FOLDER + "Temporary/Malta/IMG002.CR2",
             BASE_FOLDER + "Archive/Malta/IMG001.CR2",
             BASE_FOLDER + "Archive/Malta/IMG002.CR2",
             BASE_FOLDER + "Temporary/Georgia/IMG010.CR2",
-            BASE_FOLDER + "Temporary/Georgia/IMG011.CR2",
+            BASE_FOLDER + "Temporary/Georgia/IMG010_RT.jpg",
+            BASE_FOLDER + "Temporary/Georgia/IMG011_convert.jpg",
             BASE_FOLDER + "Archive_outside_DB/Egypt/IMG037.CR2",
         ]
         for test_file in self.all_files:
@@ -107,13 +107,13 @@ class TestRepository(unittest.TestCase):
         for folder in sorted(self.all_folders, reverse=True):
             os.rmdir(folder)
 
-    def test_pictures(self):
-        # Identify all pictures
+    def test_readonly(self):
+        # Load the pictures
         storage_locations = self.database.storagelocations_get_folders()
         locations = {loc.name: loc.path for loc in storage_locations}
         repository = Repository(locations)
-        repository.load_pictures()
 
+        # Check the recognition worked
         self.assertEqual(
             len(repository.trips),
             3,
@@ -121,29 +121,32 @@ class TestRepository(unittest.TestCase):
         )
         self.assertEqual(
             len(repository.trips[""]),
-            5,
-            "There are 5 pictures with no trip",
+            1,
+            "There is 1 picture group with no trip",
         )
         self.assertEqual(
             len(repository.trips["Malta"]),
-            4,
-            "There are 4 pictures in the Malta trip",
+            2,
+            "There are 2 picture groups in the Malta trip",
         )
 
-        repository.load_pictures({"Outside_DB": BASE_FOLDER + "Archive_outside_DB/"})
+        # String representations
+        picture_group = [g for g in repository.trips["Malta"] if g.name == "IMG001"]
+        picture_group = picture_group[0]
         self.assertEqual(
-            len(repository.trips),
-            4,
-            "There are 4 trips",
+            str(picture_group),
+            "('IMG001', 'Malta', '1 pictures')",
         )
 
         picture = [
-            p for p in repository.trips["Malta"] if p.path.endswith("IMG001.CR2")
+            p
+            for p in repository.pictures
+            if p.path.endswith("Temporary/Malta/IMG001.CR2")
         ]
         picture = picture[0]
         self.assertEqual(
             str(picture),
-            "('IMG001.CR2', 'Malta', 'Temporary', '"
+            "('IMG001', 'Malta', 'Temporary', '"
             + BASE_FOLDER
             + "Temporary/Malta/IMG001.CR2')",
             "String representation of a picture: name, trip, folder name, path",
@@ -151,3 +154,91 @@ class TestRepository(unittest.TestCase):
 
         with self.assertRaises(StorageLocationCollision):
             repository.load_pictures({"Used path": BASE_FOLDER + "Temporary/Malta"})
+
+    def test_modifications(self):
+        # Load the pictures
+        storage_locations = self.database.storagelocations_get_folders()
+        locations = {loc.name: loc.path for loc in storage_locations}
+        repository = Repository(locations)
+
+        # Add a new storage location
+        repository.load_pictures({"Outside_DB": BASE_FOLDER + "Archive_outside_DB/"})
+        self.assertEqual(
+            len(repository.trips),
+            4,
+            "There are now 4 trips",
+        )
+
+        test_name = "Try to use subfolder of existing folder"
+        test_repo = Repository(locations)
+        with self.assertRaises(ValueError) as cm:
+            test_repo.load_pictures({"Used path": BASE_FOLDER + "Temporary/Malta"})
+            self.assertEqual(type(cm.exception), StorageLocationCollision, test_name)
+
+        test_name = "Load images in wrong group (based on file name)"
+        picture_group = [g for g in repository.trips["Malta"] if g.name == "IMG001"]
+        picture_group = picture_group[0]
+        picture = [p for p in repository.pictures if p.path.endswith("IMG002.CR2")]
+        picture = picture[0]
+        with self.assertRaises(ValueError) as cm:
+            picture_group.add_picture(picture)
+        self.assertEqual(type(cm.exception), ValueError, test_name)
+        self.assertEqual(
+            cm.exception.args[0],
+            "Picture IMG002 does not belong to group IMG001",
+            test_name,
+        )
+
+        test_name = "Load images in wrong group (based on trip)"
+        picture_group = [g for g in repository.trips["Malta"] if g.name == "IMG001"]
+        picture_group = picture_group[0]
+        picture = [
+            p for p in repository.pictures if p.path.endswith("Georgia/IMG010.CR2")
+        ]
+        picture = picture[0]
+        with self.assertRaises(ValueError) as cm:
+            picture_group.add_picture(picture)
+        self.assertEqual(type(cm.exception), ValueError, test_name)
+        self.assertEqual(
+            cm.exception.args[0],
+            "Picture IMG010 has the wrong trip for group IMG001",
+            test_name,
+        )
+
+    def test_group_name_change(self):
+        # Load the pictures
+        storage_locations = self.database.storagelocations_get_folders()
+        locations = {loc.name: loc.path for loc in storage_locations}
+        repository = Repository(locations)
+
+        # Adding a picture that is more "basic" than an existing group
+        # Situation: group 'IMG011_convert' exists, now we find picture IMG011.CR2
+        # The group's name should be changed to IMG011
+        # The conversion types should change as well
+        picture_group = [
+            g for g in repository.trips["Georgia"] if g.name == "IMG011_convert"
+        ]
+        picture_group = picture_group[0]
+        new_picture = Picture(locations, BASE_FOLDER + "DCIM/IMG011.CR2")
+        picture_group.add_picture(new_picture)
+
+        self.assertEqual(
+            picture_group.name,
+            "IMG011",
+            "The group name is IMG011",
+        )
+        self.assertEqual(
+            picture_group.trip,
+            "Georgia",
+            "The group trip is Georgia",
+        )
+        self.assertIn(
+            "",
+            picture_group.pictures,
+            "The group has pictures with empty conversion type",
+        )
+        self.assertIn(
+            "_convert",
+            picture_group.pictures,
+            "The group has pictures with conversion type _convert",
+        )
