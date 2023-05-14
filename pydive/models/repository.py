@@ -1,7 +1,7 @@
 import os
 import gettext
 
-import models.picture
+from .picture import Picture as PictureModel
 
 _ = gettext.gettext
 
@@ -22,7 +22,9 @@ class Repository:
         if storage_locations:
             self.storage_locations |= storage_locations.copy()
         for name in self.storage_locations:
-            pictures += self.read_folder([], name, self.storage_locations[name])
+            new_pictures = self.read_folder([], name, self.storage_locations[name])
+            if new_pictures:
+                pictures += new_pictures
         self.pictures = pictures
 
     def read_folder(self, pictures, location_name, path):
@@ -39,9 +41,7 @@ class Repository:
                     if full_path.lower().endswith(ext)
                 ]
                 if matching_extension:
-                    pictures.append(
-                        models.picture.Picture(self.storage_locations, full_path)
-                    )
+                    pictures.append(PictureModel(self.storage_locations, full_path))
         return pictures
 
     def __getattr__(self, attr):
