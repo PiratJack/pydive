@@ -16,7 +16,7 @@ except OSError:
     pass
 
 
-class TestSharePrice(unittest.TestCase):
+class TestStorageLocation(unittest.TestCase):
     def setUp(self):
         self.database = databasemodel.Database(DATABASE_FILE)
         self.database.session.add_all(
