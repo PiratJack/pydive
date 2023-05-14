@@ -11,8 +11,8 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.2.2\n"
 
-msgid "Archives"
-msgstr "Archives"
+msgid "Change"
+msgstr "Modifier"
 
 msgid "Dive management"
 msgstr "Gestion de plongées"
@@ -36,14 +36,17 @@ msgstr "Organiser les photos"
 msgid "Pictures"
 msgstr "Photos"
 
-msgid "SD Card"
-msgstr "Carte SD"
-
 msgid "Settings"
 msgstr "Paramètres"
 
 msgid "Storage location type is invalid"
 msgstr "Le type de lieu de stockage est invalide"
 
-msgid "Temporary storage"
-msgstr "Stockage temporaire"
+#~ msgid "Archives"
+#~ msgstr "Archives"
+
+#~ msgid "SD Card"
+#~ msgstr "Carte SD"
+
+#~ msgid "Temporary storage"
+#~ msgstr "Stockage temporaire"

@@ -1,4 +1,4 @@
-msgid "Archives"
+msgid "Change"
 msgstr ""
 
 msgid "Dive management"
@@ -23,14 +23,8 @@ msgstr ""
 msgid "Pictures"
 msgstr ""
 
-msgid "SD Card"
-msgstr ""
-
 msgid "Settings"
 msgstr ""
 
 msgid "Storage location type is invalid"
-msgstr ""
-
-msgid "Temporary storage"
 msgstr ""
