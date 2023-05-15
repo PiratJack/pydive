@@ -44,6 +44,12 @@ class PicturesTree(BaseTreeWidget):
     -------
     __init__ (parent_window)
         Stores reference to parent window & defines UI elements.
+    fill_tree
+        Adds all trips & pictures to the tree
+    add_trip
+        Adds a single trip to the tree
+    add_picture_group
+        Adds a single picture group to the tree
     refresh_display
         Reloads the paths displayed in the UI
     """
@@ -76,6 +82,7 @@ class PicturesTree(BaseTreeWidget):
         self.setHeaderLabels([_(col["name"]) for col in self.columns])
 
     def fill_tree(self):
+        """Adds all trips & pictures to the tree"""
         self.clear()
         for trip, picture_groups in self.repository.trips.items():
             trip_widget = self.add_trip(trip)
@@ -83,6 +90,7 @@ class PicturesTree(BaseTreeWidget):
                 self.add_picture_group(trip_widget, picture_group)
 
     def add_trip(self, trip):
+        """Adds a single trip to the tree"""
         data = [trip]
         trip_widget = QtWidgets.QTreeWidgetItem(data)
         self.addTopLevelItem(trip_widget)
@@ -93,6 +101,7 @@ class PicturesTree(BaseTreeWidget):
         return trip_widget
 
     def add_picture_group(self, trip_widget, picture_group):
+        """Adds a single picture group to the tree"""
         data = [picture_group.name]
         for column in self.columns[1:]:
             data.append(str(picture_group.locations.get(column["name"], 0)))
@@ -220,6 +229,8 @@ class PicturesController:
         for folder in self.ui["folders"].values():
             self.ui["left_grid_layout"].removeWidget(folder["label"])
             self.ui["left_grid_layout"].removeWidget(folder["path"])
+            folder["label"].deleteLater()
+            folder["path"].deleteLater()
 
             folder["label"] = None
             folder["path"] = None
