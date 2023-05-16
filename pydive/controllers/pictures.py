@@ -64,7 +64,9 @@ class PicturesTree(BaseTreeWidget):
 
     def __init__(self, parent_controller, repository):
         super().__init__(parent_controller)
+        self.parent_controller = parent_controller
         self.repository = repository
+        self.itemClicked.connect(self.on_item_clicked)
 
     def set_folders(self, folders):
         self.columns = [self.columns[0]]
@@ -86,7 +88,7 @@ class PicturesTree(BaseTreeWidget):
         self.clear()
         for trip, picture_groups in self.repository.trips.items():
             trip_widget = self.add_trip(trip)
-            for picture_group in picture_groups:
+            for picture_group in picture_groups.values():
                 self.add_picture_group(trip_widget, picture_group)
 
     def add_trip(self, trip):
@@ -107,6 +109,18 @@ class PicturesTree(BaseTreeWidget):
             data.append(str(picture_group.locations.get(column["name"], 0)))
         picture_group_widget = QtWidgets.QTreeWidgetItem(data)
         trip_widget.addChild(picture_group_widget)
+
+    def on_item_clicked(self, item):
+        # Exclude clicks on trips
+        if not item.parent():
+            return
+
+        # Get selected picture group
+        trip = item.parent().text(0)
+        picture_group_name = item.text(0)
+        picture_group = self.repository.trips[trip][picture_group_name]
+
+        self.parent_controller.display_picture_group(picture_group)
 
 
 class PicturesController:
@@ -185,14 +199,15 @@ class PicturesController:
 
         # Right part: choose picture to keep + tasks in progress
         self.ui["right"] = QtWidgets.QWidget()
-        self.ui["right_layout"] = QtWidgets.QVBoxLayout()
+        self.ui["right_layout"] = QtWidgets.QGridLayout()
         self.ui["right"].setLayout(self.ui["right_layout"])
         self.ui["layout"].addWidget(self.ui["right"], 5)
 
-        # TODO: display the images
+        self.ui["pictures"] = {}
+
         # TODO: Allow to delete images
         # TODO: Allow to transfer images between folders
-        # TODO: display loading status
+        # TODO: display loading status for background tasks
 
     @property
     def display_widget(self):
@@ -263,3 +278,56 @@ class PicturesController:
         # Refresh image tree
         self.ui["picture_tree"].set_folders(self.folders)
         self.ui["picture_tree"].fill_tree()
+
+    def display_picture_group(self, picture_group):
+        """Displays pictures from a given group"""
+        if self.ui["pictures"]:
+            for conversion_type in self.ui["pictures"]:
+                for location_name in self.ui["pictures"][conversion_type]:
+                    picture = self.ui["pictures"][conversion_type][location_name]
+                    self.ui["right_layout"].removeWidget(picture)
+                    picture.deleteLater()
+                    picture = None
+        self.ui["pictures"] = {}
+
+        # TODO: Allow to hide duplicate pictures (same name)
+        # TODO: Allow to filter which pictures to display (via checkbox)
+        # Assumption: for a given group, location and conversion type, there is a single picture
+        column = 0
+        row = 0
+        self.ui["pictures"]["locations"] = {}
+        ui_pictures = self.ui["pictures"]
+        rows = {}
+        columns = {}
+        for conversion_type in picture_group.pictures:
+            # Conversion type label goes on top & start at column 1
+            column = len(ui_pictures)
+            columns[conversion_type] = column
+            ui_type = QtWidgets.QLabel(conversion_type)
+            ui_pictures[conversion_type] = {"label": ui_type}
+            self.ui["right_layout"].addWidget(ui_type, 0, column)
+
+            for picture in picture_group.pictures[conversion_type]:
+                # Locations go on left & start at row 1
+                if picture.location_name not in ui_pictures["locations"]:
+                    row = len(ui_pictures["locations"]) + 1
+                    rows[picture.location_name] = row
+                    ui_location = QtWidgets.QLabel(picture.location_name)
+                    ui_pictures["locations"][picture.location_name] = ui_location
+
+                    self.ui["right_layout"].addWidget(ui_location, row, 0)
+                else:
+                    row = rows[picture.location_name]
+
+                ui_image = QtWidgets.QLabel()
+                ui_pixmap = QtGui.QPixmap(picture.path)
+                # Some images (especially RAW) can't be displayed
+                if ui_pixmap.width() == 0:
+                    ui_image.setText(_("Image not readable"))
+                    ui_image.setProperty("class", "small_note")
+                else:
+                    ui_image.setPixmap(ui_pixmap)
+                    # TODO: scale images properly, given available space
+
+                ui_pictures[conversion_type][picture.location_name] = ui_image
+                self.ui["right_layout"].addWidget(ui_image, row, column)
