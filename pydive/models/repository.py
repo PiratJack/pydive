@@ -78,6 +78,6 @@ class Repository:
             trips = {}
             for picture_group in self.picture_groups:
                 if picture_group.trip not in trips:
-                    trips[picture_group.trip] = []
-                trips[picture_group.trip].append(picture_group)
+                    trips[picture_group.trip] = {}
+                trips[picture_group.trip][picture_group.name] = picture_group
             return trips

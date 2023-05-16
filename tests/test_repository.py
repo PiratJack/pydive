@@ -131,8 +131,7 @@ class TestRepository(unittest.TestCase):
         )
 
         # String representations
-        picture_group = [g for g in repository.trips["Malta"] if g.name == "IMG001"]
-        picture_group = picture_group[0]
+        picture_group = repository.trips["Malta"]["IMG001"]
         self.assertEqual(
             str(picture_group),
             "('IMG001', 'Malta', '1 pictures')",
@@ -176,8 +175,7 @@ class TestRepository(unittest.TestCase):
             self.assertEqual(type(cm.exception), StorageLocationCollision, test_name)
 
         test_name = "Load images in wrong group (based on file name)"
-        picture_group = [g for g in repository.trips["Malta"] if g.name == "IMG001"]
-        picture_group = picture_group[0]
+        picture_group = repository.trips["Malta"]["IMG001"]
         picture = [p for p in repository.pictures if p.path.endswith("IMG002.CR2")]
         picture = picture[0]
         with self.assertRaises(ValueError) as cm:
@@ -190,8 +188,7 @@ class TestRepository(unittest.TestCase):
         )
 
         test_name = "Load images in wrong group (based on trip)"
-        picture_group = [g for g in repository.trips["Malta"] if g.name == "IMG001"]
-        picture_group = picture_group[0]
+        picture_group = repository.trips["Malta"]["IMG001"]
         picture = [
             p for p in repository.pictures if p.path.endswith("Georgia/IMG010.CR2")
         ]
@@ -215,10 +212,7 @@ class TestRepository(unittest.TestCase):
         # Situation: group 'IMG011_convert' exists, now we find picture IMG011.CR2
         # The group's name should be changed to IMG011
         # The conversion types should change as well
-        picture_group = [
-            g for g in repository.trips["Georgia"] if g.name == "IMG011_convert"
-        ]
-        picture_group = picture_group[0]
+        picture_group = repository.trips["Georgia"]["IMG011_convert"]
         new_picture = Picture(locations, BASE_FOLDER + "DCIM/IMG011.CR2")
         picture_group.add_picture(new_picture)
 
