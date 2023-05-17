@@ -39,7 +39,7 @@ class AutoResize:
 
     def resizeEvent(self, event):
         """Handler for resizeEvent => resizes columns"""
-        QtWidgets.QMainWindow.resizeEvent(self, event)
+        QtWidgets.QMainWindow.resizeEvent(self.parent_controller.parent_window, event)
         self.set_column_sizes()
 
     def set_column_sizes(self):
