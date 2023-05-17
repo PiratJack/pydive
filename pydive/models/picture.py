@@ -24,7 +24,7 @@ class Picture:
         if len(storage_location) == 1:
             location_name, location_path = storage_location[0]
             self.trip = os.path.dirname(path)[len(location_path) :]
-            if self.trip.startswith("/"):
+            if self.trip.startswith(os.sep):
                 self.trip = self.trip[1:]
             self.location_name = location_name
             self.name = os.path.basename(path).rsplit(".", 1)[-2]
