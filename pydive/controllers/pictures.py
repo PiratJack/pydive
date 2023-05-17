@@ -123,6 +123,97 @@ class PicturesTree(BaseTreeWidget):
         self.parent_controller.display_picture_group(picture_group)
 
 
+class PictureGrid:
+    def __init__(self, parent_controller):
+        self.parent_controller = parent_controller
+        self.pictures = {}
+        self.grid = []  # Structure is row: column: widget
+        self.ui = {}
+        self.ui["main"] = QtWidgets.QWidget()
+        self.ui["layout"] = QtWidgets.QGridLayout()
+        self.ui["main"].setProperty("class", "picture_grid")
+        self.ui["main"].setLayout(self.ui["layout"])
+
+    def display_picture_group(self, picture_group):
+        # TODO: Allow to hide duplicate pictures (same name)
+        # TODO: Allow to filter which pictures to display (via checkbox)
+        self.clear()
+
+        rows = [""] + list(picture_group.locations.keys())
+        columns = [""] + list(picture_group.pictures.keys())
+
+        # Add row & column headers
+        self.grid.append([QtWidgets.QLabel(i) for i in columns])
+        for row, location_name in enumerate(rows):
+            if row == 0:  # To avoid erasing the headers on row = 0
+                continue
+            self.grid.append([QtWidgets.QLabel(location_name)])
+
+        for column, conversion_type in enumerate(columns):
+            for row, location_name in enumerate(rows):
+                if column == 0 or row == 0:
+                    self.ui["layout"].addWidget(self.grid[row][column], row, column)
+                    self.grid[row][column].setProperty("class", "grid_header")
+                    continue
+
+                self.grid[row].append(PictureDisplay())
+
+                picture = [
+                    p
+                    for p in picture_group.pictures[conversion_type]
+                    if p.location_name == location_name
+                ]
+                if not picture:
+                    self.grid[row][column].setImagePath()
+                else:
+                    # Assumption: for a given group, location and conversion type, there is a single picture
+                    picture = picture[0]
+                    self.grid[row][column].setImagePath(picture.path)
+
+                self.grid[row][column].setAlignment(Qt.AlignCenter)
+                self.ui["layout"].addWidget(self.grid[row][column], row, column)
+
+    def clear(self):
+        """Clears the display"""
+        for row in self.grid:
+            for widget in row:
+                self.ui["layout"].removeWidget(widget)
+                widget.deleteLater()
+                widget = None
+        self.grid = []
+
+    @property
+    def display_widget(self):
+        return self.ui["main"]
+
+
+class PictureDisplay(QtWidgets.QLabel):
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.pixmap():
+            ratio = self.pixmap().width() / self.pixmap().height()
+            width = int(min(self.width(), self.height() * ratio))
+            height = int(min(self.height(), self.width() / ratio))
+            self.pixmap().swap(
+                QtGui.QPixmap(self.image_path).scaled(
+                    self.width(), self.height(), Qt.KeepAspectRatio
+                )
+            )
+
+    def setImagePath(self, path=None):
+        self.image_path = path
+        if not path:
+            self.setText(_("No image"))
+            self.setProperty("class", "small_note")
+        else:
+            pixmap = QtGui.QPixmap(self.image_path)
+            self.setPixmap(pixmap)
+            if pixmap.width() == 0:
+                del pixmap
+                self.setText(_("Image not readable"))
+                self.setProperty("class", "small_note")
+
+
 class PicturesController:
     """Picture organization, selection & link to trips
 
@@ -180,6 +271,7 @@ class PicturesController:
         self.ui["left_layout"] = QtWidgets.QVBoxLayout()
         self.ui["left"].setLayout(self.ui["left_layout"])
         self.ui["layout"].addWidget(self.ui["left"], 3)
+        self.ui["left"].setMinimumWidth(350)
 
         # Grid for the folders
         self.ui["left_grid"] = QtWidgets.QWidget()
@@ -199,11 +291,12 @@ class PicturesController:
 
         # Right part: choose picture to keep + tasks in progress
         self.ui["right"] = QtWidgets.QWidget()
-        self.ui["right_layout"] = QtWidgets.QGridLayout()
+        self.ui["right_layout"] = QtWidgets.QVBoxLayout()
         self.ui["right"].setLayout(self.ui["right_layout"])
         self.ui["layout"].addWidget(self.ui["right"], 5)
 
-        self.ui["pictures"] = {}
+        self.ui["pictures"] = PictureGrid(self)
+        self.ui["right_layout"].addWidget(self.ui["pictures"].display_widget)
 
         # TODO: Allow to delete images
         # TODO: Allow to transfer images between folders
@@ -281,53 +374,4 @@ class PicturesController:
 
     def display_picture_group(self, picture_group):
         """Displays pictures from a given group"""
-        if self.ui["pictures"]:
-            for conversion_type in self.ui["pictures"]:
-                for location_name in self.ui["pictures"][conversion_type]:
-                    picture = self.ui["pictures"][conversion_type][location_name]
-                    self.ui["right_layout"].removeWidget(picture)
-                    picture.deleteLater()
-                    picture = None
-        self.ui["pictures"] = {}
-
-        # TODO: Allow to hide duplicate pictures (same name)
-        # TODO: Allow to filter which pictures to display (via checkbox)
-        # Assumption: for a given group, location and conversion type, there is a single picture
-        column = 0
-        row = 0
-        self.ui["pictures"]["locations"] = {}
-        ui_pictures = self.ui["pictures"]
-        rows = {}
-        columns = {}
-        for conversion_type in picture_group.pictures:
-            # Conversion type label goes on top & start at column 1
-            column = len(ui_pictures)
-            columns[conversion_type] = column
-            ui_type = QtWidgets.QLabel(conversion_type)
-            ui_pictures[conversion_type] = {"label": ui_type}
-            self.ui["right_layout"].addWidget(ui_type, 0, column)
-
-            for picture in picture_group.pictures[conversion_type]:
-                # Locations go on left & start at row 1
-                if picture.location_name not in ui_pictures["locations"]:
-                    row = len(ui_pictures["locations"]) + 1
-                    rows[picture.location_name] = row
-                    ui_location = QtWidgets.QLabel(picture.location_name)
-                    ui_pictures["locations"][picture.location_name] = ui_location
-
-                    self.ui["right_layout"].addWidget(ui_location, row, 0)
-                else:
-                    row = rows[picture.location_name]
-
-                ui_image = QtWidgets.QLabel()
-                ui_pixmap = QtGui.QPixmap(picture.path)
-                # Some images (especially RAW) can't be displayed
-                if ui_pixmap.width() == 0:
-                    ui_image.setText(_("Image not readable"))
-                    ui_image.setProperty("class", "small_note")
-                else:
-                    ui_image.setPixmap(ui_pixmap)
-                    # TODO: scale images properly, given available space
-
-                ui_pictures[conversion_type][picture.location_name] = ui_image
-                self.ui["right_layout"].addWidget(ui_image, row, column)
+        self.ui["pictures"].display_picture_group(picture_group)

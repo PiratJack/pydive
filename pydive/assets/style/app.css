@@ -12,3 +12,12 @@
     color: grey;
     font-style: italic;
 }
+
+.picture_grid QLabel {
+    qproperty-alignment: AlignCenter;
+    min-height: 50px;
+}
+
+.picture_grid QLabel.grid_header {
+    font-weight: bold;
+}
