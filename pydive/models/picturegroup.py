@@ -22,6 +22,8 @@ class PictureGroup:
         # The picture name starts with the group name ==> easy
         if picture.name.startswith(self.name):
             conversion_type = picture.name.replace(self.name, "")
+            if conversion_type.startswith("_"):
+                conversion_type = conversion_type[1:]
             if conversion_type not in self.pictures:
                 self.pictures[conversion_type] = []
             self.pictures[conversion_type].append(picture)
