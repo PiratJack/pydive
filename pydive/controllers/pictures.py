@@ -9,6 +9,7 @@ PicturesController
     Picture organization, selection & link to trips
 """
 import gettext
+import os
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
@@ -126,8 +127,9 @@ class PicturesTree(BaseTreeWidget):
 class PictureGrid:
     def __init__(self, parent_controller):
         self.parent_controller = parent_controller
-        self.pictures = {}
+        self.picture_group = None
         self.grid = []  # Structure is row: column: widget
+        self.picture_containers = {}  # Structure is row: column: PictureContainer
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QGridLayout()
@@ -138,6 +140,7 @@ class PictureGrid:
         # TODO: Allow to hide duplicate pictures (same name)
         # TODO: Allow to filter which pictures to display (via checkbox)
         self.clear()
+        self.picture_group = picture_group
 
         rows = [""] + list(picture_group.locations.keys())
         columns = [""] + list(picture_group.pictures.keys())
@@ -156,7 +159,7 @@ class PictureGrid:
                     self.grid[row][column].setProperty("class", "grid_header")
                     continue
 
-                self.grid[row].append(PictureDisplay())
+                picture_container = PictureContainer(self, row, column)
 
                 picture = [
                     p
@@ -164,33 +167,159 @@ class PictureGrid:
                     if p.location_name == location_name
                 ]
                 if not picture:
-                    self.grid[row][column].setImagePath()
+                    picture_container.set_image_path()
                 else:
                     # Assumption: for a given group, location and conversion type, there is a single picture
                     picture = picture[0]
-                    self.grid[row][column].setImagePath(picture.path)
+                    picture_container.set_image_path(picture.path)
 
-                self.grid[row][column].setAlignment(Qt.AlignCenter)
+                if row not in self.picture_containers:
+                    self.picture_containers[row] = {}
+                self.picture_containers[row][column] = picture_container
+
+                self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
 
     def clear(self):
         """Clears the display"""
         for row in self.grid:
-            for widget in row:
-                self.ui["layout"].removeWidget(widget)
-                widget.deleteLater()
-                widget = None
+            for element in row:
+                if type(element) == PictureContainer:
+                    self.ui["layout"].removeWidget(element.display_widget)
+                    element.display_widget.deleteLater()
+                    element.display_widget = None
+                    del element
+                else:
+                    self.ui["layout"].removeWidget(element)
+                    element.deleteLater()
+                    element = None
         self.grid = []
+        self.picture_group = None
+
+    def generate_image(self, row, column):
+        if not "" in self.picture_group.pictures:
+            self.picture_containers[row][column].display_error(
+                _("No source image available for generation")
+            )
+            return
+        source = self.picture_group.pictures[""]
+
+        target_location = self.grid[row][0].text()
+        source_picture = [p for p in source if p.location_name == target_location]
+        if source_picture:
+            source_picture = source_picture[0]
+        else:
+            source_picture = source[0]
+
+        target_conversion = self.grid[0][column].text()
+        if not target_conversion:
+            self.picture_containers[row][column].display_error(
+                _("No conversion method found")
+            )
+            return
+
+        target_file_name = os.path.join(
+            os.path.dirname(source_picture.path),
+            self.picture_group.name + target_conversion + ".jpg",
+        )
+
+        # TODO: Do the actual conversion
+
+        print(source_picture, target_location, target_conversion)
 
     @property
     def display_widget(self):
         return self.ui["main"]
 
 
+class PictureContainer:
+    def __init__(self, parent_controller, row, column):
+        self.parent_controller = parent_controller
+        self.row = row
+        self.column = column
+        self.ui = {}
+        self.ui["main"] = QtWidgets.QWidget()
+        self.ui["layout"] = QtWidgets.QVBoxLayout()
+        self.ui["main"].setLayout(self.ui["layout"])
+        self.ui["elements"] = {}
+        self.image_path = ""
+
+    def set_image_path(self, path=None):
+        self.image_path = path
+
+        # Clean existing elements
+        for i in ["label", "generate", "image", "delete"]:
+            if i in self.ui["elements"]:
+                self.ui["elements"][i].deleteLater()
+                self.ui["layout"].removeWidget(self.ui["elements"][i])
+                del self.ui["elements"][i]
+
+        # No image ==> display that information
+        if not path:
+            self.ui["elements"]["label"] = QtWidgets.QLabel(_("No image"))
+            self.ui["elements"]["label"].setProperty("class", "small_note")
+            self.ui["layout"].addWidget(self.ui["elements"]["label"])
+
+            self.ui["elements"]["generate"] = QtWidgets.QPushButton(_("Generate"))
+            # I have no idea why I had to use a lambda here, but it works...
+            self.ui["elements"]["generate"].clicked.connect(lambda: self.generate())
+            self.ui["layout"].addWidget(self.ui["elements"]["generate"])
+        else:
+            pixmap = QtGui.QPixmap(self.image_path)
+            # Image exists and can be read by PyQt5
+            if pixmap.width() > 0:
+                self.ui["elements"]["image"] = PictureDisplay()
+                self.ui["elements"]["image"].image_path = self.image_path
+                self.ui["elements"]["image"].setPixmap(pixmap)
+                self.ui["layout"].addWidget(self.ui["elements"]["image"])
+
+                # Delete button
+                # TODO: Ensure delete button is next to image (by default the image takes all the vertical space)
+                self.ui["elements"]["delete"] = QtWidgets.QPushButton(
+                    QtGui.QIcon("assets/images/delete.png"), ""
+                )
+                self.ui["elements"]["delete"].clicked.connect(
+                    lambda: self.on_click_delete()
+                )
+                self.ui["layout"].addWidget(self.ui["elements"]["delete"])
+            else:
+                self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
+                self.ui["elements"]["label"].setProperty("class", "small_note")
+                self.ui["layout"].addWidget(self.ui["elements"]["label"])
+
+    def generate(self):
+        self.parent_controller.generate_image(self.row, self.column)
+
+    def on_click_delete(self):
+        dialog = QtWidgets.QMessageBox(self.ui["main"])
+        dialog.setWindowTitle("Please confirm")
+        dialog.setText("Do you really want to delete this image?")
+        dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        dialog.setIcon(QtWidgets.QMessageBox.Warning)
+        button = dialog.exec()
+
+        if button == QtWidgets.QMessageBox.Yes:
+            os.unlink(self.image_path)
+            self.set_image_path()
+
+    def display_error(self, message):
+        if "error" not in self.ui["elements"]:
+            self.ui["elements"]["error"] = QtWidgets.QLabel(message)
+            self.ui["elements"]["error"].setProperty("class", "validation_warning")
+            self.ui["layout"].addWidget(self.ui["elements"]["error"])
+        self.ui["elements"]["error"].setText(message)
+
+    @property
+    def display_widget(self):
+        """Returns the QtWidgets.QWidget for display of this screen"""
+
+        return self.ui["main"]
+
+
 class PictureDisplay(QtWidgets.QLabel):
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if self.pixmap():
+        if self.pixmap() and self.pixmap().height():
             ratio = self.pixmap().width() / self.pixmap().height()
             width = int(min(self.width(), self.height() * ratio))
             height = int(min(self.height(), self.width() / ratio))
@@ -199,19 +328,6 @@ class PictureDisplay(QtWidgets.QLabel):
                     self.width(), self.height(), Qt.KeepAspectRatio
                 )
             )
-
-    def setImagePath(self, path=None):
-        self.image_path = path
-        if not path:
-            self.setText(_("No image"))
-            self.setProperty("class", "small_note")
-        else:
-            pixmap = QtGui.QPixmap(self.image_path)
-            self.setPixmap(pixmap)
-            if pixmap.width() == 0:
-                del pixmap
-                self.setText(_("Image not readable"))
-                self.setProperty("class", "small_note")
 
 
 class PicturesController:
@@ -298,7 +414,6 @@ class PicturesController:
         self.ui["pictures"] = PictureGrid(self)
         self.ui["right_layout"].addWidget(self.ui["pictures"].display_widget)
 
-        # TODO: Allow to delete images
         # TODO: Allow to transfer images between folders
         # TODO: display loading status for background tasks
 
