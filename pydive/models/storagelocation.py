@@ -4,6 +4,8 @@ For example, the camera's SD card, a temporary folder or an archive folder
 
 Classes
 ----------
+StorageLocationType
+    A type of location: folder or file
 StorageLocation
     Folder in which pictures are stored
 """
