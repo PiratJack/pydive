@@ -127,6 +127,8 @@ class PicturesTree(BaseTreeWidget):
 class PictureGrid:
     def __init__(self, parent_controller):
         self.parent_controller = parent_controller
+        self.database = parent_controller.database
+        self.repository = parent_controller.repository
         self.picture_group = None
         self.grid = []  # Structure is row: column: widget
         self.picture_containers = {}  # Structure is row: column: PictureContainer
@@ -146,7 +148,14 @@ class PictureGrid:
         columns = [""] + list(picture_group.pictures.keys())
 
         # Add row & column headers
-        self.grid.append([QtWidgets.QLabel(i) for i in columns])
+        self.grid.append([])
+        for i in columns:
+            try:
+                label = self.database.conversionmethods_get_by_suffix(i).name
+            except:
+                label = i
+            self.grid[0].append(QtWidgets.QLabel(label))
+
         for row, location_name in enumerate(rows):
             if row == 0:  # To avoid erasing the headers on row = 0
                 continue
@@ -197,6 +206,14 @@ class PictureGrid:
         self.picture_group = None
 
     def generate_image(self, row, column):
+        parameters = {
+            "command": "",
+            "source_file": "",
+            "target_folder": "",
+            "target_file": "",
+        }
+
+        # Find RAW source image
         if not "" in self.picture_group.pictures:
             self.picture_containers[row][column].display_error(
                 _("No source image available for generation")
@@ -204,28 +221,49 @@ class PictureGrid:
             return
         source = self.picture_group.pictures[""]
 
-        target_location = self.grid[row][0].text()
-        source_picture = [p for p in source if p.location_name == target_location]
+        # Identify the target folder
+        target_location_name = self.grid[row][0].text()
+        locations = self.database.storagelocations_get_folders()
+        # There will always be only 1
+        target_location = [l for l in locations if l.name == target_location_name][0]
+        parameters["target_folder"] = target_location.path
+
+        # Identify the source picture
+        # Ideally, it should be in the target location
+        source_picture = [p for p in source if p.location_name == target_location_name]
         if source_picture:
             source_picture = source_picture[0]
         else:
             source_picture = source[0]
+        parameters["source_file"] = source_picture.path
 
-        target_conversion = self.grid[0][column].text()
-        if not target_conversion:
+        # Identify which method to use for conversion
+        target_suffix = self.grid[0][column].text()
+        try:
+            conversion = self.database.conversionmethods_get_by_name(target_suffix)
+        except:
             self.picture_containers[row][column].display_error(
                 _("No conversion method found")
             )
             return
+        parameters["command"] = conversion.command
 
-        target_file_name = os.path.join(
-            os.path.dirname(source_picture.path),
-            self.picture_group.name + target_conversion + ".jpg",
-        )
+        target_file_name = self.picture_group.name + "_" + conversion.suffix + ".jpg"
+        target_file = os.path.join(parameters["target_folder"], target_file_name)
+        parameters["target_file"] = target_file
 
-        # TODO: Do the actual conversion
+        # Let's mix all that together!
+        command = parameters["command"]
+        command = command.replace("%SOURCE_FILE%", parameters["source_file"])
+        command = command.replace("%TARGET_FILE%", parameters["target_file"])
+        command = command.replace("%TARGET_FOLDER%", parameters["target_folder"])
 
-        print(source_picture, target_location, target_conversion)
+        # TODO: Put that in QProcess & process asynchronously
+        os.system(command)
+
+        # Add our new picture to the repository (& the picture group)
+        self.repository.add_picture(self.picture_group, target_location, target_file)
+        self.display_picture_group(self.picture_group)
 
     @property
     def display_widget(self):
