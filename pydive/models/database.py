@@ -91,6 +91,14 @@ class Database:
             .one()
         )
 
+    def conversionmethods_get_by_name(self, name):
+        """Returns a conversion method based on its name"""
+        return (
+            self.session.query(conversionmethod.ConversionMethod)
+            .filter(conversionmethod.ConversionMethod.name == name)
+            .one()
+        )
+
     def delete(self, item):
         self.session.delete(item)
         self.session.commit()
