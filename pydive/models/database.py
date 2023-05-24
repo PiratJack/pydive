@@ -8,6 +8,7 @@ Database
 import sqlalchemy
 
 from . import storagelocation
+from . import conversionmethod
 
 from .base import Base
 
@@ -59,7 +60,7 @@ class Database:
         return self.session.query(storagelocation.StorageLocation).all()
 
     def storagelocations_get_folders(self):
-        """Returns a list of all storage locations"""
+        """Returns a list of all folder storage locations"""
         return (
             self.session.query(storagelocation.StorageLocation)
             .filter(
@@ -74,6 +75,19 @@ class Database:
         return (
             self.session.query(storagelocation.StorageLocation)
             .filter(storagelocation.StorageLocation.id == storagelocation_id)
+            .one()
+        )
+
+    # Conversion methods
+    def conversionmethods_get(self):
+        """Returns a list of all conversion methods"""
+        return self.session.query(conversionmethod.ConversionMethod).all()
+
+    def conversionmethods_get_by_suffix(self, suffix):
+        """Returns a conversion method based on its suffix"""
+        return (
+            self.session.query(conversionmethod.ConversionMethod)
+            .filter(conversionmethod.ConversionMethod.suffix == suffix)
             .one()
         )
 
