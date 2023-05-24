@@ -73,6 +73,10 @@ class Repository:
                     pictures.append(PictureModel(self.storage_locations, full_path))
         return pictures
 
+    def add_picture(self, picture_group, location, path):
+        picture = PictureModel({location.name: location.path}, path)
+        picture_group.add_picture(picture)
+
     def __getattr__(self, attr):
         if attr == "trips":
             trips = {}
