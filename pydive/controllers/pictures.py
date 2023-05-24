@@ -145,7 +145,11 @@ class PictureGrid:
         self.picture_group = picture_group
 
         rows = [""] + list(picture_group.locations.keys())
+        # Include conversion types for existing pictures
         columns = [""] + list(picture_group.pictures.keys())
+        # Add conversion types based on conversion methods
+        columns = columns + [m.suffix for m in self.database.conversionmethods_get()]
+        columns = sorted(set(columns))
 
         # Add row & column headers
         self.grid.append([])
@@ -170,17 +174,21 @@ class PictureGrid:
 
                 picture_container = PictureContainer(self, row, column)
 
-                picture = [
-                    p
-                    for p in picture_group.pictures[conversion_type]
-                    if p.location_name == location_name
-                ]
-                if not picture:
+                # No picture at all for this conversion type
+                if conversion_type not in picture_group.pictures:
                     picture_container.set_image_path()
                 else:
-                    # Assumption: for a given group, location and conversion type, there is a single picture
-                    picture = picture[0]
-                    picture_container.set_image_path(picture.path)
+                    picture = [
+                        p
+                        for p in picture_group.pictures[conversion_type]
+                        if p.location_name == location_name
+                    ]
+                    if not picture:
+                        picture_container.set_image_path()
+                    else:
+                        # Assumption: for a given group, location and conversion type, there is a single picture
+                        picture = picture[0]
+                        picture_container.set_image_path(picture.path)
 
                 if row not in self.picture_containers:
                     self.picture_containers[row] = {}
