@@ -4,10 +4,32 @@ msgstr ""
 msgid "Dive management"
 msgstr ""
 
+msgid "Generate"
+msgstr ""
+
 msgid "ID"
 msgstr ""
 
+msgid "Image unreadable"
+msgstr ""
+
 msgid "Load pictures"
+msgstr ""
+
+#, python-brace-format
+msgid "Max length for conversion method {field} is 1000 characters"
+msgstr ""
+
+#, python-brace-format
+msgid "Max length for conversion method {field} is 250 characters"
+msgstr ""
+
+#, python-brace-format
+msgid "Max length for conversion method {field} is 50 characters"
+msgstr ""
+
+#, python-brace-format
+msgid "Missing conversion method {field}"
 msgstr ""
 
 #, python-brace-format
@@ -15,6 +37,15 @@ msgid "Missing storage location {field}"
 msgstr ""
 
 msgid "Name"
+msgstr ""
+
+msgid "No conversion method found"
+msgstr ""
+
+msgid "No image"
+msgstr ""
+
+msgid "No source image available for generation"
 msgstr ""
 
 msgid "Organize pictures"

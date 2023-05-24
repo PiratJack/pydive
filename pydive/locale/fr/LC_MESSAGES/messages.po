@@ -17,11 +17,33 @@ msgstr "Modifier"
 msgid "Dive management"
 msgstr "Gestion de plongées"
 
+msgid "Generate"
+msgstr "Générer"
+
 msgid "ID"
 msgstr "ID"
 
+msgid "Image unreadable"
+msgstr "Image non lisible"
+
 msgid "Load pictures"
 msgstr "Charger les photos"
+
+#, python-brace-format
+msgid "Max length for conversion method {field} is 1000 characters"
+msgstr "La longueur maximale du champ {field} pour la méthode de conversion est de 1000 caractères"
+
+#, python-brace-format
+msgid "Max length for conversion method {field} is 250 characters"
+msgstr "La longueur maximale du champ {field} pour la méthode de conversion est de 250 caractères"
+
+#, python-brace-format
+msgid "Max length for conversion method {field} is 50 characters"
+msgstr "La longueur maximale du champ {field} pour la méthode de conversion est de 50 caractères"
+
+#, python-brace-format
+msgid "Missing conversion method {field}"
+msgstr "Champ manquant: {field} pour méthode de conversion"
 
 #, python-brace-format
 msgid "Missing storage location {field}"
@@ -29,6 +51,15 @@ msgstr "Champ manquant: {field} pour lieu de stockage"
 
 msgid "Name"
 msgstr "Nom"
+
+msgid "No conversion method found"
+msgstr "Pas de méthode de conversion trouvée"
+
+msgid "No image"
+msgstr "Pas d'image"
+
+msgid "No source image available for generation"
+msgstr "Pas d'image source disponible pour la génération"
 
 msgid "Organize pictures"
 msgstr "Organiser les photos"
