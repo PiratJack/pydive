@@ -139,14 +139,20 @@ class PictureGrid:
         self.ui["main"].setLayout(self.ui["layout"])
 
     def display_picture_group(self, picture_group):
-        # TODO: Allow to hide duplicate pictures (same name)
         # TODO: Allow to filter which pictures to display (via checkbox)
         self.clear()
         self.picture_group = picture_group
 
+        # Include locations for existing pictures
+        # "" is added for header column
         rows = [""] + list(picture_group.locations.keys())
+        # Add all locations from DB
+        rows = rows + [l.name for l in self.database.storagelocations_get_folders()]
+        rows = sorted(set(rows))
+
         # Include conversion types for existing pictures
-        columns = [""] + list(picture_group.pictures.keys())
+        # "" is added for RAW files & header row
+        columns = ["", ""] + list(picture_group.pictures.keys())
         # Add conversion types based on conversion methods
         columns = columns + [m.suffix for m in self.database.conversionmethods_get()]
         columns = sorted(set(columns))
