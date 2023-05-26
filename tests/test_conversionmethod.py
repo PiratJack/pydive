@@ -50,17 +50,24 @@ class TestStorageLocation(unittest.TestCase):
             "There are 2 conversion methods",
         )
 
-        conversion_methods = self.database.conversionmethods_get_by_suffix("ufraw")
+        conversion_method = self.database.conversionmethods_get_by_suffix("ufraw")
         self.assertEqual(
-            type(conversion_methods),
+            type(conversion_method),
             ConversionMethod,
             "There is a single conversion method with suffix ufraw",
         )
 
         self.assertEqual(
-            str(conversion_methods),
+            str(conversion_method),
             "UFRaw",
             "The string representation is correct",
+        )
+
+        conversion_method = self.database.conversionmethods_get_by_name("UFRaw")
+        self.assertEqual(
+            type(conversion_method),
+            ConversionMethod,
+            "There is a single conversion method with name UFRaw",
         )
 
     def test_validations(self):

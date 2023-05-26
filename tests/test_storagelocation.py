@@ -79,6 +79,17 @@ class TestStorageLocation(unittest.TestCase):
             "The Temporary folder is at /tmp/Pictures/",
         )
 
+        storage_location = self.database.storagelocation_get_by_name("Camera")
+        self.assertEqual(
+            storage_location.id,
+            1,
+            "There is 1 storage locations with name = Camera and it has ID = 1",
+        )
+        self.assertEqual(
+            storage_location.type.name,
+            "folder",
+            "The storage location with name = Camera has type folder",
+        )
         self.database.delete(storage_location)
         storage_locations = self.database.storagelocations_get()
         self.assertEqual(

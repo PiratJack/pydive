@@ -78,6 +78,14 @@ class Database:
             .one()
         )
 
+    def storagelocation_get_by_name(self, storagelocation_name):
+        """Returns a storage location based on its name"""
+        return (
+            self.session.query(storagelocation.StorageLocation)
+            .filter(storagelocation.StorageLocation.name == storagelocation_name)
+            .one()
+        )
+
     # Conversion methods
     def conversionmethods_get(self):
         """Returns a list of all conversion methods"""
