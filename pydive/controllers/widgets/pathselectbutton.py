@@ -23,8 +23,9 @@ class PathSelectButton(QtWidgets.QPushButton):
             self.target = self.dialog.getExistingDirectory(self, "Choose Directory")
         else:
             self.target, _ = self.dialog.getOpenFileName(None, "Choose File")
-        self.pathSelected.emit(self.target)
-        return self.target
+        if self.target:
+            self.pathSelected.emit(self.target)
+            return self.target
 
     def set_path(self, path):
         self.target = path
