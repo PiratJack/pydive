@@ -97,7 +97,7 @@ class PicturesTree(BaseTreeWidget):
 
     def fill_tree(self):
         """Adds all trips & pictures to the tree"""
-        self.clear_display()
+        self.clear()
         for trip, picture_groups in self.repository.trips.items():
             trip_widget = self.add_trip(trip)
             for picture_group in picture_groups.values():
