@@ -9,10 +9,13 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.2.2\n"
+"X-Generator: Poedit 3.3.1\n"
 
 msgid "Change"
 msgstr "Modifier"
+
+msgid "Copy image here"
+msgstr "Copier l'image ici"
 
 msgid "Dive management"
 msgstr "Gestion de plongées"
@@ -60,6 +63,9 @@ msgstr "Pas d'image"
 
 msgid "No source image available for generation"
 msgstr "Pas d'image source disponible pour la génération"
+
+msgid "No source image found"
+msgstr "Pas d'image source disponible"
 
 msgid "Organize pictures"
 msgstr "Organiser les photos"

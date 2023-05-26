@@ -1,6 +1,9 @@
 msgid "Change"
 msgstr ""
 
+msgid "Copy image here"
+msgstr ""
+
 msgid "Dive management"
 msgstr ""
 
@@ -46,6 +49,9 @@ msgid "No image"
 msgstr ""
 
 msgid "No source image available for generation"
+msgstr ""
+
+msgid "No source image found"
 msgstr ""
 
 msgid "Organize pictures"
