@@ -12,34 +12,31 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from controllers.widgets.pathselectbutton import PathSelectButton
 from controllers.widgets.iconbutton import IconButton
 import models.storagelocation
+import models.conversionmethod
 from models.base import ValidationException
 
 _ = gettext.gettext
 
 
-class SettingsController:
-    """Settings screen: Define locations for picture storage, Subsurface file, ...
+class LocationsList:
+    """Displays locations & allows to modify them
 
     Attributes
     ----------
-    name : str
-        The name of this controller - displayed on top
-    parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
-        The window displaying this controller
+    parent_controller : SettingsController
+        A reference to the parent controller
     ui : dict of QtWidgets.QWidget
         The different widgets displayed on the screen
 
     Properties
     -------
     display_widget
-        Returns the QtWidgets.QWidget for display of this screen
-    toolbar_button
-        Returns a QtWidgets.QAction for display in the main window toolbar
+        Returns the QtWidgets.QWidget for display of this list
 
     Methods
     -------
     __init__ (parent_window)
-        Stores reference to parent window & defines UI elements.
+        Stores reference to parent controller & defines UI elements.
     add_location_ui (location_model)
         Adds the fields for the provided location
     on_click_name_change
@@ -56,9 +53,7 @@ class SettingsController:
         Updates the locations names & paths displayed on screen
     """
 
-    name = _("Settings")
-
-    def __init__(self, parent_window):
+    def __init__(self, parent_controller):
         """Stores reference to parent window & defines UI elements
 
         Parameters
@@ -66,8 +61,8 @@ class SettingsController:
         parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
             The window displaying this controller
         """
-        self.parent_window = parent_window
-        self.database = parent_window.database
+        self.parent_controller = parent_controller
+        self.database = parent_controller.database
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QGridLayout()
@@ -83,13 +78,11 @@ class SettingsController:
         )
 
         self.ui["locations"] = {}
-        # TODO: Display conversion methods & allow to create new ones
-
         self.new_location = None
 
     @property
     def display_widget(self):
-        """Returns the QtWidgets.QWidget for display of this screen"""
+        """Returns the QtWidgets.QWidget for display of this list"""
 
         self.ui["locations"] = {}
         for location_model in self.database.storagelocations_get():
@@ -97,7 +90,7 @@ class SettingsController:
 
         # Create new location
         self.ui["add_new"] = IconButton(
-            QtGui.QIcon("assets/images/add.png"), "", self.parent_window
+            QtGui.QIcon("assets/images/add.png"), "", self.ui["main"]
         )
         self.ui["add_new"].clicked.connect(lambda: self.on_click_new_location())
 
@@ -148,9 +141,8 @@ class SettingsController:
 
         # Location name - Edit button
         location["name_change_start"] = IconButton(
-            QtGui.QIcon("assets/images/modify.png"), "", self.parent_window
+            QtGui.QIcon("assets/images/modify.png"), "", self.ui["main"]
         )
-        # dlocation["name_change_start"].setMinimumWidth(100)
         location["name_change_start"].clicked.connect(
             lambda: self.on_click_name_change(location["model"].id)
         )
@@ -158,7 +150,7 @@ class SettingsController:
 
         # Location name - Validate button
         location["name_change_end"] = IconButton(
-            QtGui.QIcon("assets/images/done.png"), "", self.parent_window
+            QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
         )
         location["name_change_end"].clicked.connect(
             lambda: self.on_validate_name_change(location["model"].id)
@@ -185,7 +177,7 @@ class SettingsController:
 
         # Delete location
         location["delete"] = IconButton(
-            QtGui.QIcon("assets/images/delete.png"), "", self.parent_window
+            QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
         )
         location["delete"].clicked.connect(
             lambda a, location=location: self.on_click_delete_location(
@@ -307,7 +299,7 @@ class SettingsController:
 
         # Location name - Validate button
         location["validate_new"] = IconButton(
-            QtGui.QIcon("assets/images/done.png"), "", self.parent_window
+            QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
         )
         location["validate_new"].clicked.connect(self.on_validate_new_location)
         self.ui["layout"].addWidget(
@@ -446,6 +438,450 @@ class SettingsController:
         if field in location["error"]:
             location["error"][field].setText("")
 
+    def refresh_display(self):
+        """Updates the locations names & paths displayed on screen"""
+
+        # Refresh list of locations
+        for location in self.ui["locations"].values():
+            location["name_label"].setText(location["model"].name)
+            location["name_edit"].setText(location["model"].name)
+            location["path"].setText(location["model"].path)
+            location["path_change"].target = location["model"].path
+
+
+class ConversionMethodsList:
+    """Displays conversion methods & allows to modify them
+
+    Attributes
+    ----------
+    parent_controller : SettingsController
+        A reference to the parent controller
+    ui : dict of QtWidgets.QWidget
+        The different widgets displayed on the screen
+
+    Properties
+    -------
+    display_widget
+        Returns the QtWidgets.QWidget for display of this list
+
+    Methods
+    -------
+    __init__ (parent_window)
+        Stores reference to parent controller & defines UI elements.
+    add_method_ui (method_model)
+        Adds the fields for the provided conversion method
+    on_click_field_change
+        Displays fields to modify the conversion method name
+    on_validate_field_change
+        Saves the storage conversion method name
+    on_click_new_method
+        Displays all the fields to create a new conversion method
+    on_validate_new_method
+        Saves a new conversion method
+    refresh_display
+        Updates the conversion methods names & commands displayed on screen
+    """
+
+    def __init__(self, parent_controller):
+        """Stores reference to parent window & defines UI elements
+
+        Parameters
+        ----------
+        parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
+            The window displaying this controller
+        """
+        self.parent_controller = parent_controller
+        self.database = parent_controller.database
+        self.ui = {}
+        self.ui["main"] = QtWidgets.QWidget()
+        self.ui["layout"] = QtWidgets.QGridLayout()
+        for col, stretch in enumerate([10, 1, 2, 1, 15, 1, 1]):
+            self.ui["layout"].setColumnStretch(col, stretch)
+
+        self.ui["main"].setLayout(self.ui["layout"])
+        self.ui["layout"].setHorizontalSpacing(
+            self.ui["layout"].horizontalSpacing() * 3
+        )
+
+        self.ui["methods"] = {}
+        self.new_method = None
+
+    @property
+    def display_widget(self):
+        """Returns the QtWidgets.QWidget for display of this list"""
+
+        self.ui["methods"] = {}
+        for method_model in self.database.conversionmethods_get():
+            self.add_method_ui(method_model)
+
+        # Create new conversion method
+        self.ui["add_new"] = IconButton(
+            QtGui.QIcon("assets/images/add.png"), "", self.ui["main"]
+        )
+        self.ui["add_new"].clicked.connect(lambda: self.on_click_new_method())
+
+        self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 1, 1)
+
+        self.refresh_display()
+        return self.ui["main"]
+
+    def add_method_ui(self, method_model):
+        """Adds the fields for the provided conversion method
+
+        Parameters
+        ----------
+        method_model : models.conversionmethod.ConversionMethod
+            The conversion method to display
+        """
+        self.ui["methods"][method_model.id] = {}
+        method = self.ui["methods"][method_model.id]
+        method["model"] = method_model
+        method["error"] = {}
+
+        for column, field in enumerate(["name", "suffix", "command"]):
+            # Layout for the grid cell
+            method[field] = QtWidgets.QWidget()
+            method[field + "_layout"] = QtWidgets.QStackedLayout()
+            method[field].setLayout(method[field + "_layout"])
+            self.ui["layout"].addWidget(
+                method[field], len(self.ui["methods"]), column * 2
+            )
+
+            # Conversion method field - Display
+            method[field + "_label"] = QtWidgets.QLabel()
+            method[field + "_layout"].insertWidget(0, method[field + "_label"])
+
+            # Conversion method field - Edit box
+            method[field + "_edit"] = QtWidgets.QLineEdit()
+            method[field + "_edit"].returnPressed.connect(
+                lambda a, field=field: self.on_validate_field_change(
+                    field, method_model.id
+                )
+            )
+            method[field + "_layout"].insertWidget(1, method[field + "_edit"])
+
+            # Conversion method field - Edit / validate button
+            method[field + "_change"] = QtWidgets.QWidget()
+            method[field + "_change_layout"] = QtWidgets.QStackedLayout()
+            method[field + "_change"].setLayout(method[field + "_change_layout"])
+            self.ui["layout"].addWidget(
+                method[field + "_change"], len(self.ui["methods"]), column * 2 + 1
+            )
+
+            # Conversion method field - Edit button
+            method[field + "_change_start"] = IconButton(
+                QtGui.QIcon("assets/images/modify.png"), "", self.ui["main"]
+            )
+            method[field + "_change_start"].clicked.connect(
+                lambda a, field=field: self.on_click_field_change(
+                    field, method["model"].id
+                )
+            )
+            method[field + "_change_layout"].insertWidget(
+                0, method[field + "_change_start"]
+            )
+
+            # Conversion method field - Validate button
+            method[field + "_change_end"] = IconButton(
+                QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
+            )
+            method[field + "_change_end"].clicked.connect(
+                lambda a, field=field: self.on_validate_field_change(
+                    field, method["model"].id
+                )
+            )
+            method[field + "_change_layout"].insertWidget(
+                1, method[field + "_change_end"]
+            )
+
+        # Delete Conversion method
+        method["delete"] = IconButton(
+            QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
+        )
+        method["delete"].clicked.connect(
+            lambda a, method=method: self.on_click_delete_method(method["model"].id)
+        )
+        self.ui["layout"].addWidget(method["delete"], len(self.ui["methods"]), 8)
+
+    def on_click_field_change(self, field, method_id):
+        """Displays widgets to modify a given field the conversion method
+
+        Parameters
+        ----------
+        field : str
+            The field name to change (name, suffix or command)
+        method_id : int
+            The ID of the method whose name needs to change
+        """
+        method = self.ui["methods"][method_id]
+
+        # Update display
+        method[field + "_edit"].setText(getattr(method["model"], field))
+
+        # Make widgets visible
+        method[field + "_layout"].setCurrentIndex(1)
+        method[field + "_change_layout"].setCurrentIndex(1)
+
+    def on_validate_field_change(self, field, method_id):
+        """Saves the modified field in the conversion method
+
+        Parameters
+        ----------
+        field : str
+            The field name to validate (name, suffix or command)
+        method_id : int
+            The ID of the method whose name needs to change
+        """
+        method = self.ui["methods"][method_id]
+        # Save the change
+        try:
+            setattr(method["model"], field, method[field + "_edit"].text())
+            self.database.session.add(method["model"])
+            self.database.session.commit()
+            self.clear_error(method_id, field)
+        except ValidationException as error:
+            self.display_error(method["model"].id, field, error.message)
+            return
+
+        # Update display
+        method[field + "_label"].setText(getattr(method["model"], field))
+
+        # Make widgets visible
+        method[field + "_layout"].setCurrentIndex(0)
+        method[field + "_change_layout"].setCurrentIndex(0)
+
+    def on_click_new_method(self):
+        """Displays all the fields to create a new method"""
+
+        # Move the New button to another row
+        self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 2, 1)
+
+        # Remove all existing fields
+        if 0 in self.ui["methods"]:
+            method = self.ui["methods"][0]
+            if "error" in method:
+                for i in method["error"]:
+                    self.ui["layout"].removeWidget(method["error"][i])
+                    method["error"][i].deleteLater()
+                del method["error"]
+            for i in method:
+                self.ui["layout"].removeWidget(method[i])
+                method[i].deleteLater()
+            del self.ui["methods"][0]
+
+        # Basic structure
+        self.ui["methods"][0] = {}
+        method = self.ui["methods"][0]
+        method["error"] = {}
+
+        # Add all modifiable fields
+        for column, field in enumerate(["name", "suffix", "command"]):
+            method[field] = QtWidgets.QLineEdit()
+            self.ui["layout"].addWidget(
+                method[field], len(self.ui["methods"]), column * 2
+            )
+
+        # Validate button
+        method["validate_new"] = IconButton(
+            QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
+        )
+        method["validate_new"].clicked.connect(self.on_validate_new_method)
+        self.ui["layout"].addWidget(method["validate_new"], len(self.ui["methods"]), 7)
+
+    def on_validate_new_method(self):
+        """Saves a new conversion method"""
+        method = self.ui["methods"][0]
+
+        if not self.new_method:
+            self.new_method = models.conversionmethod.ConversionMethod()
+
+        # Clear previous errors
+        for i in method["error"]:
+            self.ui["layout"].removeWidget(method["error"][i])
+            method["error"][i].deleteLater()
+        method["error"] = {}
+
+        # Apply values in each field
+        for field in ["name", "suffix", "command"]:
+            try:
+                setattr(self.new_method, field, method[field].text())
+                self.clear_error(0, field)
+            except ValidationException as error:
+                self.display_error(0, field, error.message)
+
+        if method["error"]:
+            return
+
+        self.database.session.add(self.new_method)
+        self.database.session.commit()
+
+        # Remove all "new method" fields (error fields were removed before)
+        for field in ["name", "suffix", "command", "validate_new"]:
+            self.ui["layout"].removeWidget(method[field])
+            method[field].deleteLater()
+            del method[field]
+        del self.ui["methods"][0]
+
+        # Add fields for the newly created method (as "normal" fields)
+        self.add_method_ui(self.new_method)
+        self.refresh_display()
+        self.new_method = None
+
+        # Move the "add new" button
+        self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 1, 1)
+
+    def on_click_delete_method(self, method_id):
+        """Handler for delete button: deletes the method & refreshes the screen
+
+        Parameters
+        ----------
+        method_id : int
+            The ID of the method which should be deleted
+        """
+        dialog = QtWidgets.QMessageBox(self.ui["main"])
+        dialog.setWindowTitle(_("Please confirm"))
+        dialog.setText(_("Do you really want to delete this conversion method?"))
+        dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        dialog.setIcon(QtWidgets.QMessageBox.Warning)
+        button = dialog.exec()
+
+        if button == QtWidgets.QMessageBox.Yes:
+            method = self.ui["methods"][method_id]
+            self.database.delete(method["model"])
+            del method["model"]
+            # Delete all the corresponding fields
+            if "error" in method:
+                for i in method["error"]:
+                    self.ui["layout"].removeWidget(method["error"][i])
+                    method["error"][i].deleteLater()
+                del method["error"]
+            for i in method:
+                if "layout" not in i:
+                    self.ui["layout"].removeWidget(method[i])
+                    method[i].deleteLater()
+            del self.ui["methods"][method_id]
+
+    def display_error(self, method_id, field, message):
+        """Displays an error for the provided field
+
+        Parameters
+        ----------
+        method_id : int
+            The ID of the modified method (0 for new methods)
+        field : str
+            The name of the field for which to clear the error
+        message : str
+            The error to display
+        """
+        method = self.ui["methods"][method_id]
+        if field in method["error"]:
+            method["error"][field].setText(message)
+        else:
+            method["error"][field] = QtWidgets.QLabel(message)
+            method["error"][field].setProperty("class", "validation_error")
+            column = 0 if field == "name" else 2
+            row = (
+                len(self.ui["methods"])
+                if method_id == 0
+                else len([p for p in self.ui["methods"] if p <= method_id and p != 0])
+            )
+            self.ui["layout"].addWidget(
+                method["error"][field],
+                row,
+                column,
+                QtCore.Qt.AlignBottom,
+            )
+
+    def clear_error(self, method_id, field):
+        """Hides the error that was displayed for the provided field
+
+        Parameters
+        ----------
+        method_id : int
+            The ID of the modified method (0 for new methods)
+        field : str
+            The name of the field for which to clear the error
+        """
+        method = self.ui["methods"][method_id]
+        if field in method["error"]:
+            method["error"][field].setText("")
+
+    def refresh_display(self):
+        """Updates the methods names & paths displayed on screen"""
+
+        # Refresh list of methods
+        for method in self.ui["methods"].values():
+            for field in ["name", "suffix", "command"]:
+                method[field + "_label"].setText(getattr(method["model"], field))
+
+
+class SettingsController:
+    """Settings screen: Define locations for picture storage, Subsurface file, ...
+
+    Attributes
+    ----------
+    name : str
+        The name of this controller - displayed on top
+    parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
+        The window displaying this controller
+    ui : dict of QtWidgets.QWidget
+        The different widgets displayed on the screen
+
+    Properties
+    -------
+    display_widget
+        Returns the QtWidgets.QWidget for display of this screen
+    toolbar_button
+        Returns a QtWidgets.QAction for display in the main window toolbar
+
+    Methods
+    -------
+    __init__ (parent_window)
+        Stores reference to parent window & defines UI elements.
+    add_location_ui (location_model)
+        Adds the fields for the provided location
+    on_click_name_change
+        Displays fields to modify the location name
+    on_validate_name_change
+        Saves the storage location name
+    on_validate_path_change
+        Saves the storage location path
+    on_click_new_location
+        Displays all the fields to create a new location
+    on_validate_new_location
+        Saves a new location
+    refresh_display
+        Updates the locations names & paths displayed on screen
+    """
+
+    name = _("Settings")
+
+    def __init__(self, parent_window):
+        """Stores reference to parent window & defines UI elements
+
+        Parameters
+        ----------
+        parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
+            The window displaying this controller
+        """
+        self.parent_window = parent_window
+        self.database = parent_window.database
+        self.locations_list = LocationsList(self)
+        self.conversion_methods_list = ConversionMethodsList(self)
+        self.ui = {}
+        self.ui["main"] = QtWidgets.QWidget()
+        self.ui["layout"] = QtWidgets.QVBoxLayout()
+        self.ui["main"].setLayout(self.ui["layout"])
+
+        self.ui["layout"].addWidget(self.locations_list.display_widget)
+        self.ui["layout"].addWidget(self.conversion_methods_list.display_widget)
+
+    @property
+    def display_widget(self):
+        """Returns the QtWidgets.QWidget for display of this screen"""
+
+        return self.ui["main"]
+
     @property
     def toolbar_button(self):
         """Returns a QtWidgets.QAction for display in the main window toolbar"""
@@ -459,9 +895,5 @@ class SettingsController:
     def refresh_display(self):
         """Updates the locations names & paths displayed on screen"""
 
-        # Refresh list of locations
-        for location in self.ui["locations"].values():
-            location["name_label"].setText(location["model"].name)
-            location["name_edit"].setText(location["model"].name)
-            location["path"].setText(location["model"].path)
-            location["path_change"].target = location["model"].path
+        self.locations_list.refresh_display()
+        self.conversion_methods_list.refresh_display()
