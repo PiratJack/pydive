@@ -83,6 +83,7 @@ class SettingsController:
         )
 
         self.ui["locations"] = {}
+        # TODO: Display conversion methods & allow to create new ones
 
         self.new_location = None
 
@@ -145,7 +146,7 @@ class SettingsController:
         )
         # dlocation["name_change_start"].setMinimumWidth(100)
         location["name_change_start"].clicked.connect(
-            lambda: self.on_click_name_change(location.id)
+            lambda: self.on_click_name_change(location["model"].id)
         )
         location["name_change_layout"].insertWidget(0, location["name_change_start"])
 
@@ -154,7 +155,7 @@ class SettingsController:
             QtGui.QIcon("assets/images/done.png"), "", self.parent_window
         )
         location["name_change_end"].clicked.connect(
-            lambda: self.on_validate_name_change(location.id)
+            lambda: self.on_validate_name_change(location["model"].id)
         )
         location["name_change_layout"].insertWidget(1, location["name_change_end"])
 
@@ -169,7 +170,7 @@ class SettingsController:
         )
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(
-                location_model.id, a
+                location["model"].id, a
             )
         )
         self.ui["layout"].addWidget(
@@ -191,10 +192,14 @@ class SettingsController:
         """Saves the storage location name"""
         location = self.ui["locations"][location_id]
         # Save the change
-        location["model"].name = location["name_edit"].text()
-        self.database.session.add(location["model"])
-        self.database.session.commit()
-        # TODO: display errors if any
+        try:
+            location["model"].name = location["name_edit"].text()
+            self.database.session.add(location["model"])
+            self.database.session.commit()
+            self.clear_error(location_id, "name")
+        except ValidationException as error:
+            self.display_error(location["model"].id, "name", error.message)
+            return
 
         # Update display
         location["name_label"].setText(location["model"].name)
@@ -209,10 +214,14 @@ class SettingsController:
 
         # Save the change (for existing models)
         if location_id:
-            location["model"].path = path
-            self.database.session.add(location["model"])
-            self.database.session.commit()
-        # TODO: display errors if any
+            try:
+                location["model"].path = path
+                self.database.session.add(location["model"])
+                self.database.session.commit()
+                self.clear_error(location_id, "path")
+            except ValidationException as error:
+                self.display_error(location["model"].id, "path", error.message)
+                return
 
         # Update display
         location["path"].setText(path)
@@ -226,6 +235,18 @@ class SettingsController:
         )
 
         # Create fields for new location
+        if 0 in self.ui["locations"]:
+            location = self.ui["locations"][0]
+            if "error" in location:
+                for i in location["error"]:
+                    self.ui["layout"].removeWidget(location["error"][i])
+                    location["error"][i].deleteLater()
+                del location["error"]
+            for i in location:
+                self.ui["layout"].removeWidget(location[i])
+                location[i].deleteLater()
+            del self.ui["locations"][0]
+
         self.ui["locations"][0] = {}
         location = self.ui["locations"][0]
         location["error"] = {}
@@ -277,16 +298,9 @@ class SettingsController:
         for field in ["name", "path"]:
             try:
                 setattr(self.new_location, field, location[field].text())
+                self.clear_error(0, field)
             except ValidationException as error:
-                location["error"][field] = QtWidgets.QLabel(error.message)
-                location["error"][field].setProperty("class", "validation_error")
-                column = 0 if field == "name" else 2
-                self.ui["layout"].addWidget(
-                    location["error"][field],
-                    len(self.ui["locations"]),
-                    column,
-                    QtCore.Qt.AlignBottom,
-                )
+                self.display_error(0, field, error.message)
 
         if location["error"]:
             return
@@ -310,7 +324,6 @@ class SettingsController:
         del self.ui["locations"][0]
 
         # Add fields for the newly created location (as "normal" fields)
-        print(self.new_location)
         self.add_location_ui(self.new_location)
         self.refresh_display()
         self.new_location = None
@@ -319,6 +332,53 @@ class SettingsController:
         self.ui["layout"].addWidget(
             self.ui["add_new"], len(self.ui["locations"]) + 1, 1
         )
+
+    def display_error(self, location_id, field, message):
+        """Displays an error for the provided field
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the modified location (0 for new locations)
+        field : str
+            The name of the field for which to clear the error
+        message : str
+            The error to display
+        """
+        location = self.ui["locations"][location_id]
+        if field in location["error"]:
+            location["error"][field].setText(message)
+        else:
+            location["error"][field] = QtWidgets.QLabel(message)
+            location["error"][field].setProperty("class", "validation_error")
+            column = 0 if field == "name" else 2
+            row = (
+                len(self.ui["locations"])
+                if location_id == 0
+                else len(
+                    [p for p in self.ui["locations"] if p <= location_id and p != 0]
+                )
+            )
+            self.ui["layout"].addWidget(
+                location["error"][field],
+                row,
+                column,
+                QtCore.Qt.AlignBottom,
+            )
+
+    def clear_error(self, location_id, field):
+        """Hides the error that was displayed for the provided field
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the modified location (0 for new locations)
+        field : str
+            The name of the field for which to clear the error
+        """
+        location = self.ui["locations"][location_id]
+        if field in location["error"]:
+            location["error"][field].setText("")
 
     @property
     def toolbar_button(self):
