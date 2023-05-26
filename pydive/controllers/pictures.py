@@ -10,6 +10,7 @@ PicturesController
 """
 import gettext
 import os
+import shutil
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
@@ -144,18 +145,19 @@ class PictureGrid:
         self.picture_group = picture_group
 
         # Include locations for existing pictures
-        # "" is added for header column
-        rows = [""] + list(picture_group.locations.keys())
+        rows = list(picture_group.locations.keys())
         # Add all locations from DB
         rows = rows + [l.name for l in self.database.storagelocations_get_folders()]
-        rows = sorted(set(rows))
+        # "" is added for header column
+        rows = [""] + sorted(set(rows))
 
         # Include conversion types for existing pictures
-        # "" is added for RAW files & header row
-        columns = ["", ""] + list(picture_group.pictures.keys())
+        # "" is added for RAW files
+        columns = [""] + list(picture_group.pictures.keys())
         # Add conversion types based on conversion methods
         columns = columns + [m.suffix for m in self.database.conversionmethods_get()]
-        columns = sorted(set(columns))
+        # "" is added for header row
+        columns = [""] + sorted(set(columns))
 
         # Add row & column headers
         self.grid.append([])
@@ -171,6 +173,7 @@ class PictureGrid:
                 continue
             self.grid.append([QtWidgets.QLabel(location_name)])
 
+        # Add the images themselves
         for column, conversion_type in enumerate(columns):
             for row, location_name in enumerate(rows):
                 if column == 0 or row == 0:
@@ -178,11 +181,11 @@ class PictureGrid:
                     self.grid[row][column].setProperty("class", "grid_header")
                     continue
 
-                picture_container = PictureContainer(self, row, column)
+                picture_container = PictureContainer(self, row, column, picture_group)
 
                 # No picture at all for this conversion type
                 if conversion_type not in picture_group.pictures:
-                    picture_container.set_image_path()
+                    picture_container.set_empty_picture()
                 else:
                     picture = [
                         p
@@ -190,11 +193,11 @@ class PictureGrid:
                         if p.location_name == location_name
                     ]
                     if not picture:
-                        picture_container.set_image_path()
+                        picture_container.set_empty_picture()
                     else:
                         # Assumption: for a given group, location and conversion type, there is a single picture
                         picture = picture[0]
-                        picture_container.set_image_path(picture.path)
+                        picture_container.set_picture(picture)
 
                 if row not in self.picture_containers:
                     self.picture_containers[row] = {}
@@ -237,9 +240,9 @@ class PictureGrid:
 
         # Identify the target folder
         target_location_name = self.grid[row][0].text()
-        locations = self.database.storagelocations_get_folders()
-        # There will always be only 1
-        target_location = [l for l in locations if l.name == target_location_name][0]
+        target_location = self.database.storagelocation_get_by_name(
+            target_location_name
+        )
         parameters["target_folder"] = target_location.path
 
         # Identify the source picture
@@ -279,16 +282,52 @@ class PictureGrid:
         self.repository.add_picture(self.picture_group, target_location, target_file)
         self.display_picture_group(self.picture_group)
 
+    def copy_image(self, row, column):
+        # Find other images in the same column
+        source_picture = None
+        for i in self.picture_containers.values():
+            if i[column].picture:
+                source_picture = i[column].picture
+                break
+        if not source_picture:
+            self.picture_containers[row][column].display_error(
+                _("No source image found")
+            )
+            return
+
+        # Identify the target folder
+        target_location_name = self.grid[row][0].text()
+        target_location = self.database.storagelocation_get_by_name(
+            target_location_name
+        )
+
+        target_path = os.path.join(
+            target_location.path,
+            self.picture_group.trip,
+            os.path.basename(source_picture.path),
+        )
+
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+        # TODO: Put that in QProcess & process asynchronously
+        shutil.copy2(source_picture.path, target_path)
+
+        # Add our new picture to the repository (& the picture group)
+        self.repository.add_picture(self.picture_group, target_location, target_path)
+        self.display_picture_group(self.picture_group)
+
     @property
     def display_widget(self):
         return self.ui["main"]
 
 
 class PictureContainer:
-    def __init__(self, parent_controller, row, column):
+    def __init__(self, parent_controller, row, column, picture_group):
         self.parent_controller = parent_controller
         self.row = row
         self.column = column
+        self.picture = None
+        self.picture_group = picture_group
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QVBoxLayout()
@@ -296,8 +335,30 @@ class PictureContainer:
         self.ui["elements"] = {}
         self.image_path = ""
 
-    def set_image_path(self, path=None):
-        self.image_path = path
+    def set_empty_picture(self):
+        self.clear_display()
+        self.picture = None
+
+        self.ui["elements"]["label"] = QtWidgets.QLabel(_("No image"))
+        self.ui["elements"]["label"].setProperty("class", "small_note")
+        self.ui["layout"].addWidget(self.ui["elements"]["label"])
+
+        # Generate image from RAW file
+        self.ui["elements"]["generate"] = QtWidgets.QPushButton(_("Generate"))
+        # I have no idea why I had to use a lambda here, but it works...
+        self.ui["elements"]["generate"].clicked.connect(
+            lambda: self.on_click_generate()
+        )
+        self.ui["layout"].addWidget(self.ui["elements"]["generate"])
+
+        # Copy image from another location
+        self.ui["elements"]["copy"] = QtWidgets.QPushButton(_("Copy image here"))
+        self.ui["elements"]["copy"].clicked.connect(self.on_click_copy)
+        self.ui["layout"].addWidget(self.ui["elements"]["copy"])
+
+    def set_picture(self, picture):
+        self.clear_display()
+        self.picture = picture
 
         # Clean existing elements
         for i in ["label", "generate", "image", "delete"]:
@@ -306,41 +367,33 @@ class PictureContainer:
                 self.ui["layout"].removeWidget(self.ui["elements"][i])
                 del self.ui["elements"][i]
 
-        # No image ==> display that information
-        if not path:
-            self.ui["elements"]["label"] = QtWidgets.QLabel(_("No image"))
+        pixmap = QtGui.QPixmap(self.picture.path)
+        # Image exists and can be read by PyQt5
+        if pixmap.width() > 0:
+            self.ui["elements"]["image"] = PictureDisplay()
+            self.ui["elements"]["image"].image_path = self.picture.path
+            self.ui["elements"]["image"].setPixmap(pixmap)
+            self.ui["layout"].addWidget(self.ui["elements"]["image"])
+
+            # Delete button
+            # TODO: Ensure delete button is next to image (by default the image takes all the vertical space)
+            self.ui["elements"]["delete"] = QtWidgets.QPushButton(
+                QtGui.QIcon("assets/images/delete.png"), ""
+            )
+            self.ui["elements"]["delete"].clicked.connect(
+                lambda: self.on_click_delete()
+            )
+            self.ui["layout"].addWidget(self.ui["elements"]["delete"])
+        else:
+            self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
             self.ui["elements"]["label"].setProperty("class", "small_note")
             self.ui["layout"].addWidget(self.ui["elements"]["label"])
 
-            self.ui["elements"]["generate"] = QtWidgets.QPushButton(_("Generate"))
-            # I have no idea why I had to use a lambda here, but it works...
-            self.ui["elements"]["generate"].clicked.connect(lambda: self.generate())
-            self.ui["layout"].addWidget(self.ui["elements"]["generate"])
-        else:
-            pixmap = QtGui.QPixmap(self.image_path)
-            # Image exists and can be read by PyQt5
-            if pixmap.width() > 0:
-                self.ui["elements"]["image"] = PictureDisplay()
-                self.ui["elements"]["image"].image_path = self.image_path
-                self.ui["elements"]["image"].setPixmap(pixmap)
-                self.ui["layout"].addWidget(self.ui["elements"]["image"])
-
-                # Delete button
-                # TODO: Ensure delete button is next to image (by default the image takes all the vertical space)
-                self.ui["elements"]["delete"] = QtWidgets.QPushButton(
-                    QtGui.QIcon("assets/images/delete.png"), ""
-                )
-                self.ui["elements"]["delete"].clicked.connect(
-                    lambda: self.on_click_delete()
-                )
-                self.ui["layout"].addWidget(self.ui["elements"]["delete"])
-            else:
-                self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
-                self.ui["elements"]["label"].setProperty("class", "small_note")
-                self.ui["layout"].addWidget(self.ui["elements"]["label"])
-
-    def generate(self):
+    def on_click_generate(self):
         self.parent_controller.generate_image(self.row, self.column)
+
+    def on_click_copy(self):
+        self.parent_controller.copy_image(self.row, self.column)
 
     def on_click_delete(self):
         dialog = QtWidgets.QMessageBox(self.ui["main"])
@@ -351,8 +404,8 @@ class PictureContainer:
         button = dialog.exec()
 
         if button == QtWidgets.QMessageBox.Yes:
-            os.unlink(self.image_path)
-            self.set_image_path()
+            os.unlink(self.picture.path)
+            self.set_empty_picture()
 
     def display_error(self, message):
         if "error" not in self.ui["elements"]:
@@ -360,6 +413,12 @@ class PictureContainer:
             self.ui["elements"]["error"].setProperty("class", "validation_warning")
             self.ui["layout"].addWidget(self.ui["elements"]["error"])
         self.ui["elements"]["error"].setText(message)
+
+    def clear_display(self):
+        for i in self.ui["elements"]:
+            self.ui["elements"][i].deleteLater()
+            self.ui["layout"].removeWidget(self.ui["elements"][i])
+        self.ui["elements"] = {}
 
     @property
     def display_widget(self):
@@ -372,9 +431,6 @@ class PictureDisplay(QtWidgets.QLabel):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if self.pixmap() and self.pixmap().height():
-            ratio = self.pixmap().width() / self.pixmap().height()
-            width = int(min(self.width(), self.height() * ratio))
-            height = int(min(self.height(), self.width() / ratio))
             self.pixmap().swap(
                 QtGui.QPixmap(self.image_path).scaled(
                     self.width(), self.height(), Qt.KeepAspectRatio
