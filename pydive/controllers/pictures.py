@@ -26,34 +26,27 @@ class PicturesTree(BaseTreeWidget):
 
     Attributes
     ----------
-    name : str
-        The name of this controller - displayed on top
-    parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
-        The window displaying this controller
+    columns : dict
+        The columns to display in the tree
+    parent_controller : PicturesController
+        A reference to the parent controller
     repository: models.repository.Repository
-        A reference to the picture repository
-    ui : dict of QtWidgets.QWidget
-        The different widgets displayed on the screen
-
-    Properties
-    -------
-    display_widget
-        Returns the QtWidgets.QWidget for display of this screen
-    toolbar_button
-        Returns a QtWidgets.QAction for display in the main window toolbar
+        This program's picture repository
 
     Methods
     -------
-    __init__ (parent_window)
-        Stores reference to parent window & defines UI elements.
+    __init__ (parent_controller, repository)
+        Stores reference to parent controller & repository + sets up event handlers
+    set_folders (folders)
+        Defines which folders to display
     fill_tree
         Adds all trips & pictures to the tree
-    add_trip
+    add_trip (trip)
         Adds a single trip to the tree
-    add_picture_group
+    add_picture_group (trip_widget, picture_group)
         Adds a single picture group to the tree
-    refresh_display
-        Reloads the paths displayed in the UI
+    on_item_clicked (item)
+        Item clicked ==> display corresponding images
     """
 
     columns = [
@@ -65,12 +58,29 @@ class PicturesTree(BaseTreeWidget):
     ]
 
     def __init__(self, parent_controller, repository):
+        """Stores reference to parent controller & repository + sets up event handlers
+
+        Parameters
+        ----------
+        parent_controller : PicturesController
+            A reference to the parent controller
+        repository : models.repository.Repository
+            A reference to the picture repository
+        """
+
         super().__init__(parent_controller)
         self.parent_controller = parent_controller
         self.repository = repository
         self.itemClicked.connect(self.on_item_clicked)
 
     def set_folders(self, folders):
+        """Defines which folders to display
+
+        Parameters
+        ----------
+        folders : list of models.storagelocations.StorageLocations
+            The list of folders to display as columns in the tree
+        """
         self.columns = [self.columns[0]]
         for folder in folders:
             self.columns.append(
@@ -87,14 +97,20 @@ class PicturesTree(BaseTreeWidget):
 
     def fill_tree(self):
         """Adds all trips & pictures to the tree"""
-        self.clear()
+        self.clear_display()
         for trip, picture_groups in self.repository.trips.items():
             trip_widget = self.add_trip(trip)
             for picture_group in picture_groups.values():
                 self.add_picture_group(trip_widget, picture_group)
 
     def add_trip(self, trip):
-        """Adds a single trip to the tree"""
+        """Adds a single trip to the tree
+
+        Parameters
+        ----------
+        trip : str
+            Name of the trip
+        """
         data = [trip]
         trip_widget = QtWidgets.QTreeWidgetItem(data)
         self.addTopLevelItem(trip_widget)
@@ -105,7 +121,15 @@ class PicturesTree(BaseTreeWidget):
         return trip_widget
 
     def add_picture_group(self, trip_widget, picture_group):
-        """Adds a single picture group to the tree"""
+        """Adds a single picture group to the tree
+
+        Parameters
+        ----------
+        trip_widget : QtWidgets.QTreeWidgetItem
+            The widget in which to add the picture group
+        picture_group : models.picturegroup.PictureGroup
+            The picture group to add to the tree
+        """
         data = [picture_group.name]
         for column in self.columns[1:]:
             data.append(str(picture_group.locations.get(column["name"], 0)))
@@ -113,6 +137,12 @@ class PicturesTree(BaseTreeWidget):
         trip_widget.addChild(picture_group_widget)
 
     def on_item_clicked(self, item):
+        """Item clicked ==> display corresponding images
+
+        Parameters
+        ----------
+        item : QtWidgets.QTreeWidgetItem
+            The item that was clicked"""
         # Exclude clicks on trips
         if not item.parent():
             return
@@ -126,7 +156,51 @@ class PicturesTree(BaseTreeWidget):
 
 
 class PictureGrid:
+    """Displays all pictures of a given group in a grid format
+
+    Attributes
+    ----------
+    parent_controller : PicturesController
+        A reference to the parent controller
+    database : models.database.Database
+        This program's database
+    repository: models.repository.Repository
+        This program's picture repository
+    picture_group : models.picturegroup.PictureGroup
+        The group of pictures to display
+    grid : dict of dict of QtWidgets.QLabel or QtWidgets.QWidget
+        The different headers & images to display
+    picture_containers : dict of dict of PictureContainer
+        The container for picture display
+    ui : dict of QtWidgets.QWidget
+        The different widgets displayed on the screen
+
+    Properties
+    -------
+    display_widget
+        Returns the QtWidgets.QWidget for display of this screen
+
+    Methods
+    -------
+    __init__ (parent_controller)
+        Stores reference to parent controller + initializes the display
+    display_picture_group (picture_group)
+        Displays the provided picture group in the grid
+    clear_display
+        Removes all widgets from the display & deletes them properly
+    generate_image (row, column)
+        Generates an image for the provided row & column
+    copy_image (row, column)
+        Copies an image to the provided row & column
+    """
+
     def __init__(self, parent_controller):
+        """Stores reference to parent controller + initializes the display
+
+        Parameters
+        ----------
+        parent_controller : PicturesController
+            A reference to the parent controller"""
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.repository = parent_controller.repository
@@ -140,8 +214,16 @@ class PictureGrid:
         self.ui["main"].setLayout(self.ui["layout"])
 
     def display_picture_group(self, picture_group):
+        """Displays the provided picture group in the grid
+
+        Also fills in self.grid and self.picture_containers
+
+        Parameters
+        ----------
+        picture_group : models.picturegroup.PictureGroup
+            The group of pictures to display"""
         # TODO: Allow to filter which pictures to display (via checkbox)
-        self.clear()
+        self.clear_display()
         self.picture_group = picture_group
 
         # Include locations for existing pictures
@@ -181,7 +263,7 @@ class PictureGrid:
                     self.grid[row][column].setProperty("class", "grid_header")
                     continue
 
-                picture_container = PictureContainer(self, row, column, picture_group)
+                picture_container = PictureContainer(self, row, column)
 
                 # No picture at all for this conversion type
                 if conversion_type not in picture_group.pictures:
@@ -206,8 +288,8 @@ class PictureGrid:
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
 
-    def clear(self):
-        """Clears the display"""
+    def clear_display(self):
+        """Removes all widgets from the display & deletes them properly"""
         for row in self.grid:
             for element in row:
                 if type(element) == PictureContainer:
@@ -223,6 +305,15 @@ class PictureGrid:
         self.picture_group = None
 
     def generate_image(self, row, column):
+        """Generates an image for the provided row & column
+
+        Parameters
+        ----------
+        row : int
+            The row in which to generate the image
+        column : int
+            The column in which to generate the image"""
+
         parameters = {
             "command": "",
             "source_file": "",
@@ -230,7 +321,7 @@ class PictureGrid:
             "target_file": "",
         }
 
-        # Find RAW source image
+        # Find raw source image
         if not "" in self.picture_group.pictures:
             self.picture_containers[row][column].display_error(
                 _("No source image available for generation")
@@ -283,6 +374,14 @@ class PictureGrid:
         self.display_picture_group(self.picture_group)
 
     def copy_image(self, row, column):
+        """Copies an image to the provided row & column
+
+        Parameters
+        ----------
+        row : int
+            The row in which to copy the image
+        column : int
+            The column in which to copy the image"""
         # Find other images in the same column
         source_picture = None
         for i in self.picture_containers.values():
@@ -318,24 +417,74 @@ class PictureGrid:
 
     @property
     def display_widget(self):
+        """Returns the QtWidgets.QWidget for display of this screen"""
         return self.ui["main"]
 
 
 class PictureContainer:
-    def __init__(self, parent_controller, row, column, picture_group):
+    """Displays a single image as well as the related action buttons
+
+    Attributes
+    ----------
+    parent_controller : PicturesController
+        A reference to the parent controller
+    row : int
+        The row where the picture should be displayed
+    column: int
+        The row where the picture should be displayed
+    picture : models.picture.Picture
+        The picture to display
+    ui : dict of QtWidgets.QWidget
+        The different widgets displayed on the screen
+
+    Properties
+    -------
+    display_widget
+        Returns the QtWidgets.QWidget for display of this screen
+
+    Methods
+    -------
+    __init__ (parent_controller, row, column)
+        Stores reference to parent controller + initializes the display
+    set_empty_picture
+        Defines which folders to display
+    set_picture (picture)
+        Adds all trips & pictures to the tree
+    on_click_generate
+        Handler for generate button: triggers parent's handler
+    on_click_copy
+        Handler for copy button: triggers parent's handler
+    on_click_delete
+        Handler for delete button: deletes the image & refreshes the screen
+    display_error (message)
+        Displays the provided error message
+    clear_display
+        Removes all widgets from the display & deletes them properly
+    """
+
+    def __init__(self, parent_controller, row, column):
+        """Stores reference to parent controller + initializes the display
+
+        Parameters
+        ----------
+        parent_controller : PicturesController
+            A reference to the parent controller
+        row : int
+            The row where the picture should be displayed
+        column: int
+            The row where the picture should be displayed"""
         self.parent_controller = parent_controller
         self.row = row
         self.column = column
         self.picture = None
-        self.picture_group = picture_group
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.ui["main"].setLayout(self.ui["layout"])
         self.ui["elements"] = {}
-        self.image_path = ""
 
     def set_empty_picture(self):
+        """Displays an empty image as well as action buttons"""
         self.clear_display()
         self.picture = None
 
@@ -357,6 +506,13 @@ class PictureContainer:
         self.ui["layout"].addWidget(self.ui["elements"]["copy"])
 
     def set_picture(self, picture):
+        """Displays the provided picture as well as action buttons
+
+        Parameters
+        ----------
+        picture : models.picture.Picture
+            The picture to display
+        """
         self.clear_display()
         self.picture = picture
 
@@ -390,12 +546,15 @@ class PictureContainer:
             self.ui["layout"].addWidget(self.ui["elements"]["label"])
 
     def on_click_generate(self):
+        """Handler for generate button: triggers parent's handler"""
         self.parent_controller.generate_image(self.row, self.column)
 
     def on_click_copy(self):
+        """Handler for copy button: triggers parent's handler"""
         self.parent_controller.copy_image(self.row, self.column)
 
     def on_click_delete(self):
+        """Handler for delete button: deletes the image & refreshes the screen"""
         dialog = QtWidgets.QMessageBox(self.ui["main"])
         dialog.setWindowTitle("Please confirm")
         dialog.setText("Do you really want to delete this image?")
@@ -408,6 +567,13 @@ class PictureContainer:
             self.set_empty_picture()
 
     def display_error(self, message):
+        """Displays the provided error message
+
+        Parameters
+        ----------
+        message : str
+            The message to display
+        """
         if "error" not in self.ui["elements"]:
             self.ui["elements"]["error"] = QtWidgets.QLabel(message)
             self.ui["elements"]["error"].setProperty("class", "validation_warning")
@@ -415,6 +581,7 @@ class PictureContainer:
         self.ui["elements"]["error"].setText(message)
 
     def clear_display(self):
+        """Removes all widgets from the display & deletes them properly"""
         for i in self.ui["elements"]:
             self.ui["elements"][i].deleteLater()
             self.ui["layout"].removeWidget(self.ui["elements"][i])
@@ -428,7 +595,22 @@ class PictureContainer:
 
 
 class PictureDisplay(QtWidgets.QLabel):
+    """Displays a single image while preserving aspect ratio when resizing
+
+    Methods
+    -------
+    resizeEvent (event)
+        Overloaded method to keep aspect ratio on images
+    """
+
     def resizeEvent(self, event):
+        """Overloaded method to keep aspect ratio on images
+
+        Parameters
+        ----------
+        event : QResizeEvent
+            The resize event
+        """
         super().resizeEvent(event)
         if self.pixmap() and self.pixmap().height():
             self.pixmap().swap(
@@ -447,8 +629,10 @@ class PicturesController:
         The name of this controller - displayed on top
     parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
         The window displaying this controller
+    database : models.database.Database
+        This program's database
     repository: models.repository.Repository
-        A reference to the picture repository
+        This program's picture repository
     ui : dict of QtWidgets.QWidget
         The different widgets displayed on the screen
 
@@ -469,6 +653,8 @@ class PicturesController:
         Reloads the paths displayed at the top left
     refresh_display
         Reloads the UI
+    display_picture_group
+        Displays a given picture group
     """
 
     name = _("Pictures")
@@ -522,7 +708,6 @@ class PicturesController:
         self.ui["pictures"] = PictureGrid(self)
         self.ui["right_layout"].addWidget(self.ui["pictures"].display_widget)
 
-        # TODO: Allow to transfer images between folders
         # TODO: display loading status for background tasks
 
     @property
