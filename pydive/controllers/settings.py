@@ -183,6 +183,17 @@ class SettingsController:
             location["path_change"], len(self.ui["locations"]), 3
         )
 
+        # Delete location
+        location["delete"] = IconButton(
+            QtGui.QIcon("assets/images/delete.png"), "", self.parent_window
+        )
+        location["delete"].clicked.connect(
+            lambda a, location=location: self.on_click_delete_location(
+                location["model"].id
+            )
+        )
+        self.ui["layout"].addWidget(location["delete"], len(self.ui["locations"]), 4)
+
     def on_click_name_change(self, location_id):
         """Displays fields to modify the location name
 
@@ -356,6 +367,37 @@ class SettingsController:
         self.ui["layout"].addWidget(
             self.ui["add_new"], len(self.ui["locations"]) + 1, 1
         )
+
+    def on_click_delete_location(self, location_id):
+        """Handler for delete button: deletes the location & refreshes the screen
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the location which should be deleted
+        """
+        dialog = QtWidgets.QMessageBox(self.ui["main"])
+        dialog.setWindowTitle("Please confirm")
+        dialog.setText("Do you really want to delete this storage location?")
+        dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        dialog.setIcon(QtWidgets.QMessageBox.Warning)
+        button = dialog.exec()
+
+        if button == QtWidgets.QMessageBox.Yes:
+            location = self.ui["locations"][location_id]
+            self.database.delete(location["model"])
+            del location["model"]
+            # Delete all the corresponding fields
+            if "error" in location:
+                for i in location["error"]:
+                    self.ui["layout"].removeWidget(location["error"][i])
+                    location["error"][i].deleteLater()
+                del location["error"]
+            for i in location:
+                if "layout" not in i:
+                    self.ui["layout"].removeWidget(location[i])
+                    location[i].deleteLater()
+            del self.ui["locations"][location_id]
 
     def display_error(self, location_id, field, message):
         """Displays an error for the provided field
