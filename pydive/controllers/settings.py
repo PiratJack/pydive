@@ -59,7 +59,7 @@ class SettingsController:
     name = _("Settings")
 
     def __init__(self, parent_window):
-        """Stores reference to parent window & defines UI elements.
+        """Stores reference to parent window & defines UI elements
 
         Parameters
         ----------
@@ -109,7 +109,13 @@ class SettingsController:
         return self.ui["main"]
 
     def add_location_ui(self, location_model):
-        """Adds the fields for the provided location"""
+        """Adds the fields for the provided location
+
+        Parameters
+        ----------
+        location_model : models.storagelocation.StorageLocation
+            The storage location to display
+        """
         self.ui["locations"][location_model.id] = {}
         location = self.ui["locations"][location_model.id]
         location["model"] = location_model
@@ -178,7 +184,13 @@ class SettingsController:
         )
 
     def on_click_name_change(self, location_id):
-        """Displays fields to modify the location name"""
+        """Displays fields to modify the location name
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the location whose name needs to change
+        """
         location = self.ui["locations"][location_id]
 
         # Update display
@@ -189,7 +201,13 @@ class SettingsController:
         location["name_change_layout"].setCurrentIndex(1)
 
     def on_validate_name_change(self, location_id):
-        """Saves the storage location name"""
+        """Saves the storage location name
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the location whose name needs to change
+        """
         location = self.ui["locations"][location_id]
         # Save the change
         try:
@@ -209,7 +227,13 @@ class SettingsController:
         location["name_change_layout"].setCurrentIndex(0)
 
     def on_validate_path_change(self, location_id, path):
-        """Saves the storage location path"""
+        """Saves the storage location path
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the location whose path needs to change
+        """
         location = self.ui["locations"][location_id]
 
         # Save the change (for existing models)
