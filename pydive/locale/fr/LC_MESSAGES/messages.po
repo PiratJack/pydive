@@ -26,6 +26,17 @@ msgstr "Gestion de plongées"
 msgid "Do you really want to delete this conversion method?"
 msgstr "Voulez-vous vraiment supprimer cette méthode de conversion?"
 
+msgid ""
+"Enter the command to run to generate the target file (from a raw file)\n"
+"%SOURCE_FILE% will be replaced by the source file's full path\n"
+"%TARGET_FILE% will be replaced by the target file's full path\n"
+"%TARGET_FOLDER% will be replaced by the target file's folder path"
+msgstr ""
+"Entrez la commande à utiliser pour générer le fichier cible à partir d'un fichier brut\n"
+"%SOURCE_FILE% sera remplacé par le chemin complet du fichier source\n"
+"%TARGET_FILE% sera remplacé par le chemin complet du fichier cible\n"
+"%TARGET_FOLDER% sera remplacé par le chemin complet du dossier cible"
+
 msgid "File name suffix"
 msgstr "Suffixe de nom de fichier"
 

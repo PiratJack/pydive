@@ -13,6 +13,13 @@ msgstr ""
 msgid "Do you really want to delete this conversion method?"
 msgstr ""
 
+msgid ""
+"Enter the command to run to generate the target file (from a raw file)\n"
+"%SOURCE_FILE% will be replaced by the source file's full path\n"
+"%TARGET_FILE% will be replaced by the target file's full path\n"
+"%TARGET_FOLDER% will be replaced by the target file's folder path"
+msgstr ""
+
 msgid "File name suffix"
 msgstr ""
 
