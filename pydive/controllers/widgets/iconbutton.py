@@ -16,7 +16,6 @@ class IconButton(QtWidgets.QPushButton):
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
         self.setSizePolicy(sizePolicy)
-        self.setProperty("class", "imagebutton")
 
     def paintEvent(self, event):
 
