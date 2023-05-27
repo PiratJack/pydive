@@ -571,7 +571,6 @@ class PictureContainer:
             self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
             self.ui["elements"]["label"].setProperty("class", "small_note")
             self.ui["layout"].addWidget(self.ui["elements"]["label"])
-            # TODO: Image unreadable > Add generate + copy buttons
 
     def on_click_generate(self):
         """Handler for generate button: triggers parent's handler"""
