@@ -150,6 +150,11 @@ class TestRepository(unittest.TestCase):
             + "Temporary/Malta/IMG001.CR2')",
             "String representation of a picture: name, trip, folder name, path",
         )
+        self.assertEqual(
+            picture.filename,
+            "IMG001.CR2",
+            "Picture file name",
+        )
 
         with self.assertRaises(StorageLocationCollision):
             repository.load_pictures({"Used path": BASE_FOLDER + "Temporary/Malta"})

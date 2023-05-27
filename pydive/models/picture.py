@@ -28,6 +28,7 @@ class Picture:
                 self.trip = self.trip[1:]
             self.location_name = location_name
             self.name = os.path.basename(path).rsplit(".", 1)[-2]
+            self.filename = os.path.basename(path)
         else:
             raise StorageLocationCollision("recognition failed", path)
 
