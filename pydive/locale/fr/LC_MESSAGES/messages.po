@@ -11,8 +11,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.3.1\n"
 
-msgid "Change"
-msgstr "Modifier"
+msgid "Command to execute"
+msgstr "Commande à exécuter"
+
+msgid "Conversion methods"
+msgstr "Méthode de conversion"
 
 msgid "Copy image here"
 msgstr "Copier l'image ici"
@@ -20,11 +23,20 @@ msgstr "Copier l'image ici"
 msgid "Dive management"
 msgstr "Gestion de plongées"
 
+msgid "Do you really want to delete this conversion method?"
+msgstr "Voulez-vous vraiment supprimer cette méthode de conversion?"
+
+msgid "File name suffix"
+msgstr "Suffixe de nom de fichier"
+
 msgid "Generate"
 msgstr "Générer"
 
 msgid "ID"
 msgstr "ID"
+
+msgid "Image storage locations"
+msgstr "Lieu de stockage d'images"
 
 msgid "Image unreadable"
 msgstr "Image non lisible"
@@ -70,8 +82,14 @@ msgstr "Pas d'image source disponible"
 msgid "Organize pictures"
 msgstr "Organiser les photos"
 
+msgid "Path"
+msgstr "Chemin"
+
 msgid "Pictures"
 msgstr "Photos"
+
+msgid "Please confirm"
+msgstr "Veuillez confirmer"
 
 msgid "Settings"
 msgstr "Paramètres"
@@ -81,6 +99,9 @@ msgstr "Le type de lieu de stockage est invalide"
 
 #~ msgid "Archives"
 #~ msgstr "Archives"
+
+#~ msgid "Change"
+#~ msgstr "Modifier"
 
 #~ msgid "SD Card"
 #~ msgstr "Carte SD"

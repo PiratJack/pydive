@@ -1,4 +1,7 @@
-msgid "Change"
+msgid "Command to execute"
+msgstr ""
+
+msgid "Conversion methods"
 msgstr ""
 
 msgid "Copy image here"
@@ -7,10 +10,19 @@ msgstr ""
 msgid "Dive management"
 msgstr ""
 
+msgid "Do you really want to delete this conversion method?"
+msgstr ""
+
+msgid "File name suffix"
+msgstr ""
+
 msgid "Generate"
 msgstr ""
 
 msgid "ID"
+msgstr ""
+
+msgid "Image storage locations"
 msgstr ""
 
 msgid "Image unreadable"
@@ -57,7 +69,13 @@ msgstr ""
 msgid "Organize pictures"
 msgstr ""
 
+msgid "Path"
+msgstr ""
+
 msgid "Pictures"
+msgstr ""
+
+msgid "Please confirm"
 msgstr ""
 
 msgid "Settings"
