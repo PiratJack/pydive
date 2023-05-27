@@ -202,6 +202,19 @@ class TestRepository(unittest.TestCase):
             test_name,
         )
 
+        test_name = "Add new image to existing group"
+        new_image_path = BASE_FOLDER + "Temporary/Malta/IMG002_DT.jpg"
+        self.all_files.append(new_image_path)
+        open(new_image_path, "w").close()
+
+        picture_group = repository.trips["Malta"]["IMG002"]
+        location = [loc for loc in storage_locations if loc.name == "Temporary"][0]
+        repository.add_picture(picture_group, location, new_image_path)
+
+        self.assertIn("DT", picture_group.pictures, test_name)
+        new_picture = picture_group.pictures["DT"][0]
+        self.assertEqual(new_picture.path, new_image_path, test_name)
+
     def test_group_name_change(self):
         # Load the pictures
         storage_locations = self.database.storagelocations_get_folders()
