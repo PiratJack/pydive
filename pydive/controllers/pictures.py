@@ -159,7 +159,6 @@ class PicturesTree(BaseTreeWidget):
         #  Moves the image in the right folder
         #  Updates the image's trip + moves it to the right picture_group
         #  Refresh the tree (ideally only what changed, but most likely this won't be possible
-        # TODO: Image group > Hover > Display the different types of images available
 
     def on_item_clicked(self, item):
         """Item clicked ==> display corresponding images
@@ -542,11 +541,14 @@ class PictureContainer:
         self.picture = picture
 
         # Clean existing elements
-        for i in ["label", "generate", "image", "delete"]:
+        for i in ["filename", "label", "generate", "image", "delete"]:
             if i in self.ui["elements"]:
                 self.ui["elements"][i].deleteLater()
                 self.ui["layout"].removeWidget(self.ui["elements"][i])
                 del self.ui["elements"][i]
+
+        self.ui["elements"]["filename"] = QtWidgets.QLabel(self.picture.filename)
+        self.ui["layout"].addWidget(self.ui["elements"]["filename"])
 
         pixmap = QtGui.QPixmap(self.picture.path)
         # Image exists and can be read by PyQt5
