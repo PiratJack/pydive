@@ -118,6 +118,18 @@ class PicturesTree(BaseTreeWidget):
         for column, field in enumerate(self.columns):
             trip_widget.setTextAlignment(column, field["alignment"])
 
+        # TODO: Trip > Right click actions:
+        #  Copy everything from location A to location B
+        #  Copy from A to B: submenu "all images", "only raw images", "only DT images", ...
+        #  Convert images using all known methods
+        #  Convert images to...: submenu "DT", "RT", ...
+        #  Convert images ...: Opens a dialog:
+        #    Source locations: checkboxes for each location
+        #    Target : conversion method
+        #    Upon confirmation, will convert all images in selected locations using selected methods
+
+        # TODO: Trip > Right click > Change trip name
+        #  Should move the corresponding folders
         return trip_widget
 
     def add_picture_group(self, trip_widget, picture_group):
@@ -135,6 +147,12 @@ class PicturesTree(BaseTreeWidget):
             data.append(str(picture_group.locations.get(column["name"], 0)))
         picture_group_widget = QtWidgets.QTreeWidgetItem(data)
         trip_widget.addChild(picture_group_widget)
+        # TODO: Image group > Right click > First part is similar as for trips
+        # TODO: Image group > Right click > Add to trip:
+        #  Moves the image in the right folder
+        #  Updates the image's trip + moves it to the right picture_group
+        #  Refresh the tree (ideally only what changed, but most likely this won't be possible
+        # TODO: Image group > Hover > Display the different types of images available
 
     def on_item_clicked(self, item):
         """Item clicked ==> display corresponding images
@@ -222,7 +240,7 @@ class PictureGrid:
         ----------
         picture_group : models.picturegroup.PictureGroup
             The group of pictures to display"""
-        # TODO: Allow to filter which pictures to display (via checkbox)
+        # TODO: Picture grid > Allow to filter which pictures to display (via checkbox)
         self.clear_display()
         self.picture_group = picture_group
 
@@ -366,7 +384,7 @@ class PictureGrid:
         command = command.replace("%TARGET_FILE%", parameters["target_file"])
         command = command.replace("%TARGET_FOLDER%", parameters["target_folder"])
 
-        # TODO: Put that in QProcess & process asynchronously
+        # TODO: Generate image > Put that in QProcess & process asynchronously
         os.system(command)
 
         # Add our new picture to the repository (& the picture group)
@@ -408,7 +426,7 @@ class PictureGrid:
 
         os.makedirs(os.path.dirname(target_path), exist_ok=True)
 
-        # TODO: Put that in QProcess & process asynchronously
+        # TODO: Copy image > Put that in QProcess & process asynchronously
         shutil.copy2(source_picture.path, target_path)
 
         # Add our new picture to the repository (& the picture group)
@@ -544,6 +562,7 @@ class PictureContainer:
             self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
             self.ui["elements"]["label"].setProperty("class", "small_note")
             self.ui["layout"].addWidget(self.ui["elements"]["label"])
+            # TODO: Image unreadable > Add generate + copy buttons
 
     def on_click_generate(self):
         """Handler for generate button: triggers parent's handler"""
@@ -708,7 +727,7 @@ class PicturesController:
         self.ui["pictures"] = PictureGrid(self)
         self.ui["right_layout"].addWidget(self.ui["pictures"].display_widget)
 
-        # TODO: display loading status for background tasks
+        # TODO: Pictures screen > display loading status for background tasks
 
     @property
     def display_widget(self):
