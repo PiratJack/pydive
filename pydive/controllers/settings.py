@@ -164,7 +164,7 @@ class LocationsList:
 
         # Location path change
         location["path_change"] = PathSelectButton(
-            _("Change"), location_model.type.name
+            QtGui.QIcon("assets/images/modify.png"), location_model.type.name
         )
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(
@@ -289,7 +289,9 @@ class LocationsList:
 
         # Location path change
         # TODO: Allow to create locations of type "file" (for dive log)
-        location["path_change"] = PathSelectButton(_("Change"), "folder")
+        location["path_change"] = PathSelectButton(
+            QtGui.QIcon("assets/images/modify.png"), "folder"
+        )
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(0, a)
         )
@@ -872,7 +874,6 @@ class SettingsController:
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.ui["main"].setLayout(self.ui["layout"])
-
         self.ui["layout"].addWidget(self.locations_list.display_widget)
         self.ui["layout"].addWidget(self.conversion_methods_list.display_widget)
 

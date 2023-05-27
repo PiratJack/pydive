@@ -1,17 +1,18 @@
 import gettext
 
 from PyQt5 import QtWidgets, QtCore
+from .iconbutton import IconButton
 
 _ = gettext.gettext
 
 
-class PathSelectButton(QtWidgets.QPushButton):
+class PathSelectButton(IconButton):
     pathSelected = QtCore.pyqtSignal(str)
 
-    def __init__(self, label, target_type="folder"):
-        super().__init__()
+    def __init__(self, image, target_type="folder"):
+        super().__init__(image)
         self.target_type = "folder" if target_type == "folder" else "file"
-        self.setText(_(label))
+        self.setIcon(image)
         self.clicked.connect(self.choose_path)
 
         self.dialog = QtWidgets.QFileDialog(self)
