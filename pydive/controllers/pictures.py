@@ -144,8 +144,15 @@ class PicturesTree(BaseTreeWidget):
         """
         data = [picture_group.name]
         for column in self.columns[1:]:
-            data.append(str(picture_group.locations.get(column["name"], 0)))
+            data.append(str(len(picture_group.locations.get(column["name"], []))))
+
         picture_group_widget = QtWidgets.QTreeWidgetItem(data)
+        for col, column in enumerate(self.columns[1:]):
+            pictures = picture_group.locations.get(column["name"], [])
+            if pictures:
+                picture_group_widget.setToolTip(
+                    col + 1, "\n".join([p.filename for p in pictures])
+                )
         trip_widget.addChild(picture_group_widget)
         # TODO: Image group > Right click > First part is similar as for trips
         # TODO: Image group > Right click > Add to trip:

@@ -42,9 +42,9 @@ class PictureGroup:
             )
 
         # Update locations
-        self.locations[picture.location_name] = (
-            self.locations.get(picture.location_name, 0) + 1
-        )
+        self.locations[picture.location_name] = self.locations.get(
+            picture.location_name, []
+        ) + [picture]
 
     def __repr__(self):
         return (self.name, self.trip, str(len(self.pictures)) + " pictures").__repr__()
