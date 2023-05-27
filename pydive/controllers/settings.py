@@ -63,7 +63,7 @@ class LocationsList:
             "alignment": Qt.AlignLeft,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
         {
@@ -72,11 +72,11 @@ class LocationsList:
             "alignment": Qt.AlignLeft,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
     ]
@@ -97,7 +97,8 @@ class LocationsList:
 
         # Add headers
         for i, col in enumerate(self.columns):
-            header = QtWidgets.QLabel(col["name"])
+            # Note: _ is added here again because, otherwise, it doesn't translate
+            header = QtWidgets.QLabel(_(col["name"]))
             header.setProperty("class", "grid_header")
             if "alignment" in col:
                 header.setAlignment(col["alignment"])
@@ -320,7 +321,7 @@ class LocationsList:
         self.ui["layout"].addWidget(location["path"], len(self.ui["locations"]), 2)
 
         # Location path change
-        # TODO: Allow to create locations of type "file" (for dive log)
+        # TODO: Settings screen > Allow to create locations of type "file" (for dive log)
         location["path_change"] = PathSelectButton(
             QtGui.QIcon("assets/images/modify.png"), "folder"
         )
@@ -354,7 +355,7 @@ class LocationsList:
         location["error"] = {}
 
         # Apply values in each field
-        # TODO: Allow to create locations of type "file" (for dive log)
+        # TODO: Settings screen > Allow to create locations of type "file" (for dive log)
         self.new_location.type = "folder"
         for field in ["name", "path"]:
             try:
@@ -525,7 +526,7 @@ class ConversionMethodsList:
             "alignment": Qt.AlignLeft,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
         {
@@ -534,7 +535,7 @@ class ConversionMethodsList:
             "alignment": Qt.AlignLeft,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
         {
@@ -543,14 +544,21 @@ class ConversionMethodsList:
             "alignment": Qt.AlignLeft,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
         {
-            "name": "",
+            "name": None,
             "stretch": 1,
         },
     ]
+
+    conversion_method_help = _(
+        """Enter the command to run to generate the target file (from a raw file)
+%SOURCE_FILE% will be replaced by the source file's full path
+%TARGET_FILE% will be replaced by the target file's full path
+%TARGET_FOLDER% will be replaced by the target file's folder path"""
+    )
 
     def __init__(self, parent_controller):
         """Stores reference to parent window & defines UI elements
@@ -568,7 +576,8 @@ class ConversionMethodsList:
 
         # Add headers
         for i, col in enumerate(self.columns):
-            header = QtWidgets.QLabel(col["name"])
+            # Note: _ is added here again because, otherwise, it doesn't translate
+            header = QtWidgets.QLabel(_(col["name"]))
             header.setProperty("class", "grid_header")
             if "alignment" in col:
                 header.setAlignment(col["alignment"])
@@ -694,6 +703,9 @@ class ConversionMethodsList:
 
         # Update display
         method[field + "_edit"].setText(getattr(method["model"], field))
+        if field == "command":
+            # Note: _ is added here again because, otherwise, it doesn't translate
+            method[field + "_edit"].setToolTip(_(self.conversion_method_help))
 
         # Make widgets visible
         method[field + "_layout"].setCurrentIndex(1)
@@ -757,6 +769,8 @@ class ConversionMethodsList:
             self.ui["layout"].addWidget(
                 method[field], len(self.ui["methods"]), column * 2
             )
+        # Note: _ is added here again because, otherwise, it doesn't translate
+        method["command"].setToolTip(_(self.conversion_method_help))
 
         # Validate button
         method["validate_new"] = IconButton(
