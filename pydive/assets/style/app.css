@@ -18,6 +18,16 @@
     min-height: 50px;
 }
 
-.picture_grid QLabel.grid_header {
+.grid_header {
     font-weight: bold;
+    color: skyblue;
+}
+
+.title {
+    font-weight: bold;
+    border-top: 2px solid skyblue;
+    font-size: 20px;
+    padding: 10px;
+    qproperty-alignment: AlignCenter;
+    color: skyblue;
 }

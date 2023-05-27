@@ -8,6 +8,7 @@ SettingsController
 import gettext
 
 from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5.QtCore import Qt
 
 from controllers.widgets.pathselectbutton import PathSelectButton
 from controllers.widgets.iconbutton import IconButton
@@ -23,6 +24,8 @@ class LocationsList:
 
     Attributes
     ----------
+    columns : dict
+        The columns to display in the grid
     parent_controller : SettingsController
         A reference to the parent controller
     ui : dict of QtWidgets.QWidget
@@ -53,6 +56,31 @@ class LocationsList:
         Updates the locations names & paths displayed on screen
     """
 
+    columns = [
+        {
+            "name": _("Name"),
+            "stretch": 10,
+            "alignment": Qt.AlignLeft,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+        {
+            "name": _("Path"),
+            "stretch": 15,
+            "alignment": Qt.AlignLeft,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+    ]
+
     def __init__(self, parent_controller):
         """Stores reference to parent window & defines UI elements
 
@@ -66,11 +94,15 @@ class LocationsList:
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QGridLayout()
-        self.ui["layout"].setColumnStretch(0, 10)
-        self.ui["layout"].setColumnStretch(1, 1)
-        self.ui["layout"].setColumnStretch(2, 15)
-        self.ui["layout"].setColumnStretch(3, 1)
-        self.ui["layout"].setColumnStretch(4, 1)
+
+        # Add headers
+        for i, col in enumerate(self.columns):
+            header = QtWidgets.QLabel(col["name"])
+            header.setProperty("class", "grid_header")
+            if "alignment" in col:
+                header.setAlignment(col["alignment"])
+            self.ui["layout"].addWidget(header, 0, i)
+            self.ui["layout"].setColumnStretch(i, col["stretch"])
 
         self.ui["main"].setLayout(self.ui["layout"])
         self.ui["layout"].setHorizontalSpacing(
@@ -456,6 +488,8 @@ class ConversionMethodsList:
 
     Attributes
     ----------
+    columns : dict
+        The columns to display in the grid
     parent_controller : SettingsController
         A reference to the parent controller
     ui : dict of QtWidgets.QWidget
@@ -484,6 +518,40 @@ class ConversionMethodsList:
         Updates the conversion methods names & commands displayed on screen
     """
 
+    columns = [
+        {
+            "name": _("Name"),
+            "stretch": 10,
+            "alignment": Qt.AlignLeft,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+        {
+            "name": _("File name suffix"),
+            "stretch": 2,
+            "alignment": Qt.AlignLeft,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+        {
+            "name": _("Command to execute"),
+            "stretch": 15,
+            "alignment": Qt.AlignLeft,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+        {
+            "name": "",
+            "stretch": 1,
+        },
+    ]
+
     def __init__(self, parent_controller):
         """Stores reference to parent window & defines UI elements
 
@@ -497,8 +565,15 @@ class ConversionMethodsList:
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QGridLayout()
-        for col, stretch in enumerate([10, 1, 2, 1, 15, 1, 1]):
-            self.ui["layout"].setColumnStretch(col, stretch)
+
+        # Add headers
+        for i, col in enumerate(self.columns):
+            header = QtWidgets.QLabel(col["name"])
+            header.setProperty("class", "grid_header")
+            if "alignment" in col:
+                header.setAlignment(col["alignment"])
+            self.ui["layout"].addWidget(header, 0, i)
+            self.ui["layout"].setColumnStretch(i, col["stretch"])
 
         self.ui["main"].setLayout(self.ui["layout"])
         self.ui["layout"].setHorizontalSpacing(
@@ -603,7 +678,7 @@ class ConversionMethodsList:
         method["delete"].clicked.connect(
             lambda a, method=method: self.on_click_delete_method(method["model"].id)
         )
-        self.ui["layout"].addWidget(method["delete"], len(self.ui["methods"]), 8)
+        self.ui["layout"].addWidget(method["delete"], len(self.ui["methods"]), 6)
 
     def on_click_field_change(self, field, method_id):
         """Displays widgets to modify a given field the conversion method
@@ -874,8 +949,20 @@ class SettingsController:
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.ui["main"].setLayout(self.ui["layout"])
-        self.ui["layout"].addWidget(self.locations_list.display_widget)
-        self.ui["layout"].addWidget(self.conversion_methods_list.display_widget)
+
+        self.ui["locations_list_label"] = QtWidgets.QLabel(_("Image storage locations"))
+        self.ui["locations_list_label"].setProperty("class", "title")
+        self.ui["layout"].addWidget(self.ui["locations_list_label"])
+
+        self.ui["locations_list"] = self.locations_list.display_widget
+        self.ui["layout"].addWidget(self.ui["locations_list"])
+
+        self.ui["methods_list_label"] = QtWidgets.QLabel(_("Conversion methods"))
+        self.ui["methods_list_label"].setProperty("class", "title")
+        self.ui["layout"].addWidget(self.ui["methods_list_label"])
+
+        self.ui["conversion_methods_list"] = self.conversion_methods_list.display_widget
+        self.ui["layout"].addWidget(self.ui["conversion_methods_list"])
 
     @property
     def display_widget(self):
