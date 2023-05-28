@@ -67,9 +67,6 @@ msgstr ""
 msgid "No image"
 msgstr ""
 
-msgid "No source image available for generation"
-msgstr ""
-
 msgid "No source image found"
 msgstr ""
 
@@ -85,8 +82,14 @@ msgstr ""
 msgid "Please confirm"
 msgstr ""
 
+msgid "RAW"
+msgstr ""
+
 msgid "Settings"
 msgstr ""
 
 msgid "Storage location type is invalid"
+msgstr ""
+
+msgid "Target file already exists"
 msgstr ""

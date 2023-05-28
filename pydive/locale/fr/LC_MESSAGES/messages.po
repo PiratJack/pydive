@@ -84,9 +84,6 @@ msgstr "Pas de méthode de conversion trouvée"
 msgid "No image"
 msgstr "Pas d'image"
 
-msgid "No source image available for generation"
-msgstr "Pas d'image source disponible pour la génération"
-
 msgid "No source image found"
 msgstr "Pas d'image source disponible"
 
@@ -102,17 +99,26 @@ msgstr "Photos"
 msgid "Please confirm"
 msgstr "Veuillez confirmer"
 
+msgid "RAW"
+msgstr "BRUT"
+
 msgid "Settings"
 msgstr "Paramètres"
 
 msgid "Storage location type is invalid"
 msgstr "Le type de lieu de stockage est invalide"
 
+msgid "Target file already exists"
+msgstr "Le fichier cible existe déjà"
+
 #~ msgid "Archives"
 #~ msgstr "Archives"
 
 #~ msgid "Change"
 #~ msgstr "Modifier"
+
+#~ msgid "No source image available for generation"
+#~ msgstr "Pas d'image source disponible pour la génération"
 
 #~ msgid "SD Card"
 #~ msgstr "Carte SD"

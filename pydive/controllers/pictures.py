@@ -10,7 +10,6 @@ PicturesController
 """
 import gettext
 import os
-import shutil
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
@@ -247,6 +246,7 @@ class PictureGrid:
         picture_group : models.picturegroup.PictureGroup
             The group of pictures to display"""
         # TODO: Picture grid > Allow to filter which pictures to display (via checkbox)
+        print("display_picture_group", picture_group)
         self.clear_display()
         self.picture_group = picture_group
 
@@ -332,7 +332,6 @@ class PictureGrid:
         self.picture_group = None
 
     def generate_image(self, row, column):
-        # TODO: Generate image > Move to repository
         # TODO: Generate & copy image > merge actions? (& prioritize copy over generate)
         """Generates an image for the provided row & column
 
@@ -343,65 +342,26 @@ class PictureGrid:
         column : int
             The column in which to generate the image"""
 
-        parameters = {
-            "command": "",
-            "source_file": "",
-            "target_folder": "",
-            "target_file": "",
-        }
-
-        # Find raw source image
-        if not "" in self.picture_group.pictures:
-            self.picture_containers[row][column].display_error(
-                _("No source image available for generation")
-            )
-            return
-        source = self.picture_group.pictures[""]
-
-        # Identify the target folder
         target_location = self.grid[row][0].model
-        parameters["target_folder"] = os.path.join(
-            target_location.path, self.picture_group.trip
-        )
-
-        # Identify the source picture
-        # Ideally, it should be in the target location
-        source_picture = [p for p in source if p.location_name == target_location.name]
-        if source_picture:
-            source_picture = source_picture[0]
-        else:
-            source_picture = source[0]
-        parameters["source_file"] = source_picture.path
-
-        # Identify which method to use for conversion
         try:
-            conversion = self.grid[0][column].model
+            method = self.grid[0][column].model
         except:
             self.picture_containers[row][column].display_error(
                 _("No conversion method found")
             )
             return
-        parameters["command"] = conversion.command
 
-        target_file_name = self.picture_group.name + "_" + conversion.suffix + ".jpg"
-        target_file = os.path.join(parameters["target_folder"], target_file_name)
-        parameters["target_file"] = target_file
-
-        # Let's mix all that together!
-        command = parameters["command"]
-        command = command.replace("%SOURCE_FILE%", parameters["source_file"])
-        command = command.replace("%TARGET_FILE%", parameters["target_file"])
-        command = command.replace("%TARGET_FOLDER%", parameters["target_folder"])
-
-        # TODO: Generate image > Put that in QProcess & process asynchronously
-        os.system(command)
-
-        # Add our new picture to the repository (& the picture group)
-        self.repository.add_picture(self.picture_group, target_location, target_file)
-        self.display_picture_group(self.picture_group)
+        try:
+            task_group = self.repository.generate_pictures(
+                target_location, [method], picture_group=self.picture_group
+            )
+            # Display updated data
+            # TODO: Use signals to update the screen once the repository updates the data
+            #  Connecting it directly to the task group generates race errors
+        except FileNotFoundError as e:
+            self.picture_containers[row][column].display_error("".join(e.args))
 
     def copy_image(self, row, column):
-        # TODO: Copy image > Move to repository
         """Copies an image to the provided row & column
 
         Parameters
@@ -410,35 +370,24 @@ class PictureGrid:
             The row in which to copy the image
         column : int
             The column in which to copy the image"""
-        # Find other images in the same column
-        source_picture = None
-        for i in self.picture_containers.values():
-            if i[column].picture:
-                source_picture = i[column].picture
-                break
-        if not source_picture:
-            self.picture_containers[row][column].display_error(
-                _("No source image found")
-            )
-            return
 
-        # Identify the target folder
         target_location = self.grid[row][0].model
+        try:
+            method = self.grid[0][column].model.suffix
+        except:
+            method = self.grid[0][column].text()
 
-        target_path = os.path.join(
-            target_location.path,
-            self.picture_group.trip,
-            os.path.basename(source_picture.path),
-        )
-
-        os.makedirs(os.path.dirname(target_path), exist_ok=True)
-
-        # TODO: Copy image > Put that in QProcess & process asynchronously
-        shutil.copy2(source_picture.path, target_path)
-
-        # Add our new picture to the repository (& the picture group)
-        self.repository.add_picture(self.picture_group, target_location, target_path)
-        self.display_picture_group(self.picture_group)
+        try:
+            task_group = self.repository.copy_pictures(
+                target_location,
+                picture_group=self.picture_group,
+                conversion_method=method,
+            )
+            # Display updated data
+            # TODO: Use signals to update the screen once the repository updates the data
+            #  Connecting it directly to the task group generates race errors
+        except FileNotFoundError as e:
+            self.picture_containers[row][column].display_error("".join(e.args))
 
     @property
     def display_widget(self):
@@ -592,6 +541,7 @@ class PictureContainer:
 
         if button == QtWidgets.QMessageBox.Yes:
             os.unlink(self.picture.path)
+            # TODO: delete reference in the picture_group
             self.set_empty_picture()
 
     def display_error(self, message):
