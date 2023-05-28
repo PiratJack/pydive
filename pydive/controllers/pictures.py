@@ -250,12 +250,9 @@ class PictureGrid:
         self.clear_display()
         self.picture_group = picture_group
 
-        # Include locations for existing pictures
-        rows = list(picture_group.locations.keys())
-        # Add all locations from DB
-        rows = rows + [l.name for l in self.database.storagelocations_get_folders()]
-        # "" is added for header column
-        rows = [""] + sorted(set(rows))
+        # Include locations from the DB + "" for the header
+        rows = {"": ""}
+        rows.update({l.name: l for l in self.database.storagelocations_get_folders()})
 
         # Include conversion types for existing pictures
         # "" is added for RAW files
@@ -267,21 +264,25 @@ class PictureGrid:
 
         # Add row & column headers
         self.grid.append([])
-        for i in columns:
+        for column_name in columns:
             try:
-                label = self.database.conversionmethods_get_by_suffix(i).name
+                method = self.database.conversionmethods_get_by_suffix(column_name)
+                label = QtWidgets.QLabel(method.name)
+                label.model = method
             except:
-                label = i
-            self.grid[0].append(QtWidgets.QLabel(label))
+                label = QtWidgets.QLabel(column_name)
+            self.grid[0].append(label)
 
-        for row, location_name in enumerate(rows):
-            if row == 0:  # To avoid erasing the headers on row = 0
+        for name in sorted(rows.keys()):
+            if name == "":  # To avoid erasing the headers
                 continue
-            self.grid.append([QtWidgets.QLabel(location_name)])
+            label = QtWidgets.QLabel(name)
+            label.model = rows[name]
+            self.grid.append([label])
 
         # Add the images themselves
         for column, conversion_type in enumerate(columns):
-            for row, location_name in enumerate(rows):
+            for row, location_name in enumerate(sorted(rows.keys())):
                 if column == 0 or row == 0:
                     self.ui["layout"].addWidget(self.grid[row][column], row, column)
                     self.grid[row][column].setProperty("class", "grid_header")
@@ -312,6 +313,8 @@ class PictureGrid:
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
 
+        self.grid[0][1].setText(_("RAW"))
+
     def clear_display(self):
         """Removes all widgets from the display & deletes them properly"""
         for row in self.grid:
@@ -329,6 +332,8 @@ class PictureGrid:
         self.picture_group = None
 
     def generate_image(self, row, column):
+        # TODO: Generate image > Move to repository
+        # TODO: Generate & copy image > merge actions? (& prioritize copy over generate)
         """Generates an image for the provided row & column
 
         Parameters
@@ -354,15 +359,14 @@ class PictureGrid:
         source = self.picture_group.pictures[""]
 
         # Identify the target folder
-        target_location_name = self.grid[row][0].text()
-        target_location = self.database.storagelocation_get_by_name(
-            target_location_name
+        target_location = self.grid[row][0].model
+        parameters["target_folder"] = os.path.join(
+            target_location.path, self.picture_group.trip
         )
-        parameters["target_folder"] = target_location.path
 
         # Identify the source picture
         # Ideally, it should be in the target location
-        source_picture = [p for p in source if p.location_name == target_location_name]
+        source_picture = [p for p in source if p.location_name == target_location.name]
         if source_picture:
             source_picture = source_picture[0]
         else:
@@ -370,9 +374,8 @@ class PictureGrid:
         parameters["source_file"] = source_picture.path
 
         # Identify which method to use for conversion
-        target_suffix = self.grid[0][column].text()
         try:
-            conversion = self.database.conversionmethods_get_by_name(target_suffix)
+            conversion = self.grid[0][column].model
         except:
             self.picture_containers[row][column].display_error(
                 _("No conversion method found")
@@ -398,6 +401,7 @@ class PictureGrid:
         self.display_picture_group(self.picture_group)
 
     def copy_image(self, row, column):
+        # TODO: Copy image > Move to repository
         """Copies an image to the provided row & column
 
         Parameters
@@ -419,10 +423,7 @@ class PictureGrid:
             return
 
         # Identify the target folder
-        target_location_name = self.grid[row][0].text()
-        target_location = self.database.storagelocation_get_by_name(
-            target_location_name
-        )
+        target_location = self.grid[row][0].model
 
         target_path = os.path.join(
             target_location.path,
