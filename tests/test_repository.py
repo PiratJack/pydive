@@ -134,7 +134,7 @@ class TestRepository(unittest.TestCase):
         picture_group = repository.trips["Malta"]["IMG001"]
         self.assertEqual(
             str(picture_group),
-            "('IMG001', 'Malta', '1 pictures')",
+            "('IMG001', 'Malta', '3 pictures')",
         )
 
         picture = [

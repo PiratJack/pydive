@@ -2,6 +2,7 @@ import os
 import gettext
 
 _ = gettext.gettext
+# TODO: Picture > add documentation
 
 
 class StorageLocationCollision(ValueError):

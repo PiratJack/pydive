@@ -1,6 +1,7 @@
 import gettext
 
 _ = gettext.gettext
+# TODO: PictureGroup > add documentation
 
 
 class PictureGroup:
@@ -47,4 +48,5 @@ class PictureGroup:
         ) + [picture]
 
     def __repr__(self):
-        return (self.name, self.trip, str(len(self.pictures)) + " pictures").__repr__()
+        nb_pictures = sum([len(p) for p in self.pictures.values()])
+        return (self.name, self.trip, str(nb_pictures) + " pictures").__repr__()

@@ -24,13 +24,13 @@ class TestStorageLocation(unittest.TestCase):
                     id=1,
                     name="Darktherapee",
                     suffix="DT",
-                    command="darktherapee %SOURCE% %TARGET%",
+                    command="darktherapee %SOURCE_FILE% %TARGET_FILE%",
                 ),
                 ConversionMethod(
                     id=2,
                     name="UFRaw",
                     suffix="ufraw",
-                    command="ufraw-cli -s %SOURCE% -t %TARGET%",
+                    command="ufraw-cli -s %SOURCE_FILE% -t %TARGET_FILE%",
                 ),
             ]
         )
