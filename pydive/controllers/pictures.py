@@ -9,7 +9,6 @@ PicturesController
     Picture organization, selection & link to trips
 """
 import gettext
-import os
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
@@ -389,6 +388,27 @@ class PictureGrid:
         except FileNotFoundError as e:
             self.picture_containers[row][column].display_error("".join(e.args))
 
+    def delete_image(self, row, column):
+        """Deletes an image in the provided row & column
+
+        Parameters
+        ----------
+        row : int
+            The row in which to copy the image
+        column : int
+            The column in which to copy the image"""
+
+        try:
+            picture = self.picture_containers[row][column].picture
+        except:
+            self.picture_containers[row][column].display_error(_("No image to delete"))
+            return
+
+        self.repository.remove_picture(self.picture_group, picture)
+        self.picture_containers[row][column].set_empty_picture()
+        # TODO: Use signals to update the screen once the repository updates the data
+        #  Connecting it directly to the task group generates race errors
+
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
@@ -540,9 +560,7 @@ class PictureContainer:
         button = dialog.exec()
 
         if button == QtWidgets.QMessageBox.Yes:
-            os.unlink(self.picture.path)
-            # TODO: delete reference in the picture_group
-            self.set_empty_picture()
+            self.parent_controller.delete_image(self.row, self.column)
 
     def display_error(self, message):
         """Displays the provided error message
