@@ -82,6 +82,9 @@ class Repository:
         picture = PictureModel({location.name: location.path}, path)
         picture_group.add_picture(picture)
 
+    def remove_picture(self, picture_group, picture):
+        picture_group.remove_picture(picture)
+
     def copy_pictures(
         self, target_location, trip=None, picture_group=None, conversion_method=None
     ):

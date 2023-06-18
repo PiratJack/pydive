@@ -103,7 +103,8 @@ class TestRepository(unittest.TestCase):
 
         # Delete folders
         for test_file in self.all_files:
-            os.remove(test_file)
+            if os.path.exists(test_file):
+                os.remove(test_file)
         for folder in sorted(self.all_folders, reverse=True):
             os.rmdir(folder)
 
@@ -219,6 +220,61 @@ class TestRepository(unittest.TestCase):
         self.assertIn("DT", picture_group.pictures, test_name)
         new_picture = picture_group.pictures["DT"][0]
         self.assertEqual(new_picture.path, new_image_path, test_name)
+
+        # Delete image without changing structure of .pictures and .locations
+        picture_group = repository.trips["Malta"]["IMG002"]
+        picture = picture_group.locations["Temporary"][0]
+        location_initial_count = len(picture_group.locations["Temporary"])
+        conversion_type_initial_count = len(picture_group.pictures[""])
+        path = picture.path
+        repository.remove_picture(picture_group, picture)
+        self.assertFalse(
+            os.path.exists(path),
+            "Picture has not been deleted by repository.remove_picture",
+        )
+        self.assertEqual(
+            len(picture_group.locations["Temporary"]),
+            location_initial_count - 1,
+            "Picture has not been deleted from picture_group.locations",
+        )
+        self.assertEqual(
+            len(picture_group.pictures[""]),
+            conversion_type_initial_count - 1,
+            "Picture has not been deleted from picture_group.pictures",
+        )
+
+        # Delete image while removing values from .pictures and .locations
+        picture_group = repository.trips["Malta"]["IMG002"]
+        picture = picture_group.pictures["DT"][0]
+        path = picture.path
+        repository.remove_picture(picture_group, picture)
+        self.assertFalse(
+            os.path.exists(path),
+            "Picture has not been deleted by repository.remove_picture",
+        )
+        self.assertNotIn(
+            "DT",
+            picture_group.pictures,
+            "picture_group.pictures still has DT as key",
+        )
+        self.assertNotIn(
+            "Temporary",
+            picture_group.locations,
+            "picture_group.locations still has Temporary as key",
+        )
+
+        # Negative deletion test
+        test_name = "Delete image from wrong group (based on trip)"
+        picture_group = repository.trips["Malta"]["IMG002"]
+        picture = repository.trips["Georgia"]["IMG010"]
+        with self.assertRaises(ValueError) as cm:
+            repository.remove_picture(picture_group, picture)
+        self.assertEqual(type(cm.exception), ValueError, test_name)
+        self.assertEqual(
+            cm.exception.args[0],
+            "Picture IMG010 has the wrong trip for group IMG002",
+            test_name,
+        )
 
     def test_group_name_change(self):
         # Load the pictures

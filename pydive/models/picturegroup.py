@@ -1,3 +1,4 @@
+import os
 import gettext
 
 _ = gettext.gettext
@@ -46,6 +47,30 @@ class PictureGroup:
         self.locations[picture.location_name] = self.locations.get(
             picture.location_name, []
         ) + [picture]
+
+    def remove_picture(self, picture):
+        # Check trip matches the group's trip
+        if picture.trip and picture.trip != self.trip:
+            raise ValueError(
+                "Picture " + picture.name + " has the wrong trip for group " + self.name
+            )
+
+        # The picture name starts with the group name ==> easy
+        conversion_type = picture.name.replace(self.name, "")
+        if conversion_type.startswith("_"):
+            conversion_type = conversion_type[1:]
+        self.pictures[conversion_type].remove(picture)
+        if not self.pictures[conversion_type]:
+            del self.pictures[conversion_type]
+
+        os.unlink(picture.path)
+
+        # Update locations
+        self.locations[picture.location_name].remove(picture)
+        if not self.locations[picture.location_name]:
+            del self.locations[picture.location_name]
+
+        del picture
 
     def __repr__(self):
         nb_pictures = sum([len(p) for p in self.pictures.values()])
