@@ -245,9 +245,11 @@ class PictureGrid:
         picture_group : models.picturegroup.PictureGroup
             The group of pictures to display"""
         # TODO: Picture grid > Allow to filter which pictures to display (via checkbox)
-        print("display_picture_group", picture_group)
         self.clear_display()
         self.picture_group = picture_group
+        if self.picture_group:
+            self.picture_group.pictureAdded.connect(self.picture_added)
+            self.picture_group.pictureRemoved.connect(self.picture_removed)
 
         # Include locations from the DB + "" for the header
         rows = {"": ""}
@@ -314,6 +316,30 @@ class PictureGrid:
 
         self.grid[0][1].setText(_("RAW"))
 
+    def picture_added(self, picture, conversion_type):
+        """Receives the signal from the picture_group
+
+        Parameters
+        ----------
+        picture : models.picture.Picture
+            The newly added picture
+        conversion_type : str
+            The suffix of the conversion type (as a picture_group.pictures key)
+        """
+        self.display_picture_group(self.picture_group)
+
+    def picture_removed(self, conversion_type, location_name):
+        """Receives the signal from the picture_group
+
+        Parameters
+        ----------
+        conversion_type : str
+            The suffix of the conversion type (as a picture_group.pictures key)
+        location_name : str
+            The name of location of the picture (as a picture_group.locations key)
+        """
+        self.display_picture_group(self.picture_group)
+
     def clear_display(self):
         """Removes all widgets from the display & deletes them properly"""
         for row in self.grid:
@@ -328,7 +354,11 @@ class PictureGrid:
                     element.deleteLater()
                     element = None
         self.grid = []
-        self.picture_group = None
+
+        if self.picture_group:
+            self.picture_group.pictureAdded.disconnect(self.picture_added)
+            self.picture_group.pictureRemoved.disconnect(self.picture_removed)
+            self.picture_group = None
 
     def generate_image(self, row, column):
         # TODO: Generate & copy image > merge actions? (& prioritize copy over generate)
@@ -351,12 +381,10 @@ class PictureGrid:
             return
 
         try:
-            task_group = self.repository.generate_pictures(
+            self.repository.generate_pictures(
                 target_location, [method], picture_group=self.picture_group
             )
-            # Display updated data
-            # TODO: Use signals to update the screen once the repository updates the data
-            #  Connecting it directly to the task group generates race errors
+            # Updated data will be displayed through the signals directly
         except FileNotFoundError as e:
             self.picture_containers[row][column].display_error("".join(e.args))
 
@@ -377,14 +405,12 @@ class PictureGrid:
             method = self.grid[0][column].text()
 
         try:
-            task_group = self.repository.copy_pictures(
+            self.repository.copy_pictures(
                 target_location,
                 picture_group=self.picture_group,
                 conversion_method=method,
             )
-            # Display updated data
-            # TODO: Use signals to update the screen once the repository updates the data
-            #  Connecting it directly to the task group generates race errors
+            # Updated data will be displayed through the signals directly
         except FileNotFoundError as e:
             self.picture_containers[row][column].display_error("".join(e.args))
 

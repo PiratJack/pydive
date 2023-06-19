@@ -1,12 +1,19 @@
 import os
 import gettext
+from PyQt5 import QtCore
+
+from .picture import Picture as PictureModel
 
 _ = gettext.gettext
 # TODO: PictureGroup > add documentation
 
 
-class PictureGroup:
+class PictureGroup(QtCore.QObject):
+    pictureAdded = QtCore.pyqtSignal(PictureModel, str)
+    pictureRemoved = QtCore.pyqtSignal(str, str)
+
     def __init__(self, group_name):
+        super().__init__()
         self.name = group_name
         self.trip = None
         self.pictures = {}  # Structure is conversion_type: picture model
@@ -22,6 +29,7 @@ class PictureGroup:
             )
 
         # The picture name starts with the group name ==> easy
+        conversion_type = ""
         if picture.name.startswith(self.name):
             conversion_type = picture.name.replace(self.name, "")
             if conversion_type.startswith("_"):
@@ -48,6 +56,8 @@ class PictureGroup:
             picture.location_name, []
         ) + [picture]
 
+        self.pictureAdded.emit(picture, conversion_type)
+
     def remove_picture(self, picture):
         # Check trip matches the group's trip
         if picture.trip and picture.trip != self.trip:
@@ -69,6 +79,8 @@ class PictureGroup:
         self.locations[picture.location_name].remove(picture)
         if not self.locations[picture.location_name]:
             del self.locations[picture.location_name]
+
+        self.pictureRemoved.emit(conversion_type, picture.location_name)
 
         del picture
 

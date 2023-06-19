@@ -22,7 +22,6 @@ class Repository:
         if storage_locations:
             self.storage_locations = storage_locations.copy()
             self.load_pictures()
-        # TODO: Create signals when pictures are added / removed / ...
 
     def load_pictures(self, storage_locations=None):
         # Find all pictures
@@ -281,6 +280,9 @@ class GenerateProcess(QtCore.QRunnable):
         if os.path.exists(self.parameters["target_file"]):
             self.signals.error.emit(_("Target file already exists"))
             return
+        # Check target folder exists
+        if not os.path.exists(self.parameters["target_folder"]):
+            os.makedirs(self.parameters["target_folder"], exist_ok=True)
 
         os.system(self.parameters["command"])
         self.signals.finished.emit(self.parameters["target_file"])
