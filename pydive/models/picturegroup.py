@@ -1,3 +1,10 @@
+"""A group of images that belong together, based on their file name
+
+Classes
+----------
+PictureGroup
+    A group of images that belong together, based on their file name
+"""
 import os
 import gettext
 from PyQt5 import QtCore
@@ -5,14 +12,50 @@ from PyQt5 import QtCore
 from .picture import Picture as PictureModel
 
 _ = gettext.gettext
-# TODO: PictureGroup > add documentation
 
 
 class PictureGroup(QtCore.QObject):
+    """A group of images that belong together, based on their file name
+
+    The images may be in different folders or different types (RAW, jpg, ...)
+    They are matched together if their filenames start with the same elements
+
+    Attributes
+    ----------
+    pictureAdded : pyqtSignal
+        Emitted with a new image is added
+    pictureRemoved : pyqtSignal
+        Emitted with an image is deleted
+    name : str
+        The name of the picture group (= the common part of the pictures' file names)
+    trip : str
+        The trip of the picture group (= shared trip across all images)
+    pictures : dict of form conversion_type: picture
+        The pictures belonging to this group, organized by conversion type
+    locations : dict of form location.name: picture
+        The pictures belonging to this group, organized by location
+
+    Methods
+    -------
+    __init__
+        Initializes values to defaults
+    add_picture (picture)
+        Adds a new picture to the group, after checking that it matches the group
+    remove_picture (picture)
+        Removes a picture from the group, after checking that it matches the group
+    """
+
     pictureAdded = QtCore.pyqtSignal(PictureModel, str)
     pictureRemoved = QtCore.pyqtSignal(str, str)
 
     def __init__(self, group_name):
+        """Initializes values to defaults
+
+        Parameters
+        -------
+        group_name : str
+            The name of the picture group
+        """
         super().__init__()
         self.name = group_name
         self.trip = None
@@ -20,6 +63,19 @@ class PictureGroup(QtCore.QObject):
         self.locations = {}
 
     def add_picture(self, picture):
+        """Adds a new picture to the group, after checking that it matches the group
+
+        Determines the image's conversion type
+        May recalculate all images' conversion types if the new image is a RAW one
+
+        Raises ValueError if the picture's trip or name do not match the group
+        Emits pictureAdded once done
+
+        Parameters
+        -------
+        picture : Picture
+            The picture to add
+        """
         # Check trip matches the group's trip
         if not self.trip:
             self.trip = picture.trip
@@ -59,6 +115,18 @@ class PictureGroup(QtCore.QObject):
         self.pictureAdded.emit(picture, conversion_type)
 
     def remove_picture(self, picture):
+        """Removes a picture from the group, after checking that it matches the group
+
+        Deletes the actual image file
+
+        Raises ValueError if the picture's trip do not match the group
+        Emits pictureRemoved once done
+
+        Parameters
+        -------
+        picture : Picture
+            The picture to remove
+        """
         # Check trip matches the group's trip
         if picture.trip and picture.trip != self.trip:
             raise ValueError(

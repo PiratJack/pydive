@@ -13,10 +13,15 @@ I have no idea whether this will be useful for other people. Probably not, but w
 
 ## What is the status of this project?
 
+What is done:
+- Models for pictures, picture groups, storage locations
+- Display / Edit of settings (will evolve depending on progress on other items)
+- Display / copy / conversion of images (in GUI)
+
 What is remaining:
-- Models for dive trips, dives, pictures, storage locations
+- Models for dive trips & dives (may be useless, depending on how the project goes)
 - Backend controllers for picture transfers, picture conversion, and the different views
-- Views: home, picture management, paper dive log scans, dive analysis/comments
+- Views: home, paper dive log scans, dive analysis/comments
 
 ## What else should you know?
 

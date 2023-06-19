@@ -14,7 +14,6 @@ class ValidationException(Exception):
     """The provided data doesn't match requirements (such as mandatory fields)"""
 
     def __init__(self, message, item, key, invalid_value):
-        # TODO: Base > add documentation
         super().__init__(message)
         self.message = message
         self.item = item

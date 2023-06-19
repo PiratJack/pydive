@@ -557,8 +557,6 @@ class PictureGrid:
 
         self.repository.remove_picture(self.picture_group, picture)
         self.picture_containers[row][column].set_empty_picture()
-        # TODO: Use signals to update the screen once the repository updates the data
-        #  Connecting it directly to the task group generates race errors
 
     @property
     def display_widget(self):

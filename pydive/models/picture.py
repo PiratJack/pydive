@@ -1,12 +1,21 @@
+"""Represents a single image file with some additional information
+
+Classes
+----------
+StorageLocationCollision
+    Exception raised with a storage location is within another
+
+Picture
+    A single picture, corresponding to 1 image file on disk
+"""
 import os
 import gettext
 
 _ = gettext.gettext
-# TODO: Picture > add documentation
 
 
 class StorageLocationCollision(ValueError):
-    """Raised when 2 storage location are in one another"""
+    """Exception raised when 2 storage location are in one another"""
 
     def __init__(self, message, path):
         super().__init__(message)
@@ -14,7 +23,42 @@ class StorageLocationCollision(ValueError):
 
 
 class Picture:
+    """A single picture, corresponding to 1 image file on disk
+
+    Attributes
+    ----------
+    path : str
+        The path to the image file
+    trip : str
+        The image's trip (leaf folder)
+    location_name : str
+        The name of the image's storage location
+    name : str
+        Image file's name (without folder or extension)
+    filename : str
+        Image file's name (with extension, without folder)
+
+    Methods
+    -------
+    __init__ (storage_locations, path)
+        Stores information based on provided parameters & file path
+    """
+
     def __init__(self, storage_locations, path):
+        """Stores information based on provided parameters & file path
+
+        Matches the image to its storage location
+        Determines the image's attributes
+
+        Raises StorageLocationCollision if 2 storage locations match the same image
+
+        Parameters
+        -------
+        storage_locations : dict of form location.name: location.path
+            The available storage locations
+        path : str
+            Image's file path
+        """
         self.path = path
         # In which folder / storage location is the picture?
         storage_location = [
