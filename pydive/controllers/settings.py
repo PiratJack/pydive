@@ -640,7 +640,7 @@ class ConversionMethodsList:
             # Conversion method field - Edit box
             method[field + "_edit"] = QtWidgets.QLineEdit()
             method[field + "_edit"].returnPressed.connect(
-                lambda a, field=field: self.on_validate_field_change(
+                lambda field=field: self.on_validate_field_change(
                     field, method_model.id
                 )
             )
