@@ -60,9 +60,10 @@ class Repository:
     def __init__(self):
         """Defines default attributes"""
         self.storage_locations = {}
-        self.pictures = []
         self.picture_groups = []
         self.process_groups = []
+        # TODO: Darktherapee prevents multithreading, hence this (ugly) workaround
+        QtCore.QThreadPool.globalInstance().setMaxThreadCount(1)
 
     def load_pictures(self, storage_locations):
         """Loads all pictures from the provided storage locations (folders)
@@ -165,7 +166,12 @@ class Repository:
         picture_group.remove_picture(picture)
 
     def copy_pictures(
-        self, target_location, trip=None, picture_group=None, conversion_method=None
+        self,
+        target_location,
+        source_location=None,
+        trip=None,
+        picture_group=None,
+        conversion_method=None,
     ):
         """Copies pictures between folders
 
@@ -176,6 +182,9 @@ class Repository:
         ----------
         target_location : StorageLocation
             The location in which pictures should be copied
+        source_location : StorageLocation
+            The source location in which pictures should be taken from
+            Copies images from all locations if empty
         trip : str
             The trip to copy. Ignored if blank or if picture_group is provided.
             Either trip or picture_group must be provided
@@ -191,6 +200,7 @@ class Repository:
             The group of background processes copying pictures
         """
         # Determine all the picture groups to process
+        picture_groups = None
         if picture_group:
             picture_groups = [picture_group]
             trip = picture_group.trip
@@ -202,8 +212,8 @@ class Repository:
 
         # Determine the source: if same image exists, then it'll be a copy
         process_group = ProcessGroup("copy", trip, target_location)
-        source_pictures = []
         for picture_group in picture_groups:
+            source_pictures = []
             if conversion_method:
                 # If a conversion method is preferred: take the first available picture
                 if conversion_method not in picture_group.pictures:
@@ -215,19 +225,32 @@ class Repository:
                 for method in picture_group.pictures:
                     source_pictures.append(picture_group.pictures[method][0])
 
-        # Generate tasks for each copy
-        for source_picture in source_pictures:
-            process = process_group.add_task(source_picture)
-            process.signals.finished.connect(
-                lambda path: self.add_picture(picture_group, target_location, path)
-            )
-            QtCore.QThreadPool.globalInstance().start(process, 100)
+            # Generate tasks for each copy
+            for source_picture in source_pictures:
+                if (
+                    source_location
+                    and source_picture.location_name != source_location.name
+                ):
+                    continue
+                process = process_group.add_task(source_picture)
+                # TODO: Processes > simplify by putting all parameters in the signal
+                process.signals.finished.connect(
+                    lambda path, picture_group=picture_group, target_location=target_location: self.add_picture(
+                        picture_group, target_location, path
+                    )
+                )
+                QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
         return process_group
 
     def generate_pictures(
-        self, target_location, conversion_methods, trip=None, picture_group=None
+        self,
+        target_location,
+        conversion_methods,
+        source_location=None,
+        trip=None,
+        picture_group=None,
     ):
         """Generates pictures by converting between different formats
 
@@ -238,14 +261,17 @@ class Repository:
         ----------
         target_location : StorageLocation
             The location in which pictures should be copied
+        conversion_methods : ConversionMethod
+            Uses those methods to convert
+        source_location : StorageLocation
+            The source location in which pictures should be taken from
+            Copies images from all locations if empty
         trip : str
             The trip to copy. Ignored if blank or if picture_group is provided.
             Either trip or picture_group must be provided
         picture_group : PictureGroup
             The picture group to copy. Ignored if blank.
             Either trip or picture_group must be provided
-        conversion_method : str
-            Copy only pictures with a specific conversion method. If blank, copies all pictures.
 
         Returns
         ----------
@@ -264,20 +290,28 @@ class Repository:
 
         # Determine the source: find the RAW image
         process_group = ProcessGroup("generate", trip, target_location)
-        source_pictures = []
         for picture_group in picture_groups:
+            source_pictures = []
             if "" not in picture_group.pictures:
                 raise FileNotFoundError(_("No source image found"))
             source_pictures.append(picture_group.pictures[""][0])
 
-        # Generate tasks for each generation
-        for conversion_method in conversion_methods:
-            for source_picture in source_pictures:
-                process = process_group.add_task(source_picture, conversion_method)
-                process.signals.finished.connect(
-                    lambda path: self.add_picture(picture_group, target_location, path)
-                )
-                QtCore.QThreadPool.globalInstance().start(process, 100)
+            # Generate tasks for each generation
+            for conversion_method in conversion_methods:
+                for source_picture in source_pictures:
+                    if (
+                        source_location
+                        and source_picture.location_name != source_location.name
+                    ):
+                        continue
+                    process = process_group.add_task(source_picture, conversion_method)
+                    # TODO: Processes > simplify by putting all parameters in the signal
+                    process.signals.finished.connect(
+                        lambda path, picture_group=picture_group, target_location=target_location: self.add_picture(
+                            picture_group, target_location, path
+                        )
+                    )
+                    QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
         return process_group
@@ -438,6 +472,9 @@ class CopyProcess(QtCore.QRunnable):
             "target_file": target_path,
         }
 
+    def __repr__(self):
+        return "Copy task: " + self.parameters.__repr__()
+
     def run(self):
         """Runs the copy, after making sure it won't create issues
 
@@ -524,6 +561,9 @@ class GenerateProcess(QtCore.QRunnable):
 
         os.system(self.parameters["command"])
         self.signals.finished.emit(self.parameters["target_file"])
+
+    def __repr__(self):
+        return "Generate task: " + self.parameters["command"]
 
 
 class ProcessSignals(QtCore.QObject):

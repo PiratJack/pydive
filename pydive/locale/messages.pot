@@ -4,6 +4,14 @@ msgstr ""
 msgid "Conversion methods"
 msgstr ""
 
+#, python-brace-format
+msgid "Convert images in {location}"
+msgstr ""
+
+#, python-brace-format
+msgid "Copy all images from {source} to {target}"
+msgstr ""
+
 msgid "Copy image here"
 msgstr ""
 
@@ -95,4 +103,11 @@ msgid "Storage location type is invalid"
 msgstr ""
 
 msgid "Target file already exists"
+msgstr ""
+
+msgid "Using all methods"
+msgstr ""
+
+#, python-brace-format
+msgid "Using {method}"
 msgstr ""

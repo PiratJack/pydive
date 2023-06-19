@@ -17,6 +17,14 @@ msgstr "Commande à exécuter"
 msgid "Conversion methods"
 msgstr "Méthode de conversion"
 
+#, python-brace-format
+msgid "Convert images in {location}"
+msgstr "Convertir les images dans {location}"
+
+#, python-brace-format
+msgid "Copy all images from {source} to {target}"
+msgstr "Copier les images de {source} vers {target}"
+
 msgid "Copy image here"
 msgstr "Copier l'image ici"
 
@@ -113,6 +121,13 @@ msgstr "Le type de lieu de stockage est invalide"
 
 msgid "Target file already exists"
 msgstr "Le fichier cible existe déjà"
+
+msgid "Using all methods"
+msgstr "Avec toutes les méthodes de conversion"
+
+#, python-brace-format
+msgid "Using {method}"
+msgstr "Avec la méthode {method}"
 
 #~ msgid "Archives"
 #~ msgstr "Archives"

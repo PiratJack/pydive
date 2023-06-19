@@ -112,7 +112,8 @@ class TestRepository(unittest.TestCase):
         # Load the pictures
         storage_locations = self.database.storagelocations_get_folders()
         locations = {loc.name: loc.path for loc in storage_locations}
-        repository = Repository(locations)
+        repository = Repository()
+        repository.load_pictures(locations)
 
         # Check the recognition worked
         self.assertEqual(
@@ -140,7 +141,7 @@ class TestRepository(unittest.TestCase):
 
         picture = [
             p
-            for p in repository.pictures
+            for p in picture_group.pictures[""]
             if p.path.endswith("Temporary/Malta/IMG001.CR2")
         ]
         picture = picture[0]
@@ -164,7 +165,8 @@ class TestRepository(unittest.TestCase):
         # Load the pictures
         storage_locations = self.database.storagelocations_get_folders()
         locations = {loc.name: loc.path for loc in storage_locations}
-        repository = Repository(locations)
+        repository = Repository()
+        repository.load_pictures(locations)
 
         # Add a new storage location
         repository.load_pictures({"Outside_DB": BASE_FOLDER + "Archive_outside_DB/"})
@@ -175,14 +177,20 @@ class TestRepository(unittest.TestCase):
         )
 
         test_name = "Try to use subfolder of existing folder"
-        test_repo = Repository(locations)
+        test_repo = Repository()
+        test_repo.load_pictures(locations)
         with self.assertRaises(ValueError) as cm:
             test_repo.load_pictures({"Used path": BASE_FOLDER + "Temporary/Malta"})
             self.assertEqual(type(cm.exception), StorageLocationCollision, test_name)
 
         test_name = "Load images in wrong group (based on file name)"
         picture_group = repository.trips["Malta"]["IMG001"]
-        picture = [p for p in repository.pictures if p.path.endswith("IMG002.CR2")]
+        picture = [
+            p
+            for p in repository.trips["Malta"]["IMG002"].pictures[""]
+            if p.path.endswith("IMG002.CR2")
+        ]
+
         picture = picture[0]
         with self.assertRaises(ValueError) as cm:
             picture_group.add_picture(picture)
@@ -196,7 +204,9 @@ class TestRepository(unittest.TestCase):
         test_name = "Load images in wrong group (based on trip)"
         picture_group = repository.trips["Malta"]["IMG001"]
         picture = [
-            p for p in repository.pictures if p.path.endswith("Georgia/IMG010.CR2")
+            p
+            for p in repository.trips["Georgia"]["IMG010"].pictures[""]
+            if p.path.endswith("Georgia/IMG010.CR2")
         ]
         picture = picture[0]
         with self.assertRaises(ValueError) as cm:
@@ -280,7 +290,8 @@ class TestRepository(unittest.TestCase):
         # Load the pictures
         storage_locations = self.database.storagelocations_get_folders()
         locations = {loc.name: loc.path for loc in storage_locations}
-        repository = Repository(locations)
+        repository = Repository()
+        repository.load_pictures(locations)
 
         # Adding a picture that is more "basic" than an existing group
         # Situation: group 'IMG011_convert' exists, now we find picture IMG011.CR2

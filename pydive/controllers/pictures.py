@@ -47,6 +47,7 @@ class PicturesTree(BaseTreeWidget):
         Item clicked ==> display corresponding images
     """
 
+    # TODO: PictureTree: update numbers in tree once images are added / deleted
     columns = [
         {
             "name": _("Name"),
@@ -68,8 +69,149 @@ class PicturesTree(BaseTreeWidget):
 
         super().__init__(parent_controller)
         self.parent_controller = parent_controller
+        self.database = parent_controller.database
         self.repository = repository
         self.itemClicked.connect(self.on_item_clicked)
+
+    def contextMenuEvent(self, event):
+        self.menu = QtWidgets.QMenu()
+        index = self.indexAt(event.pos())
+
+        if not index.isValid():
+            return
+
+        tree_item = self.itemFromIndex(index)
+
+        # This only stores references, otherwise the menu disappears immediately
+        self.actions = []
+        self.submenus = []
+        locations = self.database.storagelocations_get_folders()
+        methods = self.database.conversionmethods_get()
+        # No parent = trip
+        if not tree_item.parent():
+            trip = tree_item.text(0)
+            for source in locations:
+                for target in locations:
+                    if source == target:
+                        continue
+                    label = _("Copy all images from {source} to {target}").format(
+                        source=source.name, target=target.name
+                    )
+                    self.add_trip_action(self.menu, label, "copy", source, target, trip)
+
+            # TODO: Trip > Right click > Change trip name
+            #  Should move the corresponding folders
+
+            self.menu.addSeparator()
+            for location in locations:
+                label = _("Convert images in {location}").format(location=location.name)
+                submenu = QtWidgets.QMenu(label)
+                self.menu.addMenu(submenu)
+
+                label = _("Using all methods")
+                self.add_trip_action(
+                    submenu, label, "generate", location, location, trip, methods
+                )
+
+                for method in methods:
+                    label = _("Using {method}").format(method=method.name)
+                    self.add_trip_action(
+                        submenu, label, "generate", location, location, trip, [method]
+                    )
+
+                self.submenus.append(submenu)
+        # Picture groups
+        else:
+            trip = tree_item.parent().text(0)
+            picture_group_name = tree_item.text(0)
+            picture_group = self.repository.trips[trip][picture_group_name]
+
+            # TODO: Picture group > Right click > Add to trip:
+            #  Moves the image in the right folder
+            #  Updates the image's trip + moves it to the right picture_group
+            #  Refresh the tree (ideally only what changed, but most likely this won't be possible)
+
+            for source in locations:
+                for target in locations:
+                    if source == target:
+                        continue
+                    label = _("Copy all images from {source} to {target}").format(
+                        source=source.name, target=target.name
+                    )
+                    self.add_picture_group_action(
+                        self.menu, label, "copy", source, target, picture_group
+                    )
+
+            self.menu.addSeparator()
+            for location in locations:
+                label = _("Convert images in {location}").format(location=location.name)
+                submenu = QtWidgets.QMenu(label)
+                self.menu.addMenu(submenu)
+
+                label = _("Using all methods")
+                self.add_picture_group_action(
+                    submenu,
+                    label,
+                    "generate",
+                    location,
+                    location,
+                    picture_group,
+                    methods,
+                )
+
+                for method in methods:
+                    label = _("Using {method}").format(method=method.name)
+                    self.add_picture_group_action(
+                        submenu,
+                        label,
+                        "generate",
+                        location,
+                        location,
+                        picture_group,
+                        [method],
+                    )
+
+                self.submenus.append(submenu)
+
+        self.menu.exec_(event.globalPos())
+
+    def add_trip_action(self, menu, label, type, source, target, trip, methods=None):
+        action = QtWidgets.QAction(label)
+        if type == "copy":
+            action.triggered.connect(
+                lambda: self.repository.copy_pictures(
+                    target, trip=trip, source_location=source
+                )
+            )
+        else:
+            action.triggered.connect(
+                lambda: self.repository.generate_pictures(
+                    target, methods, trip=trip, source_location=source
+                )
+            )
+
+        menu.addAction(action)
+        self.actions.append(action)
+
+    def add_picture_group_action(
+        self, menu, label, type, source, target, picture_group, methods=None
+    ):
+        action = QtWidgets.QAction(label)
+        if type == "copy":
+            action.triggered.connect(
+                lambda: self.repository.copy_pictures(
+                    target, picture_group=picture_group, source_location=source
+                )
+            )
+        else:
+            action.triggered.connect(
+                lambda: self.repository.generate_pictures(
+                    target, methods, picture_group=picture_group, source_location=source
+                )
+            )
+
+        menu.addAction(action)
+        self.actions.append(action)
 
     def set_folders(self, folders):
         """Defines which folders to display
@@ -116,18 +258,6 @@ class PicturesTree(BaseTreeWidget):
         for column, field in enumerate(self.columns):
             trip_widget.setTextAlignment(column, field["alignment"])
 
-        # TODO: Trip > Right click actions:
-        #  Copy everything from location A to location B
-        #  Copy from A to B: submenu "all images", "only raw images", "only DT images", ...
-        #  Convert images using all known methods
-        #  Convert images to...: submenu "DT", "RT", ...
-        #  Convert images ...: Opens a dialog:
-        #    Source locations: checkboxes for each location
-        #    Target : conversion method
-        #    Upon confirmation, will convert all images in selected locations using selected methods
-
-        # TODO: Trip > Right click > Change trip name
-        #  Should move the corresponding folders
         return trip_widget
 
     def add_picture_group(self, trip_widget, picture_group):
@@ -152,11 +282,6 @@ class PicturesTree(BaseTreeWidget):
                     col + 1, "\n".join([p.filename for p in pictures])
                 )
         trip_widget.addChild(picture_group_widget)
-        # TODO: Image group > Right click > First part is similar as for trips
-        # TODO: Image group > Right click > Add to trip:
-        #  Moves the image in the right folder
-        #  Updates the image's trip + moves it to the right picture_group
-        #  Refresh the tree (ideally only what changed, but most likely this won't be possible
 
     def on_item_clicked(self, item):
         """Item clicked ==> display corresponding images
