@@ -73,6 +73,13 @@ class PicturesTree(BaseTreeWidget):
         self.itemClicked.connect(self.on_item_clicked)
 
     def contextMenuEvent(self, event):
+        """Right-click menu: copy & generate pictures
+
+        Parameters
+        ----------
+        event : QContextMenuEvent
+            A reference to the right-click event
+        """
         self.menu = QtWidgets.QMenu()
         index = self.indexAt(event.pos())
 
@@ -175,6 +182,25 @@ class PicturesTree(BaseTreeWidget):
         self.menu.exec_(event.globalPos())
 
     def add_trip_action(self, menu, label, type, source, target, trip, methods=None):
+        """Right-click menu: adds copy/generate to trips
+
+        Parameters
+        ----------
+        menu : QMenu
+            The overall context menu
+        label : str
+            The name of the action
+        type : str ('copy' or 'generate')
+            Which action to perform when the user clicks
+        source : StorageLocation
+            The source of the copy or generation (source=target for generation)
+        target : StorageLocation
+            The target of the copy or generation (source=target for generation)
+        trip : str
+            The name of the trip
+        methods : list of ConversionMethods
+            Which conversion method to use when the user clicks (None uses all methods)
+        """
         action = QtWidgets.QAction(label)
         if type == "copy":
             action.triggered.connect(
@@ -195,6 +221,25 @@ class PicturesTree(BaseTreeWidget):
     def add_picture_group_action(
         self, menu, label, type, source, target, picture_group, methods=None
     ):
+        """Right-click menu: adds copy/generate to picture groups
+
+        Parameters
+        ----------
+        menu : QMenu
+            The overall context menu
+        label : str
+            The name of the action
+        type : str ('copy' or 'generate')
+            Which action to perform when the user clicks
+        source : StorageLocation
+            The source of the copy or generation (source=target for generation)
+        target : StorageLocation
+            The target of the copy or generation (source=target for generation)
+        picture_group : PIctureGroup
+            The picture group to copy or generate
+        methods : list of ConversionMethods
+            Which conversion method to use when the user clicks (None uses all methods)
+        """
         action = QtWidgets.QAction(label)
         if type == "copy":
             action.triggered.connect(
