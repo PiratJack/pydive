@@ -47,7 +47,6 @@ class PicturesTree(BaseTreeWidget):
         Item clicked ==> display corresponding images
     """
 
-    # TODO: PictureTree: update numbers in tree once images are added / deleted
     columns = [
         {
             "name": _("Name"),
@@ -260,8 +259,8 @@ class PicturesTree(BaseTreeWidget):
 
         return trip_widget
 
-    def add_picture_group(self, trip_widget, picture_group):
-        """Adds a single picture group to the tree
+    def add_picture_group(self, trip_widget, picture_group, picture_group_widget=None):
+        """Adds or updates a single picture group to the tree
 
         Parameters
         ----------
@@ -269,19 +268,36 @@ class PicturesTree(BaseTreeWidget):
             The widget in which to add the picture group
         picture_group : models.picturegroup.PictureGroup
             The picture group to add to the tree
+        picture_group_widget : QtWidgets.QTreeWidgetItem
+            If provided, will update the item. Otherwise, creates a new one
         """
         data = [picture_group.name]
         for column in self.columns[1:]:
             data.append(str(len(picture_group.locations.get(column["name"], []))))
 
-        picture_group_widget = QtWidgets.QTreeWidgetItem(data)
+        if picture_group_widget:
+            for col, column in enumerate(data):
+                picture_group_widget.setText(col, data[col])
+        else:
+            picture_group_widget = QtWidgets.QTreeWidgetItem(data)
+            picture_group.pictureAdded.connect(
+                lambda _a, _b: self.add_picture_group(
+                    trip_widget, picture_group, picture_group_widget
+                )
+            )
+            picture_group.pictureRemoved.connect(
+                lambda _a, _b: self.add_picture_group(
+                    trip_widget, picture_group, picture_group_widget
+                )
+            )
+            trip_widget.addChild(picture_group_widget)
+
         for col, column in enumerate(self.columns[1:]):
             pictures = picture_group.locations.get(column["name"], [])
             if pictures:
                 picture_group_widget.setToolTip(
                     col + 1, "\n".join([p.filename for p in pictures])
                 )
-        trip_widget.addChild(picture_group_widget)
 
     def on_item_clicked(self, item):
         """Item clicked ==> display corresponding images
