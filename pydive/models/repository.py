@@ -24,6 +24,7 @@ import gettext
 from PyQt5 import QtCore
 from .picture import Picture as PictureModel
 from .picturegroup import PictureGroup
+from .storagelocation import StorageLocation
 
 _ = gettext.gettext
 
@@ -232,13 +233,8 @@ class Repository:
                     and source_picture.location_name != source_location.name
                 ):
                     continue
-                process = process_group.add_task(source_picture)
-                # TODO: Processes > simplify by putting all parameters in the signal
-                process.signals.finished.connect(
-                    lambda path, picture_group=picture_group, target_location=target_location: self.add_picture(
-                        picture_group, target_location, path
-                    )
-                )
+                process = process_group.add_task(picture_group, source_picture)
+                process.signals.taskFinished.connect(self.add_picture)
                 QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
@@ -304,13 +300,10 @@ class Repository:
                         and source_picture.location_name != source_location.name
                     ):
                         continue
-                    process = process_group.add_task(source_picture, conversion_method)
-                    # TODO: Processes > simplify by putting all parameters in the signal
-                    process.signals.finished.connect(
-                        lambda path, picture_group=picture_group, target_location=target_location: self.add_picture(
-                            picture_group, target_location, path
-                        )
+                    process = process_group.add_task(
+                        picture_group, source_picture, conversion_method
                     )
+                    process.signals.taskFinished.connect(self.add_picture)
                     QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
@@ -373,7 +366,7 @@ class ProcessGroup(QtCore.QObject):
         self.tasks = []
         self.target_location = target_location
 
-    def add_task(self, source_picture, method=None):
+    def add_task(self, picture_group, source_picture, method=None):
         """Adds a new task to the group
 
         Parameters
@@ -384,16 +377,16 @@ class ProcessGroup(QtCore.QObject):
             The method to use for conversion. None for copies.
         """
         if self.task_type == "copy":
-            process = CopyProcess(self, source_picture)
+            process = CopyProcess(self, picture_group, source_picture)
         elif self.task_type == "generate":
-            process = GenerateProcess(self, source_picture, method)
+            process = GenerateProcess(self, picture_group, source_picture, method)
         task = {"source_picture": source_picture, "status": "Queued"}
         self.tasks.append(task)
-        process.signals.finished.connect(
-            lambda path, task=task: self.task_done(task, path)
+        process.signals.taskFinished.connect(
+            lambda _a, _b, path, task=task: self.task_done(task, path)
         )
-        process.signals.error.connect(
-            lambda error, task=task: self.task_error(task, error)
+        process.signals.taskError.connect(
+            lambda _a, _b, error, task=task: self.task_error(task, error)
         )
         return process
 
@@ -447,7 +440,7 @@ class CopyProcess(QtCore.QRunnable):
         Runs the copy, after making sure it won't create issues
     """
 
-    def __init__(self, task_group, source_picture):
+    def __init__(self, task_group, picture_group, source_picture):
         """Stores the required parameters for the copy
 
         Parameters
@@ -459,6 +452,8 @@ class CopyProcess(QtCore.QRunnable):
         """
         super().__init__()
         self.signals = ProcessSignals()
+        self.picture_group = picture_group
+        self.task_group = task_group
 
         # Determine picture's target path
         target_path = os.path.join(
@@ -483,13 +478,21 @@ class CopyProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         if os.path.exists(self.parameters["target_file"]):
-            self.signals.error.emit(_("Target file already exists"))
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.task_group.target_location,
+                _("Target file already exists"),
+            )
             return
 
         # Run the actual processes
         os.makedirs(os.path.dirname(self.parameters["target_file"]), exist_ok=True)
         shutil.copy2(self.parameters["source_file"], self.parameters["target_file"])
-        self.signals.finished.emit(self.parameters["target_file"])
+        self.signals.taskFinished.emit(
+            self.picture_group,
+            self.task_group.target_location,
+            self.parameters["target_file"],
+        )
 
 
 class GenerateProcess(QtCore.QRunnable):
@@ -503,7 +506,7 @@ class GenerateProcess(QtCore.QRunnable):
         Runs the command, after making sure it won't create issues
     """
 
-    def __init__(self, task_group, source_picture, method):
+    def __init__(self, task_group, picture_group, source_picture, method):
         """Determines the actual system command to run
 
         Parameters
@@ -517,6 +520,8 @@ class GenerateProcess(QtCore.QRunnable):
         """
         super().__init__()
         self.signals = ProcessSignals()
+        self.picture_group = picture_group
+        self.task_group = task_group
 
         # Determine the command to run
         parameters = {
@@ -553,14 +558,22 @@ class GenerateProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         if os.path.exists(self.parameters["target_file"]):
-            self.signals.error.emit(_("Target file already exists"))
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.task_group.target_location,
+                _("Target file already exists"),
+            )
             return
         # Check target folder exists
         if not os.path.exists(self.parameters["target_folder"]):
             os.makedirs(self.parameters["target_folder"], exist_ok=True)
 
         os.system(self.parameters["command"])
-        self.signals.finished.emit(self.parameters["target_file"])
+        self.signals.taskFinished.emit(
+            self.picture_group,
+            self.task_group.target_location,
+            self.parameters["target_file"],
+        )
 
     def __repr__(self):
         return "Generate task: " + self.parameters["command"]
@@ -577,5 +590,5 @@ class ProcessSignals(QtCore.QObject):
         Emitted once a process is in error
     """
 
-    finished = QtCore.pyqtSignal(str)
-    error = QtCore.pyqtSignal(str)
+    taskFinished = QtCore.pyqtSignal(PictureGroup, StorageLocation, str)
+    taskError = QtCore.pyqtSignal(PictureGroup, StorageLocation, str)
