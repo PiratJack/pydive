@@ -70,6 +70,17 @@ class Database:
             .all()
         )
 
+    def storagelocations_get_divelog(self):
+        """Returns the storage location for dive log"""
+        return (
+            self.session.query(storagelocation.StorageLocation)
+            .filter(
+                storagelocation.StorageLocation.type
+                == storagelocation.StorageLocationType.file
+            )
+            .all()
+        )
+
     def storagelocation_get_by_id(self, storagelocation_id):
         """Returns a storage location based on its ID"""
         return (

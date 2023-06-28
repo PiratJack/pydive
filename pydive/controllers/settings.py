@@ -38,7 +38,7 @@ class LocationsList:
 
     Methods
     -------
-    __init__ (parent_window)
+    __init__ (parent_controller, location_type)
         Stores reference to parent controller & defines UI elements.
     add_location_ui (location_model)
         Adds the fields for the provided location
@@ -81,19 +81,22 @@ class LocationsList:
         },
     ]
 
-    def __init__(self, parent_controller):
+    def __init__(self, parent_controller, location_type):
         """Stores reference to parent window & defines UI elements
 
         Parameters
         ----------
         parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
             The window displaying this controller
+        location_type : Either "file" for dive log file or "folder" for image folders
+            The type of locations to display / edit
         """
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QGridLayout()
+        self.location_type = location_type
 
         # Add headers
         for i, col in enumerate(self.columns):
@@ -118,18 +121,34 @@ class LocationsList:
         """Returns the QtWidgets.QWidget for display of this list"""
 
         self.ui["locations"] = {}
-        for location_model in self.database.storagelocations_get():
+        if self.location_type == "folder":
+            locations = self.database.storagelocations_get_folders()
+
+            # Create new location
+            self.ui["add_new"] = IconButton(
+                QtGui.QIcon("assets/images/add.png"), "", self.ui["main"]
+            )
+            self.ui["add_new"].clicked.connect(lambda: self.on_click_new_location())
+
+            self.ui["layout"].addWidget(
+                self.ui["add_new"], len(self.ui["locations"]) + 1, 1
+            )
+
+        else:
+            # Divelog ==> do not allow to create new ones
+            locations = self.database.storagelocations_get_divelog()
+            if not locations:
+                divelog = models.storagelocation.StorageLocation()
+                divelog.type = self.location_type
+                divelog.name = "Dive log"
+                divelog.path = " "
+                self.database.session.add(divelog)
+                self.database.session.commit()
+
+                locations = [divelog]
+
+        for location_model in locations:
             self.add_location_ui(location_model)
-
-        # Create new location
-        self.ui["add_new"] = IconButton(
-            QtGui.QIcon("assets/images/add.png"), "", self.ui["main"]
-        )
-        self.ui["add_new"].clicked.connect(lambda: self.on_click_new_location())
-
-        self.ui["layout"].addWidget(
-            self.ui["add_new"], len(self.ui["locations"]) + 1, 1
-        )
 
         self.refresh_display()
         return self.ui["main"]
@@ -200,24 +219,27 @@ class LocationsList:
             QtGui.QIcon("assets/images/modify.png"), location_model.type.name
         )
         location["path_change"].pathSelected.connect(
-            lambda a, location=location: self.on_validate_path_change(
-                location["model"].id, a
+            lambda path, location=location: self.on_validate_path_change(
+                location["model"].id, path
             )
         )
         self.ui["layout"].addWidget(
             location["path_change"], len(self.ui["locations"]), 3
         )
 
-        # Delete location
-        location["delete"] = IconButton(
-            QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
-        )
-        location["delete"].clicked.connect(
-            lambda a, location=location: self.on_click_delete_location(
-                location["model"].id
+        if self.location_type == "folder":
+            # Delete location
+            location["delete"] = IconButton(
+                QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
             )
-        )
-        self.ui["layout"].addWidget(location["delete"], len(self.ui["locations"]), 4)
+            location["delete"].clicked.connect(
+                lambda a, location=location: self.on_click_delete_location(
+                    location["model"].id
+                )
+            )
+            self.ui["layout"].addWidget(
+                location["delete"], len(self.ui["locations"]), 4
+            )
 
     def on_click_name_change(self, location_id):
         """Displays fields to modify the location name
@@ -248,9 +270,11 @@ class LocationsList:
         # Save the change
         try:
             location["model"].name = location["name_edit"].text()
-            self.database.session.add(location["model"])
-            self.database.session.commit()
-            self.clear_error(location_id, "name")
+            # For dive log: if the name is edited before the path, it should not crash
+            if location["model"].path:
+                self.database.session.add(location["model"])
+                self.database.session.commit()
+                self.clear_error(location_id, "name")
         except ValidationException as error:
             self.display_error(location["model"].id, "name", error.message)
             return
@@ -321,9 +345,8 @@ class LocationsList:
         self.ui["layout"].addWidget(location["path"], len(self.ui["locations"]), 2)
 
         # Location path change
-        # TODO: Settings screen > Allow to create locations of type "file" (for dive log)
         location["path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"), "folder"
+            QtGui.QIcon("assets/images/modify.png"), self.location_type
         )
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(0, a)
@@ -355,8 +378,7 @@ class LocationsList:
         location["error"] = {}
 
         # Apply values in each field
-        # TODO: Settings screen > Allow to create locations of type "file" (for dive log)
-        self.new_location.type = "folder"
+        self.new_location.type = self.location_type
         for field in ["name", "path"]:
             try:
                 setattr(self.new_location, field, location[field].text())
@@ -957,7 +979,8 @@ class SettingsController:
         """
         self.parent_window = parent_window
         self.database = parent_window.database
-        self.locations_list = LocationsList(self)
+        self.locations_list = LocationsList(self, "folder")
+        self.divelog_list = LocationsList(self, "file")
         self.conversion_methods_list = ConversionMethodsList(self)
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
@@ -967,14 +990,18 @@ class SettingsController:
         self.ui["locations_list_label"] = QtWidgets.QLabel(_("Image storage locations"))
         self.ui["locations_list_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["locations_list_label"])
-
         self.ui["locations_list"] = self.locations_list.display_widget
         self.ui["layout"].addWidget(self.ui["locations_list"])
+
+        self.ui["divelog_label"] = QtWidgets.QLabel(_("Dive log file"))
+        self.ui["divelog_label"].setProperty("class", "title")
+        self.ui["layout"].addWidget(self.ui["divelog_label"])
+        self.ui["divelog"] = self.divelog_list.display_widget
+        self.ui["layout"].addWidget(self.ui["divelog"])
 
         self.ui["methods_list_label"] = QtWidgets.QLabel(_("Conversion methods"))
         self.ui["methods_list_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["methods_list_label"])
-
         self.ui["conversion_methods_list"] = self.conversion_methods_list.display_widget
         self.ui["layout"].addWidget(self.ui["conversion_methods_list"])
 

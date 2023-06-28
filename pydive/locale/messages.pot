@@ -15,6 +15,9 @@ msgstr ""
 msgid "Copy image here"
 msgstr ""
 
+msgid "Dive log file"
+msgstr ""
+
 msgid "Dive management"
 msgstr ""
 

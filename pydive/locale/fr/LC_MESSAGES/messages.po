@@ -28,6 +28,9 @@ msgstr "Copier les images de {source} vers {target}"
 msgid "Copy image here"
 msgstr "Copier l'image ici"
 
+msgid "Dive log file"
+msgstr "Historique des plongées"
+
 msgid "Dive management"
 msgstr "Gestion de plongées"
 
