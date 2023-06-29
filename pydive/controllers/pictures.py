@@ -235,7 +235,7 @@ class PicturesTree(BaseTreeWidget):
             The source of the copy or generation (source=target for generation)
         target : StorageLocation
             The target of the copy or generation (source=target for generation)
-        picture_group : PIctureGroup
+        picture_group : PictureGroup
             The picture group to copy or generate
         methods : list of ConversionMethods
             Which conversion method to use when the user clicks (None uses all methods)

@@ -77,36 +77,26 @@ class Repository:
             The storage locations, in form name:path
         """
         # Find all pictures
-        pictures = []
         self.storage_locations |= storage_locations.copy()
         self.picture_groups = []
         for name in self.storage_locations:
-            new_pictures = self.read_folder([], name, self.storage_locations[name])
-            if new_pictures:
-                pictures += new_pictures
-
-        # Then group them
-        picture_names = set(picture.name for picture in pictures)
-        picture_names = sorted(picture_names)
-        for picture_name in picture_names:
-            matching_groups = [
-                group
-                for group in self.picture_groups
-                if picture_name.startswith(group.name)
-            ]
-            matching_pictures = [
-                picture for picture in pictures if picture.name == picture_name
-            ]
-
-            if len(matching_groups) == 0:
-                group = PictureGroup(picture_name)
-                self.picture_groups.append(group)
-            else:
-                # There should not be multiple matching groups
-                # This is because groups are created in alphabetical order
-                # Therefore groups with shorter names are processed first
-                group = matching_groups[0]
-            for picture in matching_pictures:
+            pictures = self.read_folder([], name, self.storage_locations[name])
+            for picture in pictures:
+                matching_groups = [
+                    group
+                    for group in self.picture_groups
+                    if picture.name.startswith(group.name)
+                    and picture.trip == group.trip
+                ]
+                # Group doesn't exist yet
+                if len(matching_groups) == 0:
+                    group = PictureGroup(picture.name)
+                    self.picture_groups.append(group)
+                else:
+                    # There should not be multiple matching groups
+                    # This is because groups are created in alphabetical order
+                    # Therefore groups with shorter names are processed first
+                    group = matching_groups[0]
                 group.add_picture(picture)
 
     def read_folder(self, pictures, location_name, path):
