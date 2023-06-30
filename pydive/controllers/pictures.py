@@ -106,7 +106,8 @@ class PicturesTree(BaseTreeWidget):
                     self.add_trip_action(self.menu, label, "copy", source, target, trip)
 
             # TODO: Trip > Right click > Change trip name
-            #  Should move the corresponding folders
+            # If target trip exists, confirm merge before applying
+            # Then update display
 
             self.menu.addSeparator()
             for location in locations:
@@ -133,8 +134,7 @@ class PicturesTree(BaseTreeWidget):
             picture_group = self.repository.trips[trip][picture_group_name]
 
             # TODO: Picture group > Right click > Add to trip:
-            #  Moves the image in the right folder
-            #  Updates the image's trip + moves it to the right picture_group
+            #  Triggers repository action
             #  Refresh the tree (ideally only what changed, but most likely this won't be possible)
 
             for source in locations:
@@ -484,7 +484,7 @@ class PictureGrid:
                     picture = [
                         p
                         for p in picture_group.pictures[conversion_type]
-                        if p.location_name == location_name
+                        if p.location.name == location_name
                     ]
                     if not picture:
                         picture_container.set_empty_picture()
@@ -514,15 +514,15 @@ class PictureGrid:
         """
         self.display_picture_group(self.picture_group)
 
-    def picture_removed(self, conversion_type, location_name):
+    def picture_removed(self, conversion_type, location):
         """Receives the signal from the picture_group
 
         Parameters
         ----------
         conversion_type : str
             The suffix of the conversion type (as a picture_group.pictures key)
-        location_name : str
-            The name of location of the picture (as a picture_group.locations key)
+        location : StorageLocation
+            The storage location of the picture
         """
         self.display_picture_group(self.picture_group)
 
@@ -936,9 +936,7 @@ class PicturesController:
 
     def on_load_pictures(self):
         """User clicks 'load pictures' => reload the tree of pictures"""
-        self.repository.load_pictures(
-            {folder.name: folder.path for folder in self.folders}
-        )
+        self.repository.load_pictures(self.folders)
 
         self.ui["picture_tree"].fill_tree()
 

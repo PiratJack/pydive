@@ -60,7 +60,7 @@ class Repository:
 
     def __init__(self):
         """Defines default attributes"""
-        self.storage_locations = {}
+        self.storage_locations = []
         self.picture_groups = []
         self.process_groups = []
         # TODO: Darktherapee prevents multithreading, hence this (ugly) workaround
@@ -73,14 +73,14 @@ class Repository:
 
         Parameters
         ----------
-        storage_locations : dict of str
-            The storage locations, in form name:path
+        storage_locations : list of StorageLocation
+            The storage locations
         """
         # Find all pictures
-        self.storage_locations |= storage_locations.copy()
+        self.storage_locations += storage_locations.copy()
         self.picture_groups = []
-        for name in self.storage_locations:
-            pictures = self.read_folder([], name, self.storage_locations[name])
+        for location in self.storage_locations:
+            pictures = self.read_folder([], location.path)
             for picture in pictures:
                 matching_groups = [
                     group
@@ -99,24 +99,22 @@ class Repository:
                     group = matching_groups[0]
                 group.add_picture(picture)
 
-    def read_folder(self, pictures, location_name, path):
+    def read_folder(self, pictures, path):
         """Reads a given folder recursively to find pictures
 
         Parameters
         ----------
         pictures : list of Picture
             The list in which to add new pictures
-        location_name : str
-            The name of the storage location
         path : str
             The path to explore (will do nothing if it's not a folder)
         """
         if not os.path.isdir(path):
-            return None
+            return pictures
         for element in os.listdir(path):
             full_path = os.path.join(path, element)
             if os.path.isdir(full_path):
-                self.read_folder(pictures, location_name, full_path)
+                self.read_folder(pictures, full_path)
             else:
                 matching_extension = [
                     ext
@@ -141,7 +139,7 @@ class Repository:
         path : str
             The file path of the picture to add
         """
-        picture = PictureModel({location.name: location.path}, path)
+        picture = PictureModel([location], path)
         picture_group.add_picture(picture)
 
     def remove_picture(self, picture_group, picture):

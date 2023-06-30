@@ -10,6 +10,7 @@ import gettext
 from PyQt5 import QtCore
 
 from .picture import Picture as PictureModel
+from .storagelocation import StorageLocation
 
 _ = gettext.gettext
 
@@ -46,7 +47,7 @@ class PictureGroup(QtCore.QObject):
     """
 
     pictureAdded = QtCore.pyqtSignal(PictureModel, str)
-    pictureRemoved = QtCore.pyqtSignal(str, str)
+    pictureRemoved = QtCore.pyqtSignal(str, StorageLocation)
 
     def __init__(self, group_name):
         """Initializes values to defaults
@@ -108,8 +109,8 @@ class PictureGroup(QtCore.QObject):
             )
 
         # Update locations
-        self.locations[picture.location_name] = self.locations.get(
-            picture.location_name, []
+        self.locations[picture.location.name] = self.locations.get(
+            picture.location.name, []
         ) + [picture]
 
         self.pictureAdded.emit(picture, conversion_type)
@@ -144,13 +145,16 @@ class PictureGroup(QtCore.QObject):
         os.unlink(picture.path)
 
         # Update locations
-        self.locations[picture.location_name].remove(picture)
-        if not self.locations[picture.location_name]:
-            del self.locations[picture.location_name]
+        self.locations[picture.location.name].remove(picture)
+        if not self.locations[picture.location.name]:
+            del self.locations[picture.location.name]
 
-        self.pictureRemoved.emit(conversion_type, picture.location_name)
+        self.pictureRemoved.emit(conversion_type, picture.location)
 
         del picture
+
+    # TODO: trip management > new function: transfer pictures between trips
+    # Should also trigger picture update
 
     def __repr__(self):
         nb_pictures = sum([len(p) for p in self.pictures.values()])

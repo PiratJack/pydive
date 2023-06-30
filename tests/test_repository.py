@@ -110,8 +110,7 @@ class TestRepository(unittest.TestCase):
 
     def test_readonly(self):
         # Load the pictures
-        storage_locations = self.database.storagelocations_get_folders()
-        locations = {loc.name: loc.path for loc in storage_locations}
+        locations = self.database.storagelocations_get_folders()
         repository = Repository()
         repository.load_pictures(locations)
 
@@ -123,8 +122,8 @@ class TestRepository(unittest.TestCase):
         )
         self.assertEqual(
             len(repository.trips[""]),
-            1,
-            "There is 1 picture group with no trip",
+            4,
+            "There are 4 picture groups with no trip",
         )
         self.assertEqual(
             len(repository.trips["Malta"]),
@@ -136,7 +135,7 @@ class TestRepository(unittest.TestCase):
         picture_group = repository.trips["Malta"]["IMG001"]
         self.assertEqual(
             str(picture_group),
-            "('IMG001', 'Malta', '3 pictures')",
+            "('IMG001', 'Malta', '2 pictures')",
         )
 
         picture = [
@@ -159,17 +158,28 @@ class TestRepository(unittest.TestCase):
         )
 
         with self.assertRaises(StorageLocationCollision):
-            repository.load_pictures({"Used path": BASE_FOLDER + "Temporary/Malta"})
+            new_location = StorageLocation(
+                id=999,
+                name="Used path",
+                type="folder",
+                path=BASE_FOLDER + "Temporary/Malta",
+            )
+            repository.load_pictures([new_location])
 
     def test_modifications(self):
         # Load the pictures
-        storage_locations = self.database.storagelocations_get_folders()
-        locations = {loc.name: loc.path for loc in storage_locations}
+        locations = self.database.storagelocations_get_folders()
         repository = Repository()
         repository.load_pictures(locations)
 
         # Add a new storage location
-        repository.load_pictures({"Outside_DB": BASE_FOLDER + "Archive_outside_DB/"})
+        new_location = StorageLocation(
+            id=999,
+            name="Outside_DB",
+            type="folder",
+            path=BASE_FOLDER + "Archive_outside_DB/",
+        )
+        repository.load_pictures([new_location])
         self.assertEqual(
             len(repository.trips),
             4,
@@ -180,7 +190,13 @@ class TestRepository(unittest.TestCase):
         test_repo = Repository()
         test_repo.load_pictures(locations)
         with self.assertRaises(ValueError) as cm:
-            test_repo.load_pictures({"Used path": BASE_FOLDER + "Temporary/Malta"})
+            new_location = StorageLocation(
+                id=999,
+                name="Used path",
+                type="folder",
+                path=BASE_FOLDER + "Temporary/Malta",
+            )
+            test_repo.load_pictures([new_location])
             self.assertEqual(type(cm.exception), StorageLocationCollision, test_name)
 
         test_name = "Load images in wrong group (based on file name)"
@@ -224,7 +240,7 @@ class TestRepository(unittest.TestCase):
         open(new_image_path, "w").close()
 
         picture_group = repository.trips["Malta"]["IMG002"]
-        location = [loc for loc in storage_locations if loc.name == "Temporary"][0]
+        location = [loc for loc in locations if loc.name == "Temporary"][0]
         repository.add_picture(picture_group, location, new_image_path)
 
         self.assertIn("DT", picture_group.pictures, test_name)
@@ -288,8 +304,7 @@ class TestRepository(unittest.TestCase):
 
     def test_group_name_change(self):
         # Load the pictures
-        storage_locations = self.database.storagelocations_get_folders()
-        locations = {loc.name: loc.path for loc in storage_locations}
+        locations = self.database.storagelocations_get_folders()
         repository = Repository()
         repository.load_pictures(locations)
 

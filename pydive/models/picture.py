@@ -31,8 +31,8 @@ class Picture:
         The path to the image file
     trip : str
         The image's trip (leaf folder)
-    location_name : str
-        The name of the image's storage location
+    location : StorageLocation
+        The image's storage location
     name : str
         Image file's name (without folder or extension)
     filename : str
@@ -54,7 +54,7 @@ class Picture:
 
         Parameters
         -------
-        storage_locations : dict of form location.name: location.path
+        storage_locations : list of StorageLocation
             The available storage locations
         path : str
             Image's file path
@@ -62,20 +62,22 @@ class Picture:
         self.path = path
         # In which folder / storage location is the picture?
         storage_location = [
-            (name, storage_locations[name])
-            for name in storage_locations
-            if path[: len(storage_locations[name])] == storage_locations[name]
+            location
+            for location in storage_locations
+            if path[: len(location.path)] == location.path
         ]
         if len(storage_location) == 1:
-            location_name, location_path = storage_location[0]
-            self.trip = os.path.dirname(path)[len(location_path) :]
+            location = storage_location[0]
+            self.trip = os.path.dirname(path)[len(location.path) :]
             if self.trip.startswith(os.sep):
                 self.trip = self.trip[1:]
-            self.location_name = location_name
+            self.location = location
             self.name = os.path.basename(path).rsplit(".", 1)[-2]
             self.filename = os.path.basename(path)
         else:
             raise StorageLocationCollision("recognition failed", path)
 
+    # TODO: trip management > new function: change trip (file moved by repository)
+
     def __repr__(self):
-        return (self.name, self.trip, self.location_name, self.path).__repr__()
+        return (self.name, self.trip, self.location.name, self.path).__repr__()
