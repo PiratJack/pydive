@@ -61,6 +61,13 @@ class TestStorageLocation(unittest.TestCase):
             "There are 3 folder storage locations",
         )
 
+        storage_locations = self.database.storagelocations_get_divelog()
+        self.assertEqual(
+            len(storage_locations),
+            1,
+            "There is 1 file storage locations",
+        )
+
         storage_location = self.database.storagelocation_get_by_id(2)
         self.assertEqual(
             storage_location.id,
