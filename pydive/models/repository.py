@@ -152,7 +152,6 @@ class Repository:
         picture : Picture
             The picture to delete
         """
-        print(picture_group, picture_group.locations, location, path)
         picture = [p for p in picture_group.locations[location.name] if p.path == path]
         if picture and len(picture) == 1:
             picture_group.remove_picture(picture[0])
@@ -196,7 +195,7 @@ class Repository:
         if picture_group:
             picture_groups = [picture_group]
             trip = picture_group.trip
-        elif trip:
+        elif trip is not None:
             picture_groups = self.trips[trip].values()
 
         if not picture_groups:
@@ -221,7 +220,7 @@ class Repository:
             for source_picture in source_pictures:
                 if (
                     source_location
-                    and source_picture.location_name != source_location.name
+                    and source_picture.location.name != source_location.name
                 ):
                     continue
                 process = process_group.add_task(picture_group, source_picture)
@@ -269,7 +268,7 @@ class Repository:
         if picture_group:
             picture_groups = [picture_group]
             trip = picture_group.trip
-        elif trip:
+        elif trip is not None:
             picture_groups = self.trips[trip].values()
 
         if not picture_groups:
@@ -278,24 +277,35 @@ class Repository:
         # Determine the source: find the RAW image
         process_group = ProcessGroup("generate", trip, target_location)
         for picture_group in picture_groups:
-            source_pictures = []
+            # Determine source (RAW) picture
             if "" not in picture_group.pictures:
                 raise FileNotFoundError(_("No source image found"))
-            source_pictures.append(picture_group.pictures[""][0])
+            if source_location:
+                source_picture = [
+                    p
+                    for p in picture_group.pictures[""]
+                    if p.location == source_location
+                ]
+                if not source_picture:
+                    raise FileNotFoundError(
+                        _("No source image found in specified location")
+                    )
+            else:
+                source_picture = picture_group.pictures[""]
+            source_picture = source_picture[0]
 
             # Generate tasks for each generation
             for conversion_method in conversion_methods:
-                for source_picture in source_pictures:
-                    if (
-                        source_location
-                        and source_picture.location_name != source_location.name
-                    ):
-                        continue
-                    process = process_group.add_task(
-                        picture_group, source_picture, conversion_method
-                    )
-                    process.signals.taskFinished.connect(self.add_picture)
-                    QtCore.QThreadPool.globalInstance().start(process, 100)
+                if (
+                    source_location
+                    and source_picture.location_name != source_location.name
+                ):
+                    continue
+                process = process_group.add_task(
+                    picture_group, source_picture, conversion_method
+                )
+                process.signals.taskFinished.connect(self.add_picture)
+                QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
         return process_group
@@ -328,7 +338,7 @@ class Repository:
             The group of background processes deleting pictures
         """
 
-        if not picture and not picture_group and not trip:
+        if not picture and not picture_group and trip is None:
             raise ValueError("Either trip, picture_group or picture must be provided")
 
         # Determine all the picture groups to process
@@ -340,7 +350,7 @@ class Repository:
             pictures = [picture]
         if picture_group:
             picture_groups = [picture_group]
-        elif trip:
+        elif trip is not None:
             picture_groups = self.trips[trip].values()
 
         # Determine the source: if same image exists, then it'll be a copy
@@ -477,7 +487,7 @@ class ProcessGroup(QtCore.QObject):
 
     def update_progress(self):
         """Updates the progress. Emits finishes signal once complete."""
-        done = len([p for p in self.tasks if p["status"] == "Stopped"])
+        done = len([t for t in self.tasks if t["status"] == "Stopped"])
         self.progress = done / len(self.tasks)
         if done == len(self.tasks):
             self.finished.emit()
