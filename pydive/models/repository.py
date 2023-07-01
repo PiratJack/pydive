@@ -525,19 +525,14 @@ class CopyProcess(QtCore.QRunnable):
 
         self.source_file = source_picture.path
         # Determine picture's target path
-        target_path = os.path.join(
+        self.target_file = os.path.join(
             target_location.path,
             source_picture.trip,
             source_picture.filename,
         )
-        # Store all parameters
-        self.parameters = {
-            "source_file": source_picture.path,
-            "target_file": target_path,
-        }
 
     def __repr__(self):
-        return "Copy task: " + self.parameters.__repr__()
+        return "Copy task: " + self.source_file + " to " + self.target_file
 
     def run(self):
         """Runs the copy, after making sure it won't create issues
@@ -546,7 +541,7 @@ class CopyProcess(QtCore.QRunnable):
         Will emit finished signal once copy is complete
         """
         # Check target doesn't exist already
-        if os.path.exists(self.parameters["target_file"]):
+        if os.path.exists(self.target_file):
             self.signals.taskError.emit(
                 self.picture_group,
                 self.target_location,
@@ -555,12 +550,12 @@ class CopyProcess(QtCore.QRunnable):
             return
 
         # Run the actual processes
-        os.makedirs(os.path.dirname(self.parameters["target_file"]), exist_ok=True)
-        shutil.copy2(self.parameters["source_file"], self.parameters["target_file"])
+        os.makedirs(os.path.dirname(self.target_file), exist_ok=True)
+        shutil.copy2(self.source_file, self.target_file)
         self.signals.taskFinished.emit(
             self.picture_group,
             self.target_location,
-            self.parameters["target_file"],
+            self.target_file,
         )
 
 
@@ -594,30 +589,19 @@ class GenerateProcess(QtCore.QRunnable):
         self.picture_group = picture_group
         self.location = location
 
-        # Determine the command to run
-        parameters = {
-            "command": "",
-            "source_file": "",
-            "target_folder": "",
-            "target_file": "",
-        }
+        # Determine folder / file paths
+        self.source_file = source_picture.path
 
-        parameters["target_folder"] = os.path.join(location.path, picture_group.trip)
-
-        parameters["source_file"] = source_picture.path
-
+        self.target_folder = os.path.join(location.path, picture_group.trip)
         target_file_name = source_picture.name + "_" + method.suffix + ".jpg"
-        target_file = os.path.join(parameters["target_folder"], target_file_name)
-        parameters["target_file"] = target_file
+        self.target_file = os.path.join(self.target_folder, target_file_name)
 
         # Let's mix all that together!
         command = method.command
-        command = command.replace("%SOURCE_FILE%", parameters["source_file"])
-        command = command.replace("%TARGET_FILE%", parameters["target_file"])
-        command = command.replace("%TARGET_FOLDER%", parameters["target_folder"])
-        parameters["command"] = command
-
-        self.parameters = parameters
+        command = command.replace("%SOURCE_FILE%", self.source_file)
+        command = command.replace("%TARGET_FILE%", self.target_file)
+        command = command.replace("%TARGET_FOLDER%", self.target_folder)
+        self.command = command
 
     def run(self):
         """Runs the command, after making sure it won't create issues
@@ -626,7 +610,7 @@ class GenerateProcess(QtCore.QRunnable):
         Will emit finished signal once process is complete
         """
         # Check target doesn't exist already
-        if os.path.exists(self.parameters["target_file"]):
+        if os.path.exists(self.target_file):
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
@@ -634,18 +618,18 @@ class GenerateProcess(QtCore.QRunnable):
             )
             return
         # Check target folder exists
-        if not os.path.exists(self.parameters["target_folder"]):
-            os.makedirs(self.parameters["target_folder"], exist_ok=True)
+        if not os.path.exists(self.target_folder):
+            os.makedirs(self.target_folder, exist_ok=True)
 
-        os.system(self.parameters["command"])
+        os.system(self.command)
         self.signals.taskFinished.emit(
             self.picture_group,
             self.location,
-            self.parameters["target_file"],
+            self.target_file,
         )
 
     def __repr__(self):
-        return "Generate task: " + self.parameters["command"]
+        return "Generate task: " + self.command
 
 
 class RemoveProcess(QtCore.QRunnable):
@@ -674,14 +658,8 @@ class RemoveProcess(QtCore.QRunnable):
         self.picture_group = picture_group
 
         # Determine the command to run
+        self.file = picture.path
         self.location = picture.location
-        parameters = {
-            "file": "",
-        }
-
-        parameters["file"] = picture.path
-
-        self.parameters = parameters
 
     def run(self):
         """Runs the command, after making sure it won't create issues
@@ -690,14 +668,14 @@ class RemoveProcess(QtCore.QRunnable):
         Will emit finished signal once process is complete
         """
         # Check target doesn't exist already
-        if not os.path.exists(self.parameters["file"]):
+        if not os.path.exists(self.file):
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
                 _("The file to delete does not exist"),
             )
             return
-        if os.path.isdir(self.parameters["file"]):
+        if os.path.isdir(self.file):
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
