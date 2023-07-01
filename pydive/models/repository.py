@@ -14,6 +14,9 @@ CopyProcess
 GenerateProcess
     A process to generate pictures from raw pictures
 
+RemoveProcess
+    A process to delete pictures
+
 ProcessSignals
     Defines signals when processes are completed or in error
 """
@@ -47,11 +50,11 @@ class Repository:
         Reads a given folder recursively to find pictures
     add_picture (picture_group, location, path)
         Adds a single picture to a given picture_group
-    remove_picture (picture_group, picture)
-        Removes (deletes) a single picture
-    copy_pictures (target_location, trip, picture_group, conversion_method)
+    remove_picture (picture_group, location, path)
+        Removes a picture from memory (not hard drive)
+    copy_pictures (label, target_location, source_location, trip, picture_group, conversion_method)
         Copies pictures between folders
-    generate_pictures (target_location, conversion_methods, trip, picture_group)
+    generate_pictures (label, target_location, conversion_methods, source_location, trip, picture_group)
         Generates pictures by converting between different formats
 
     """
@@ -143,14 +146,16 @@ class Repository:
         picture_group.add_picture(picture)
 
     def remove_picture(self, picture_group, location, path):
-        """Removes (deletes) a single picture
+        """Removes a picture from memory (not hard drive)
 
         Parameters
         ----------
         picture_group : PictureGroup
             The picture group in which to add the picture
-        picture : Picture
-            The picture to delete
+        location : StorageLocation
+            Where the picture is stored
+        path : str
+            The file path on hard drive
         """
         picture = [p for p in picture_group.locations[location.name] if p.path == path]
         if picture and len(picture) == 1:
@@ -158,6 +163,7 @@ class Repository:
 
     def copy_pictures(
         self,
+        label,
         target_location,
         source_location=None,
         trip=None,
@@ -171,6 +177,8 @@ class Repository:
 
         Parameters
         ----------
+        label : str
+            The name of the process (used for display)
         target_location : StorageLocation
             The location in which pictures should be copied
         source_location : StorageLocation
@@ -202,7 +210,7 @@ class Repository:
             raise ValueError("trip or picture_group is required")
 
         # Determine the source: if same image exists, then it'll be a copy
-        process_group = ProcessGroup("copy", trip, target_location)
+        process_group = ProcessGroup(label)
         for picture_group in picture_groups:
             source_pictures = []
             if conversion_method:
@@ -223,8 +231,9 @@ class Repository:
                     and source_picture.location.name != source_location.name
                 ):
                     continue
-                process = process_group.add_task(picture_group, source_picture)
+                process = CopyProcess(picture_group, source_picture, target_location)
                 process.signals.taskFinished.connect(self.add_picture)
+                process_group.add_task(process)
                 QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
@@ -232,6 +241,7 @@ class Repository:
 
     def generate_pictures(
         self,
+        label,
         target_location,
         conversion_methods,
         source_location=None,
@@ -245,9 +255,11 @@ class Repository:
 
         Parameters
         ----------
+        label : str
+            The name of the process (used for display)
         target_location : StorageLocation
             The location in which pictures should be copied
-        conversion_methods : ConversionMethod
+        conversion_methods : list of ConversionMethod
             Uses those methods to convert
         source_location : StorageLocation
             The source location in which pictures should be taken from
@@ -275,7 +287,7 @@ class Repository:
             raise ValueError("trip or picture_group is required")
 
         # Determine the source: find the RAW image
-        process_group = ProcessGroup("generate", trip, target_location)
+        process_group = ProcessGroup(label)
         for picture_group in picture_groups:
             # Determine source (RAW) picture
             if "" not in picture_group.pictures:
@@ -298,13 +310,15 @@ class Repository:
             for conversion_method in conversion_methods:
                 if (
                     source_location
-                    and source_picture.location_name != source_location.name
+                    and source_picture.location.name != source_location.name
                 ):
                     continue
-                process = process_group.add_task(
-                    picture_group, source_picture, conversion_method
+
+                process = GenerateProcess(
+                    target_location, picture_group, source_picture, conversion_method
                 )
                 process.signals.taskFinished.connect(self.add_picture)
+                process_group.add_task(process)
                 QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
@@ -312,24 +326,28 @@ class Repository:
 
     def remove_pictures(
         self,
+        label,
         trip=None,
         picture_group=None,
         picture=None,
     ):
-        """Removes pictures
+        """Removes pictures from hard drive
 
         Triggers self.remove_picture once the process is complete
 
         Parameters
         ----------
+        label : str
+            The name of the process (used for display)
         trip : str
             The trip where the files are. Ignored if picture or picture_group is provided.
             Either trip, picture_group or picture must be provided
         picture_group : PictureGroup
-            The picture group to copy. Ignored if picture is provided.
+            The picture group to copy. Required if picture is provided.
             Either trip, picture_group or picture must be provided
         picture : Picture
             The picture to copy.
+            picture_group is required if picture is provided
             Either trip, picture_group or picture must be provided
 
         Returns
@@ -354,8 +372,7 @@ class Repository:
             picture_groups = self.trips[trip].values()
 
         # Determine the source: if same image exists, then it'll be a copy
-        # TODO: this is wrong when multiple pictures are deleted
-        process_group = ProcessGroup("remove", "", picture.location)
+        process_group = ProcessGroup(label)
         for picture_group in picture_groups:
             if picture:
                 pictures = [picture]
@@ -365,7 +382,8 @@ class Repository:
                     pictures += picture_group.pictures[conversion_type]
             for picture in pictures:
                 # Generate tasks for each deletion
-                process = process_group.add_task(picture_group, picture)
+                process = RemoveProcess(picture_group, picture)
+                process_group.add_task(process)
                 process.signals.taskFinished.connect(self.remove_picture)
                 QtCore.QThreadPool.globalInstance().start(process, 100)
 
@@ -394,9 +412,9 @@ class ProcessGroup(QtCore.QObject):
 
     Methods
     -------
-    __init__ (task_type, trip, target_location)
+    __init__ (label)
         Stores basic information about the task group
-    add_task (source_picture, method)
+    add_task (process)
         Adds a new task to the group
     task_done (task, path)
         Marks a single task as in done & stopped. Triggers self.update_progress
@@ -408,61 +426,42 @@ class ProcessGroup(QtCore.QObject):
 
     finished = QtCore.pyqtSignal()
 
-    # TODO: Improve this
-    # The goal is only to display a task label that makes sense...
-    def __init__(self, task_type, trip, target_location):
+    def __init__(self, label):
         """Stores basic information about the task group
 
         Parameters
         ----------
-        task_type : "copy" or "generate"
-            Which task to perform
-        trip : str
-            The name of the trip of the picture to copy/generate (target trip if it changes)
-        target_location : StorageLocation
-            The location in which to copy or generate (None for change trip)
+        label : str
+            The name of the task to display
         """
         super().__init__()
-        if task_type not in ["copy", "generate", "remove"]:
-            raise ValueError("Task type is invalid")
-        self.task_type = task_type
-        self.trip = trip
         self.progress = 0
         self.tasks = []
-        self.target_location = target_location
+        self.label = label
 
-    def add_task(self, picture_group, source_picture, method=None):
+    def add_task(self, process):
         """Adds a new task to the group
 
         Parameters
         ----------
-        source_picture : Picture
-            The picture to copy or convert
-        method : ConversionMethod
-            The method to use for conversion. None for copies.
+        process : *Process
+            The process to add
         """
-        if self.task_type == "copy":
-            process = CopyProcess(self, picture_group, source_picture)
-        elif self.task_type == "generate":
-            process = GenerateProcess(self, picture_group, source_picture, method)
-        elif self.task_type == "remove":
-            process = RemoveProcess(self, picture_group, source_picture)
-        task = {"source_picture": source_picture, "status": "Queued"}
+        task = {"status": "Queued"}
         self.tasks.append(task)
         process.signals.taskFinished.connect(
-            lambda _a, _b, path, task=task: self.task_done(task, path)
+            lambda _a, _b, path: self.task_done(task, path)
         )
         process.signals.taskError.connect(
-            lambda _a, _b, error, task=task: self.task_error(task, error)
+            lambda _a, _b, error: self.task_error(task, error)
         )
-        return process
 
     def task_done(self, task, path):
         """Marks a single task as in done & stopped. Triggers self.update_progress
 
         Parameters
         ----------
-        task : CopyProcess or GenerateProcess
+        task : *Process
             The task in error
         path : str
             The path of the newly created image
@@ -476,7 +475,7 @@ class ProcessGroup(QtCore.QObject):
 
         Parameters
         ----------
-        task : CopyProcess or GenerateProcess
+        task : *Process
             The task in error
         error : str
             The error message
@@ -486,7 +485,7 @@ class ProcessGroup(QtCore.QObject):
         self.update_progress()
 
     def update_progress(self):
-        """Updates the progress. Emits finishes signal once complete."""
+        """Updates the progress. Emits finished signal once complete."""
         done = len([t for t in self.tasks if t["status"] == "Stopped"])
         self.progress = done / len(self.tasks)
         if done == len(self.tasks):
@@ -501,32 +500,35 @@ class CopyProcess(QtCore.QRunnable):
 
     Methods
     -------
-    __init__ (task_group, source_picture)
+    __init__ (picture_group, source_picture, target_location)
         Stores the required parameters for the copy
-    run (folders)
+    run
         Runs the copy, after making sure it won't create issues
     """
 
-    def __init__(self, task_group, picture_group, source_picture):
+    def __init__(self, picture_group, source_picture, target_location):
         """Stores the required parameters for the copy
 
         Parameters
         ----------
-        task_group : ProcessGroup
-            The group of related task this belongs to
+        picture_group : PictureGroup
+            The group of pictures to copy
         source_picture : Picture
             The source picture to copy
+        target_location : StorageLocation
+            The location where to copy the picture
         """
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
-        self.task_group = task_group
+        self.target_location = target_location
 
+        self.source_file = source_picture.path
         # Determine picture's target path
         target_path = os.path.join(
-            task_group.target_location.path,
-            task_group.trip,
-            os.path.basename(source_picture.path),
+            target_location.path,
+            source_picture.trip,
+            source_picture.filename,
         )
         # Store all parameters
         self.parameters = {
@@ -547,7 +549,7 @@ class CopyProcess(QtCore.QRunnable):
         if os.path.exists(self.parameters["target_file"]):
             self.signals.taskError.emit(
                 self.picture_group,
-                self.task_group.target_location,
+                self.target_location,
                 _("Target file already exists"),
             )
             return
@@ -557,7 +559,7 @@ class CopyProcess(QtCore.QRunnable):
         shutil.copy2(self.parameters["source_file"], self.parameters["target_file"])
         self.signals.taskFinished.emit(
             self.picture_group,
-            self.task_group.target_location,
+            self.target_location,
             self.parameters["target_file"],
         )
 
@@ -567,19 +569,19 @@ class GenerateProcess(QtCore.QRunnable):
 
     Methods
     -------
-    __init__ (task_group, source_picture, method)
+    __init__ (location, picture_group, source_picture, method)
         Determines the actual system command to run
-    run (folders)
+    run
         Runs the command, after making sure it won't create issues
     """
 
-    def __init__(self, task_group, picture_group, source_picture, method):
+    def __init__(self, location, picture_group, source_picture, method):
         """Determines the actual system command to run
 
         Parameters
         ----------
-        task_group : ProcessGroup
-            The group of related task this belongs to
+        location : StorageLocation
+            The location where the generation happens
         picture_group : PictureGroup
             The picture_group to update after the command runs
         source_picture : Picture
@@ -590,7 +592,7 @@ class GenerateProcess(QtCore.QRunnable):
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
-        self.task_group = task_group
+        self.location = location
 
         # Determine the command to run
         parameters = {
@@ -600,9 +602,7 @@ class GenerateProcess(QtCore.QRunnable):
             "target_file": "",
         }
 
-        parameters["target_folder"] = os.path.join(
-            task_group.target_location.path, task_group.trip
-        )
+        parameters["target_folder"] = os.path.join(location.path, picture_group.trip)
 
         parameters["source_file"] = source_picture.path
 
@@ -629,7 +629,7 @@ class GenerateProcess(QtCore.QRunnable):
         if os.path.exists(self.parameters["target_file"]):
             self.signals.taskError.emit(
                 self.picture_group,
-                self.task_group.target_location,
+                self.location,
                 _("Target file already exists"),
             )
             return
@@ -640,7 +640,7 @@ class GenerateProcess(QtCore.QRunnable):
         os.system(self.parameters["command"])
         self.signals.taskFinished.emit(
             self.picture_group,
-            self.task_group.target_location,
+            self.location,
             self.parameters["target_file"],
         )
 
@@ -653,19 +653,17 @@ class RemoveProcess(QtCore.QRunnable):
 
     Methods
     -------
-    __init__ (task_group, source_picture)
+    __init__ (picture_group, picture)
         Determines the actual system command to run
-    run (folders)
+    run
         Runs the command, after making sure it won't create issues
     """
 
-    def __init__(self, task_group, picture_group, picture):
+    def __init__(self, picture_group, picture):
         """Determines the actual system command to run
 
         Parameters
         ----------
-        task_group : ProcessGroup
-            The group of related task this belongs to
         picture_group : PictureGroup
             The picture_group to update after the command runs
         picture : Picture
@@ -674,9 +672,9 @@ class RemoveProcess(QtCore.QRunnable):
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
-        self.task_group = task_group
 
         # Determine the command to run
+        self.location = picture.location
         parameters = {
             "file": "",
         }
@@ -695,14 +693,14 @@ class RemoveProcess(QtCore.QRunnable):
         if not os.path.exists(self.parameters["file"]):
             self.signals.taskError.emit(
                 self.picture_group,
-                self.task_group.target_location,
+                self.location,
                 _("The file to delete does not exist"),
             )
             return
         if os.path.isdir(self.parameters["file"]):
             self.signals.taskError.emit(
                 self.picture_group,
-                self.task_group.target_location,
+                self.location,
                 _("The element to delete is not a file"),
             )
             return
@@ -711,18 +709,18 @@ class RemoveProcess(QtCore.QRunnable):
             os.unlink(self.parameters["file"])
             self.signals.taskFinished.emit(
                 self.picture_group,
-                self.task_group.target_location,
+                self.location,
                 self.parameters["file"],
             )
         except Exception as e:
             self.signals.taskError.emit(
                 self.picture_group,
-                self.task_group.target_location,
+                self.location,
                 e.args.__repr__(),
             )
 
     def __repr__(self):
-        return "Change trip task: " + self.parameters["command"]
+        return "Delete picture: " + self.parameters["command"]
 
 
 class ProcessSignals(QtCore.QObject):

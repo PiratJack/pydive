@@ -18,8 +18,16 @@ msgid "Conversion methods"
 msgstr "Méthode de conversion"
 
 #, python-brace-format
+msgid "Convert 1 image in {location}"
+msgstr "Convertir 1 image dans {location}"
+
+#, python-brace-format
 msgid "Convert images in {location}"
 msgstr "Convertir les images dans {location}"
+
+#, python-brace-format
+msgid "Copy 1 image to {target}"
+msgstr "Copier 1 image vers {target}"
 
 #, python-brace-format
 msgid "Copy all images from {source} to {target}"
@@ -101,6 +109,9 @@ msgstr "Pas d'image à supprimer"
 msgid "No source image found"
 msgstr "Pas d'image source disponible"
 
+msgid "No source image found in specified location"
+msgstr "Pas d'image source disponible dans le lieu de stockage choisi"
+
 msgid "Organize pictures"
 msgstr "Organiser les photos"
 
@@ -115,6 +126,10 @@ msgstr "Veuillez confirmer"
 
 msgid "RAW"
 msgstr "BRUT"
+
+#, python-brace-format
+msgid "Remove 1 image in {target}"
+msgstr "Retirer 1 image de {target}"
 
 msgid "Settings"
 msgstr "Paramètres"

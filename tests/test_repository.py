@@ -253,7 +253,7 @@ class TestRepository(unittest.TestCase):
         location_initial_count = len(picture_group.locations["Temporary"])
         conversion_type_initial_count = len(picture_group.pictures[""])
         path = picture.path
-        process = repository.remove_pictures(None, picture_group, picture)
+        process = repository.remove_pictures("", None, picture_group, picture)
         process.finished.connect(
             lambda: self.assertFalse(
                 os.path.exists(path),
@@ -279,7 +279,7 @@ class TestRepository(unittest.TestCase):
         picture_group = repository.trips["Malta"]["IMG002"]
         picture = picture_group.pictures["DT"][0]
         path = picture.path
-        repository.remove_pictures(None, picture_group, picture)
+        repository.remove_pictures("", None, picture_group, picture)
         process.finished.connect(
             lambda: self.assertFalse(
                 os.path.exists(path),

@@ -5,7 +5,15 @@ msgid "Conversion methods"
 msgstr ""
 
 #, python-brace-format
+msgid "Convert 1 image in {location}"
+msgstr ""
+
+#, python-brace-format
 msgid "Convert images in {location}"
+msgstr ""
+
+#, python-brace-format
+msgid "Copy 1 image to {target}"
 msgstr ""
 
 #, python-brace-format
@@ -84,6 +92,9 @@ msgstr ""
 msgid "No source image found"
 msgstr ""
 
+msgid "No source image found in specified location"
+msgstr ""
+
 msgid "Organize pictures"
 msgstr ""
 
@@ -97,6 +108,10 @@ msgid "Please confirm"
 msgstr ""
 
 msgid "RAW"
+msgstr ""
+
+#, python-brace-format
+msgid "Remove 1 image in {target}"
 msgstr ""
 
 msgid "Settings"

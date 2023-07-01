@@ -205,13 +205,13 @@ class PicturesTree(BaseTreeWidget):
         if type == "copy":
             action.triggered.connect(
                 lambda: self.repository.copy_pictures(
-                    target, trip=trip, source_location=source
+                    label, target, trip=trip, source_location=source
                 )
             )
         else:
             action.triggered.connect(
                 lambda: self.repository.generate_pictures(
-                    target, methods, trip=trip, source_location=source
+                    label, target, methods, trip=trip, source_location=source
                 )
             )
 
@@ -244,13 +244,17 @@ class PicturesTree(BaseTreeWidget):
         if type == "copy":
             action.triggered.connect(
                 lambda: self.repository.copy_pictures(
-                    target, picture_group=picture_group, source_location=source
+                    label, target, picture_group=picture_group, source_location=source
                 )
             )
         else:
             action.triggered.connect(
                 lambda: self.repository.generate_pictures(
-                    target, methods, picture_group=picture_group, source_location=source
+                    label,
+                    target,
+                    methods,
+                    picture_group=picture_group,
+                    source_location=source,
                 )
             )
 
@@ -567,8 +571,11 @@ class PictureGrid:
             return
 
         try:
+            label = _("Convert 1 image in {location}").format(
+                location=target_location.name
+            )
             self.repository.generate_pictures(
-                target_location, [method], picture_group=self.picture_group
+                label, target_location, [method], picture_group=self.picture_group
             )
             # Updated data will be displayed through the signals directly
         except FileNotFoundError as e:
@@ -591,7 +598,9 @@ class PictureGrid:
             method = self.grid[0][column].text()
 
         try:
+            label = _("Copy 1 image to {target}").format(target=target_location.name)
             self.repository.copy_pictures(
+                label,
                 target_location,
                 picture_group=self.picture_group,
                 conversion_method=method,
@@ -616,7 +625,8 @@ class PictureGrid:
             self.picture_containers[row][column].display_error(_("No image to delete"))
             return
 
-        self.repository.remove_pictures(None, self.picture_group, picture)
+        label = _("Remove 1 image in {target}").format(target=picture.location.name)
+        self.repository.remove_pictures(label, None, self.picture_group, picture)
         self.picture_containers[row][column].set_empty_picture()
 
     @property
