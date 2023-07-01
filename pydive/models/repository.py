@@ -56,7 +56,10 @@ class Repository:
         Copies pictures between folders
     generate_pictures (label, target_location, conversion_methods, source_location, trip, picture_group)
         Generates pictures by converting between different formats
-
+    change_trip_pictures (label, target_trip, source_trip, picture_group)
+        Moves pictures between folders (trips)
+    change_trip_pictures_finished (source_picture_group, picture, target_picture_group)
+        Triggers memory updates after a picture has been moved
     """
 
     allowed_extensions = [".cr2", ".jpg", ".jpeg"]
@@ -81,6 +84,7 @@ class Repository:
         """
         # Find all pictures
         self.storage_locations += storage_locations.copy()
+        self.storage_locations = list(set(self.storage_locations))
         self.picture_groups = []
         for location in self.storage_locations:
             pictures = self.read_folder([], location.path)
@@ -389,6 +393,109 @@ class Repository:
 
         self.process_groups.append(process_group)
         return process_group
+
+    def change_trip_pictures(
+        self,
+        label,
+        target_trip,
+        source_trip=None,
+        picture_group=None,
+    ):
+        """Moves pictures between folders (trips)
+
+        Triggers self.remove_picture and self.add_picture once the copy is complete
+
+        Parameters
+        ----------
+        label : str
+            The name of the process (used for display)
+        target_trip : str
+            The trip where the files should be transferred
+        source_trip : str
+            The trip where the files are. Ignored if blank or if picture_group is provided.
+            Either source_trip or picture_group must be provided
+        picture_group : PictureGroup
+            The picture group to copy. Ignored if blank.
+            Either source_trip or picture_group must be provided
+
+        Returns
+        ----------
+        process_group : ProcessGroup
+            The group of background processes copying pictures
+        """
+        # Determine all the picture groups to process
+        picture_groups = None
+        if picture_group:
+            picture_groups = [picture_group]
+            source_trip = picture_group.trip
+        elif source_trip:
+            picture_groups = self.trips[source_trip].values()
+
+        if not picture_groups:
+            raise ValueError("source_trip or picture_group is required")
+
+        # Determine the source: if same image exists, then it'll be a copy
+        process_group = ProcessGroup(label)
+        for source_picture_group in picture_groups:
+            # The target picture group may not be the source one
+            # Or transfers may fail, thus we need to have both
+            target_picture_group = [
+                pg
+                for pg in self.picture_groups
+                if pg.trip == target_trip and pg.name == source_picture_group.name
+            ]
+            if target_picture_group:
+                target_picture_group = target_picture_group[0]
+            else:
+                target_picture_group = PictureGroup(source_picture_group.name)
+                target_picture_group.trip = target_trip
+                self.picture_groups.append(target_picture_group)
+
+            # Generate tasks for each move
+            for conversion_type in source_picture_group.pictures:
+                for source_picture in source_picture_group.pictures[conversion_type]:
+                    process = ChangeTripProcess(
+                        source_picture_group, source_picture, target_trip
+                    )
+                    process_group.add_task(process)
+
+                    process.signals.taskFinished.connect(
+                        lambda source_picture_group, _b, path, picture=source_picture, target_picture_group=target_picture_group: self.change_trip_pictures_finished(
+                            source_picture_group, picture, path, target_picture_group
+                        )
+                    )
+                    QtCore.QThreadPool.globalInstance().start(process, 100)
+
+        self.process_groups.append(process_group)
+        return process_group
+
+    def change_trip_pictures_finished(
+        self, source_picture_group, picture, path, target_picture_group
+    ):
+        """Triggers memory updates after a picture has been moved
+
+        Triggers self.remove_picture and self.add_picture
+
+        Parameters
+        ----------
+        source_picture_group : PictureGroup
+            The source picture group of the image
+        picture : Picture
+            The modified picture
+        path : str
+            The new path of the picture
+        target_picture_group : PictureGroup
+            The target picture group of the image
+
+        Returns
+        ----------
+        process_group : ProcessGroup
+            The group of background processes copying pictures
+        """
+        self.remove_picture(source_picture_group, picture.location, picture.path)
+        picture.trip = target_picture_group.trip
+        picture.path = path
+        self.add_picture(target_picture_group, picture.location, picture.path)
 
     def __getattr__(self, attr):
         """Calculates & returns missing attributes. Only works for trips attribute.
@@ -699,6 +806,78 @@ class RemoveProcess(QtCore.QRunnable):
 
     def __repr__(self):
         return "Delete picture: " + self.parameters["command"]
+
+
+class ChangeTripProcess(QtCore.QRunnable):
+    """A process to change the trip of given pictures
+
+    Methods
+    -------
+    __init__ (picture_group, picture, target_trip)
+        Determines the actual system command to run
+    run (folders)
+        Runs the command, after making sure it won't create issues
+    """
+
+    def __init__(self, picture_group, picture, target_trip):
+        """Determines the actual system command to run
+
+        Parameters
+        ----------
+        picture_group : PictureGroup
+            The picture_group to update after the command runs
+        picture : Picture
+            The picture to move
+        target_trip : str
+            The trip in which to put the picture
+        """
+        super().__init__()
+        self.signals = ProcessSignals()
+        self.picture_group = picture_group
+        self.target_location = picture.location
+
+        # Determine the command to run
+        self.source_file = picture.path
+
+        self.target_folder = os.path.join(
+            os.path.dirname(os.path.dirname(picture.path)), target_trip
+        )
+        self.target_file = os.path.join(self.target_folder, picture.filename)
+
+    def run(self):
+        """Runs the command, after making sure it won't create issues
+
+        Will emit error signal if target file already exists
+        Will emit finished signal once process is complete
+        """
+        # Check target doesn't exist already
+        if os.path.exists(self.target_file):
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.target_location,
+                _("Target file already exists"),
+            )
+            return
+        # Check target folder exists
+        if not os.path.exists(self.target_folder):
+            os.makedirs(self.target_folder, exist_ok=True)
+
+        try:
+            os.rename(self.source_file, self.target_file)
+            self.signals.taskFinished.emit(
+                self.picture_group,
+                self.target_location,
+                self.target_file,
+            )
+        except Exception as e:
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.target_location,
+                e.args.__repr__(),
+            )
+
+    def __repr__(self):
+        return "Change trip task: " + self.source_file + " to " + self.target_file
 
 
 class ProcessSignals(QtCore.QObject):

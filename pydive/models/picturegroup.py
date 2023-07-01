@@ -47,6 +47,7 @@ class PictureGroup(QtCore.QObject):
 
     pictureAdded = QtCore.pyqtSignal(PictureModel, str)
     pictureRemoved = QtCore.pyqtSignal(str, StorageLocation)
+    pictureGroupDeleted = QtCore.pyqtSignal(str, str)
 
     def __init__(self, group_name):
         """Initializes values to defaults
@@ -147,11 +148,12 @@ class PictureGroup(QtCore.QObject):
             del self.locations[picture.location.name]
 
         self.pictureRemoved.emit(conversion_type, picture.location)
-
         del picture
 
-    # TODO: trip management > new function: transfer pictures between trips
-    # Should also trigger picture update
+        if not self.pictures:
+            # TODO: Picture group: emit deletion only if no pending task?
+            self.pictureGroupDeleted.emit(self.trip, self.name)
+            del self
 
     def __repr__(self):
         nb_pictures = sum([len(p) for p in self.pictures.values()])

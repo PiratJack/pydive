@@ -1,3 +1,9 @@
+msgid "Change name to ..."
+msgstr ""
+
+msgid "Change trip to ..."
+msgstr ""
+
 msgid "Command to execute"
 msgstr ""
 
@@ -114,6 +120,9 @@ msgstr ""
 msgid "Remove 1 image in {target}"
 msgstr ""
 
+msgid "Rename trip"
+msgstr ""
+
 msgid "Settings"
 msgstr ""
 
@@ -127,6 +136,9 @@ msgid "The element to delete is not a file"
 msgstr ""
 
 msgid "The file to delete does not exist"
+msgstr ""
+
+msgid "Trip name:"
 msgstr ""
 
 msgid "Using all methods"

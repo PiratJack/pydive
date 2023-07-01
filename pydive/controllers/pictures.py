@@ -96,6 +96,7 @@ class PicturesTree(BaseTreeWidget):
         # No parent = trip
         if not tree_item.parent():
             trip = tree_item.text(0)
+            # Copy images
             for source in locations:
                 for target in locations:
                     if source == target:
@@ -105,11 +106,9 @@ class PicturesTree(BaseTreeWidget):
                     )
                     self.add_trip_action(self.menu, label, "copy", source, target, trip)
 
-            # TODO: Trip > Right click > Change trip name
-            # If target trip exists, confirm merge before applying
-            # Then update display
-
             self.menu.addSeparator()
+
+            # Convert / Generate images
             for location in locations:
                 label = _("Convert images in {location}").format(location=location.name)
                 submenu = QtWidgets.QMenu(label)
@@ -127,16 +126,27 @@ class PicturesTree(BaseTreeWidget):
                     )
 
                 self.submenus.append(submenu)
+
+            self.menu.addSeparator()
+
+            # Change trip action
+            label = _("Change name to ...")
+            self.add_trip_action(
+                self.menu,
+                label,
+                "change_trip",
+                location,
+                location,
+                trip,
+            )
+
         # Picture groups
         else:
             trip = tree_item.parent().text(0)
             picture_group_name = tree_item.text(0)
             picture_group = self.repository.trips[trip][picture_group_name]
 
-            # TODO: Picture group > Right click > Add to trip:
-            #  Triggers repository action
-            #  Refresh the tree (ideally only what changed, but most likely this won't be possible)
-
+            # Copy actions
             for source in locations:
                 for target in locations:
                     if source == target:
@@ -149,6 +159,8 @@ class PicturesTree(BaseTreeWidget):
                     )
 
             self.menu.addSeparator()
+
+            # Conversion / generation actions
             for location in locations:
                 label = _("Convert images in {location}").format(location=location.name)
                 submenu = QtWidgets.QMenu(label)
@@ -179,10 +191,24 @@ class PicturesTree(BaseTreeWidget):
 
                 self.submenus.append(submenu)
 
+            self.menu.addSeparator()
+
+            # Change trip action
+            label = _("Change trip to ...")
+            self.add_picture_group_action(
+                self.menu,
+                label,
+                "change_trip",
+                location,
+                location,
+                picture_group,
+                methods,
+            )
+
         self.menu.exec_(event.globalPos())
 
     def add_trip_action(self, menu, label, type, source, target, trip, methods=None):
-        """Right-click menu: adds copy/generate to trips
+        """Right-click menu: adds copy/generate/change trip name to trips
 
         Parameters
         ----------
@@ -190,7 +216,7 @@ class PicturesTree(BaseTreeWidget):
             The overall context menu
         label : str
             The name of the action
-        type : str ('copy' or 'generate')
+        type : str ('copy', 'generate' or 'change_trip')
             Which action to perform when the user clicks
         source : StorageLocation
             The source of the copy or generation (source=target for generation)
@@ -208,20 +234,79 @@ class PicturesTree(BaseTreeWidget):
                     label, target, trip=trip, source_location=source
                 )
             )
-        else:
+        elif type == "generate":
             action.triggered.connect(
                 lambda: self.repository.generate_pictures(
                     label, target, methods, trip=trip, source_location=source
                 )
             )
+        elif type == "change_trip":
+
+            def open_dialog(parent_controller):
+                target_trip, confirmed = QtWidgets.QInputDialog.getText(
+                    parent_controller.parent_window,
+                    _("Rename trip"),
+                    _("Trip name:"),
+                    QtWidgets.QLineEdit.Normal,
+                    trip,
+                )
+                if confirmed:
+                    process_group = self.repository.change_trip_pictures(
+                        label,
+                        target_trip,
+                        trip,
+                    )
+                    process_group.finished.connect(
+                        lambda: self.change_trip_name(trip, target_trip)
+                    )
+
+            action.triggered.connect(lambda: open_dialog(self.parent_controller))
+        else:
+            raise ValueError("Action must be copy, generate or change_trip")
 
         menu.addAction(action)
         self.actions.append(action)
 
+    def change_trip_name(self, source_trip, target_trip):
+        """Changes the trip name of a given trip
+
+        Merges trips if needed
+
+        Parameters
+        ----------
+        source_trip : str
+            The name of the trip to rename
+        target_trip : str
+            The target name of the trip
+        """
+        # Find the source trip widget - there should be only 1
+        print(f"PicturesTree.change_trip_name: {source_trip} to {target_trip}")
+
+        # Source trip widget will be deleted thanks to remove_picture_group
+        # We simply need to add a new one if needed, and to connect the picture groups to it
+
+        # Does the target trip already exist in the tree?
+        widgets = self.findItems(target_trip, Qt.MatchExactly, 0)
+        widgets = [w for w in widgets if not w.parent()]
+        if len(widgets) == 0:
+            target_trip_widget = self.add_trip(target_trip)
+        else:
+            # There should be at most 1 match
+            target_trip_widget = widgets[0]
+
+        # Need to refresh the repository, otherwise it'll fail
+        self.repository.load_pictures(self.parent_controller.folders)
+        picture_groups = self.repository.trips[target_trip].values()
+        print(f"PicturesTree.change_trip_name: processing {picture_groups}")
+        # Remove any existing children
+        target_trip_widget.takeChildren()
+        for picture_group in picture_groups:
+            self.add_picture_group(target_trip_widget, picture_group)
+
     def add_picture_group_action(
         self, menu, label, type, source, target, picture_group, methods=None
     ):
-        """Right-click menu: adds copy/generate to picture groups
+        """Right-click menu: adds copy/generate/change trip to picture groups
 
         Parameters
         ----------
@@ -229,7 +314,7 @@ class PicturesTree(BaseTreeWidget):
             The overall context menu
         label : str
             The name of the action
-        type : str ('copy' or 'generate')
+        type : str ('copy', 'generate' or 'change_trip')
             Which action to perform when the user clicks
         source : StorageLocation
             The source of the copy or generation (source=target for generation)
@@ -247,7 +332,7 @@ class PicturesTree(BaseTreeWidget):
                     label, target, picture_group=picture_group, source_location=source
                 )
             )
-        else:
+        elif type == "generate":
             action.triggered.connect(
                 lambda: self.repository.generate_pictures(
                     label,
@@ -257,9 +342,68 @@ class PicturesTree(BaseTreeWidget):
                     source_location=source,
                 )
             )
+        elif type == "change_trip":
+
+            def open_dialog(parent_controller):
+                target_trip, confirmed = QtWidgets.QInputDialog.getText(
+                    parent_controller.parent_window,
+                    _("Rename trip"),
+                    _("Trip name:"),
+                    QtWidgets.QLineEdit.Normal,
+                    picture_group.trip,
+                )
+                if confirmed:
+                    source_trip = picture_group.trip
+                    process_group = self.repository.change_trip_pictures(
+                        label,
+                        target_trip,
+                        picture_group.trip,
+                        picture_group,
+                    )
+                    process_group.finished.connect(
+                        lambda: self.change_picture_group_trip(
+                            picture_group.name, source_trip, target_trip
+                        )
+                    )
+
+            action.triggered.connect(lambda: open_dialog(self.parent_controller))
+        else:
+            raise ValueError("Action must be copy, generate or change_trip")
 
         menu.addAction(action)
         self.actions.append(action)
+
+    def change_picture_group_trip(self, picture_group_name, source_trip, target_trip):
+        """Changes the trip of a given picture group
+
+        Parameters
+        ----------
+        picture_group_name : str
+            The name of the picture group
+        source_trip : str
+            The trip in which the picture group is prior to the move
+        target_trip : str
+            The trip in which to move the picture group
+        """
+        # Does the target already exist in the tree?
+        widgets = self.findItems(target_trip, Qt.MatchExactly, 0)
+        widgets = [w for w in widgets if not w.parent()]
+        if len(widgets) == 0:
+            # Widget doesn't exist ==> we add the trip & all its picture groupe (easy)
+            target_trip_widget = self.add_trip(target_trip)
+            picture_groups = self.repository.trips[target_trip].values()
+        else:
+            # Widget exists ==> we need to add only the new picture group
+            # There should be only 1 match
+            target_trip_widget = widgets[0]
+            picture_groups = self.repository.trips[target_trip].values()
+            target_picture_group = [
+                pg for pg in picture_groups if pg.name == picture_group_name
+            ]
+            picture_groups = [target_picture_group[0]]
+
+        for picture_group in picture_groups:
+            self.add_picture_group(target_trip_widget, picture_group)
 
     def set_folders(self, folders):
         """Defines which folders to display
@@ -320,6 +464,12 @@ class PicturesTree(BaseTreeWidget):
         picture_group_widget : QtWidgets.QTreeWidgetItem
             If provided, will update the item. Otherwise, creates a new one
         """
+
+        if not trip_widget:
+            return
+        print(
+            f"PicturesTree.add_picture_group: {picture_group.name} in {trip_widget.data(0, Qt.DisplayRole)}"
+        )
         data = [picture_group.name]
         for column in self.columns[1:]:
             data.append(str(len(picture_group.locations.get(column["name"], []))))
@@ -339,6 +489,9 @@ class PicturesTree(BaseTreeWidget):
                     trip_widget, picture_group, picture_group_widget
                 )
             )
+            picture_group.pictureGroupDeleted.connect(
+                lambda: self.remove_picture_group(picture_group_widget)
+            )
             trip_widget.addChild(picture_group_widget)
 
         for col, column in enumerate(self.columns[1:]):
@@ -347,6 +500,32 @@ class PicturesTree(BaseTreeWidget):
                 picture_group_widget.setToolTip(
                     col + 1, "\n".join([p.filename for p in pictures])
                 )
+
+    def remove_picture_group(self, picture_group_widget):
+        """Removes a picture group from the tree
+
+        Also removes the top-level item (trip) if it becomes empty
+
+        Parameters
+        ----------
+        picture_group_widget : QtWidgets.QTreeWidgetItem
+            The picture group to remove
+        """
+        if not picture_group_widget:
+            return
+        trip_widget = picture_group_widget.parent()
+        # This means it has been deleted from the tree before
+        if not trip_widget:
+            return
+        print(
+            f"PicturesTree.remove_picture_group: {picture_group_widget.data(0, Qt.DisplayRole)} in {trip_widget.data(0, Qt.DisplayRole)}"
+        )
+        trip_widget.removeChild(picture_group_widget)
+        print(
+            f"PicturesTree.remove_picture_group: {trip_widget.childCount()} children remain"
+        )
+        if trip_widget.childCount() == 0:
+            self.takeTopLevelItem(self.indexOfTopLevelItem(trip_widget))
 
     def on_item_clicked(self, item):
         """Item clicked ==> display corresponding images

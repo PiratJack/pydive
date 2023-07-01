@@ -11,6 +11,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.3.1\n"
 
+msgid "Change name to ..."
+msgstr "Renommer ..."
+
+msgid "Change trip to ..."
+msgstr "Changer le voyage"
+
 msgid "Command to execute"
 msgstr "Commande à exécuter"
 
@@ -131,6 +137,10 @@ msgstr "BRUT"
 msgid "Remove 1 image in {target}"
 msgstr "Retirer 1 image de {target}"
 
+#, fuzzy
+msgid "Rename trip"
+msgstr "Modifier"
+
 msgid "Settings"
 msgstr "Paramètres"
 
@@ -146,6 +156,9 @@ msgstr "L'élément à supprimer n'est pas un fichier"
 msgid "The file to delete does not exist"
 msgstr "Le fichier à supprimer n'existe pas"
 
+msgid "Trip name:"
+msgstr "Nom du voyage:"
+
 msgid "Using all methods"
 msgstr "Avec toutes les méthodes de conversion"
 
@@ -155,9 +168,6 @@ msgstr "Avec la méthode {method}"
 
 #~ msgid "Archives"
 #~ msgstr "Archives"
-
-#~ msgid "Change"
-#~ msgstr "Modifier"
 
 #~ msgid "No source image available for generation"
 #~ msgstr "Pas d'image source disponible pour la génération"

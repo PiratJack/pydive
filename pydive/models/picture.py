@@ -77,7 +77,5 @@ class Picture:
         else:
             raise StorageLocationCollision("recognition failed", path)
 
-    # TODO: trip management > new function: change trip (file moved by repository)
-
     def __repr__(self):
         return (self.name, self.trip, self.location.name, self.path).__repr__()
