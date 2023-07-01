@@ -108,6 +108,12 @@ msgstr ""
 msgid "Target file already exists"
 msgstr ""
 
+msgid "The element to delete is not a file"
+msgstr ""
+
+msgid "The file to delete does not exist"
+msgstr ""
+
 msgid "Using all methods"
 msgstr ""
 

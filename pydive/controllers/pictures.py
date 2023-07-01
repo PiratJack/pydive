@@ -616,7 +616,7 @@ class PictureGrid:
             self.picture_containers[row][column].display_error(_("No image to delete"))
             return
 
-        self.repository.remove_picture(self.picture_group, picture)
+        self.repository.remove_pictures(None, self.picture_group, picture)
         self.picture_containers[row][column].set_empty_picture()
 
     @property

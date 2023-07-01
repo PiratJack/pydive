@@ -142,7 +142,7 @@ class Repository:
         picture = PictureModel([location], path)
         picture_group.add_picture(picture)
 
-    def remove_picture(self, picture_group, picture):
+    def remove_picture(self, picture_group, location, path):
         """Removes (deletes) a single picture
 
         Parameters
@@ -152,7 +152,10 @@ class Repository:
         picture : Picture
             The picture to delete
         """
-        picture_group.remove_picture(picture)
+        print(picture_group, picture_group.locations, location, path)
+        picture = [p for p in picture_group.locations[location.name] if p.path == path]
+        if picture and len(picture) == 1:
+            picture_group.remove_picture(picture[0])
 
     def copy_pictures(
         self,
@@ -297,6 +300,68 @@ class Repository:
         self.process_groups.append(process_group)
         return process_group
 
+    def remove_pictures(
+        self,
+        trip=None,
+        picture_group=None,
+        picture=None,
+    ):
+        """Removes pictures
+
+        Triggers self.remove_picture once the process is complete
+
+        Parameters
+        ----------
+        trip : str
+            The trip where the files are. Ignored if picture or picture_group is provided.
+            Either trip, picture_group or picture must be provided
+        picture_group : PictureGroup
+            The picture group to copy. Ignored if picture is provided.
+            Either trip, picture_group or picture must be provided
+        picture : Picture
+            The picture to copy.
+            Either trip, picture_group or picture must be provided
+
+        Returns
+        ----------
+        process_group : ProcessGroup
+            The group of background processes deleting pictures
+        """
+
+        if not picture and not picture_group and not trip:
+            raise ValueError("Either trip, picture_group or picture must be provided")
+
+        # Determine all the picture groups to process
+        pictures = []
+        picture_groups = []
+        if picture:
+            if not picture_group:
+                raise ValueError("picture_group is required if picture is provided")
+            pictures = [picture]
+        if picture_group:
+            picture_groups = [picture_group]
+        elif trip:
+            picture_groups = self.trips[trip].values()
+
+        # Determine the source: if same image exists, then it'll be a copy
+        # TODO: this is wrong when multiple pictures are deleted
+        process_group = ProcessGroup("remove", "", picture.location)
+        for picture_group in picture_groups:
+            if picture:
+                pictures = [picture]
+            else:
+                pictures = []
+                for conversion_type in picture_group.pictures:
+                    pictures += picture_group.pictures[conversion_type]
+            for picture in pictures:
+                # Generate tasks for each deletion
+                process = process_group.add_task(picture_group, picture)
+                process.signals.taskFinished.connect(self.remove_picture)
+                QtCore.QThreadPool.globalInstance().start(process, 100)
+
+        self.process_groups.append(process_group)
+        return process_group
+
     def __getattr__(self, attr):
         """Calculates & returns missing attributes. Only works for trips attribute.
 
@@ -333,6 +398,8 @@ class ProcessGroup(QtCore.QObject):
 
     finished = QtCore.pyqtSignal()
 
+    # TODO: Improve this
+    # The goal is only to display a task label that makes sense...
     def __init__(self, task_type, trip, target_location):
         """Stores basic information about the task group
 
@@ -341,12 +408,12 @@ class ProcessGroup(QtCore.QObject):
         task_type : "copy" or "generate"
             Which task to perform
         trip : str
-            The name of the trip of the picture to copy/generate
+            The name of the trip of the picture to copy/generate (target trip if it changes)
         target_location : StorageLocation
-            The location in which to copy or generate
+            The location in which to copy or generate (None for change trip)
         """
         super().__init__()
-        if task_type not in ["copy", "generate"]:
+        if task_type not in ["copy", "generate", "remove"]:
             raise ValueError("Task type is invalid")
         self.task_type = task_type
         self.trip = trip
@@ -368,6 +435,8 @@ class ProcessGroup(QtCore.QObject):
             process = CopyProcess(self, picture_group, source_picture)
         elif self.task_type == "generate":
             process = GenerateProcess(self, picture_group, source_picture, method)
+        elif self.task_type == "remove":
+            process = RemoveProcess(self, picture_group, source_picture)
         task = {"source_picture": source_picture, "status": "Queued"}
         self.tasks.append(task)
         process.signals.taskFinished.connect(
@@ -501,6 +570,8 @@ class GenerateProcess(QtCore.QRunnable):
         ----------
         task_group : ProcessGroup
             The group of related task this belongs to
+        picture_group : PictureGroup
+            The picture_group to update after the command runs
         source_picture : Picture
             The RAW picture to convert
         method : ConversionMethod
@@ -565,6 +636,83 @@ class GenerateProcess(QtCore.QRunnable):
 
     def __repr__(self):
         return "Generate task: " + self.parameters["command"]
+
+
+class RemoveProcess(QtCore.QRunnable):
+    """A process to delete pictures
+
+    Methods
+    -------
+    __init__ (task_group, source_picture)
+        Determines the actual system command to run
+    run (folders)
+        Runs the command, after making sure it won't create issues
+    """
+
+    def __init__(self, task_group, picture_group, picture):
+        """Determines the actual system command to run
+
+        Parameters
+        ----------
+        task_group : ProcessGroup
+            The group of related task this belongs to
+        picture_group : PictureGroup
+            The picture_group to update after the command runs
+        picture : Picture
+            The picture to delete
+        """
+        super().__init__()
+        self.signals = ProcessSignals()
+        self.picture_group = picture_group
+        self.task_group = task_group
+
+        # Determine the command to run
+        parameters = {
+            "file": "",
+        }
+
+        parameters["file"] = picture.path
+
+        self.parameters = parameters
+
+    def run(self):
+        """Runs the command, after making sure it won't create issues
+
+        Will emit error signal if target file does not exist or is a folder
+        Will emit finished signal once process is complete
+        """
+        # Check target doesn't exist already
+        if not os.path.exists(self.parameters["file"]):
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.task_group.target_location,
+                _("The file to delete does not exist"),
+            )
+            return
+        if os.path.isdir(self.parameters["file"]):
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.task_group.target_location,
+                _("The element to delete is not a file"),
+            )
+            return
+
+        try:
+            os.unlink(self.parameters["file"])
+            self.signals.taskFinished.emit(
+                self.picture_group,
+                self.task_group.target_location,
+                self.parameters["file"],
+            )
+        except Exception as e:
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.task_group.target_location,
+                e.args.__repr__(),
+            )
+
+    def __repr__(self):
+        return "Change trip task: " + self.parameters["command"]
 
 
 class ProcessSignals(QtCore.QObject):

@@ -5,7 +5,6 @@ Classes
 PictureGroup
     A group of images that belong together, based on their file name
 """
-import os
 import gettext
 from PyQt5 import QtCore
 
@@ -141,8 +140,6 @@ class PictureGroup(QtCore.QObject):
         self.pictures[conversion_type].remove(picture)
         if not self.pictures[conversion_type]:
             del self.pictures[conversion_type]
-
-        os.unlink(picture.path)
 
         # Update locations
         self.locations[picture.location.name].remove(picture)

@@ -125,6 +125,12 @@ msgstr "Le type de lieu de stockage est invalide"
 msgid "Target file already exists"
 msgstr "Le fichier cible existe déjà"
 
+msgid "The element to delete is not a file"
+msgstr "L'élément à supprimer n'est pas un fichier"
+
+msgid "The file to delete does not exist"
+msgstr "Le fichier à supprimer n'existe pas"
+
 msgid "Using all methods"
 msgstr "Avec toutes les méthodes de conversion"
 
