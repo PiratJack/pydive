@@ -706,6 +706,18 @@ class CopyProcess(QtCore.QRunnable):
             )
             return
 
+        # Check source file exists
+        if not os.path.exists(self.source_file):
+            logger.warning(
+                f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Source file missing"
+            )
+            self.signals.taskError.emit(
+                self.picture_group,
+                self.target_location,
+                _("Source file does not exists"),
+            )
+            return
+
         # Run the actual processes
         os.makedirs(os.path.dirname(self.target_file), exist_ok=True)
         shutil.copy2(self.source_file, self.target_file)
