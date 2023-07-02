@@ -96,13 +96,19 @@ class Repository:
                 matching_groups = [
                     group
                     for group in self.picture_groups
-                    if picture.name.startswith(group.name)
+                    if (
+                        picture.name.startswith(group.name)
+                        or group.name.startswith(picture.name)
+                    )
                     and picture.trip == group.trip
                 ]
                 # Group doesn't exist yet
                 if len(matching_groups) == 0:
                     group = PictureGroup(picture.name)
                     self.picture_groups.append(group)
+                    group.pictureGroupDeleted.connect(
+                        lambda _a, _b, g=group: self.picture_groups.remove(g)
+                    )
                 else:
                     # There should not be multiple matching groups
                     # This is because groups are created in alphabetical order
