@@ -103,6 +103,8 @@ class PictureGroup(QtCore.QObject):
         # Otherwise we have to re-convert all images
         elif self.name.startswith(picture.name):
             prefix_to_add = self.name[len(picture.name) :]
+            if prefix_to_add.startswith("_"):
+                prefix_to_add = prefix_to_add[1:]
             self.name = picture.name
             self.pictures = {
                 prefix_to_add + conversion_type: self.pictures[conversion_type]
@@ -171,7 +173,6 @@ class PictureGroup(QtCore.QObject):
                 f"PictureGroup.remove_picture: emit pictureGroupDeleted for {self.name} in {self.trip}"
             )
             self.pictureGroupDeleted.emit(self.trip, self.name)
-            del self
 
     def __repr__(self):
         nb_pictures = sum([len(p) for p in self.pictures.values()])
