@@ -15,7 +15,7 @@ msgid "Change name to ..."
 msgstr "Renommer ..."
 
 msgid "Change trip to ..."
-msgstr "Changer le voyage"
+msgstr "Changer le voyage en..."
 
 msgid "Command to execute"
 msgstr "Commande à exécuter"
@@ -137,12 +137,14 @@ msgstr "BRUT"
 msgid "Remove 1 image in {target}"
 msgstr "Retirer 1 image de {target}"
 
-#, fuzzy
 msgid "Rename trip"
-msgstr "Modifier"
+msgstr "Renommer le voyage"
 
 msgid "Settings"
 msgstr "Paramètres"
+
+msgid "Source file does not exists"
+msgstr "Le fichier source n'existe pas"
 
 msgid "Storage location type is invalid"
 msgstr "Le type de lieu de stockage est invalide"

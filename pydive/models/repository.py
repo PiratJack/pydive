@@ -237,7 +237,7 @@ class Repository:
             picture_groups = self.trips[trip].values()
 
         if not picture_groups:
-            raise ValueError("trip or picture_group is required")
+            raise ValueError("Either trip or picture_group must be provided")
 
         # Determine the source: if same image exists, then it'll be a copy
         process_group = ProcessGroup(label)

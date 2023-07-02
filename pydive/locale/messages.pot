@@ -126,6 +126,9 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+msgid "Source file does not exists"
+msgstr ""
+
 msgid "Storage location type is invalid"
 msgstr ""
 
