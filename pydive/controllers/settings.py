@@ -6,6 +6,7 @@ SettingsController
     Settings screen: Define locations for picture storage, Subsurface file, ...
 """
 import gettext
+import logging
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
@@ -17,6 +18,7 @@ import models.conversionmethod
 from models.base import ValidationException
 
 _ = gettext.gettext
+logger = logging.getLogger(__name__)
 
 
 class LocationsList:
@@ -91,6 +93,7 @@ class LocationsList:
         location_type : Either "file" for dive log file or "folder" for image folders
             The type of locations to display / edit
         """
+        logger.debug(f"LocationsList.init {location_type}")
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.ui = {}
@@ -161,6 +164,7 @@ class LocationsList:
         location_model : models.storagelocation.StorageLocation
             The storage location to display
         """
+        logger.info(f"LocationsList.add_location_ui {location_model}")
         self.ui["locations"][location_model.id] = {}
         location = self.ui["locations"][location_model.id]
         location["model"] = location_model
@@ -249,6 +253,7 @@ class LocationsList:
         location_id : int
             The ID of the location whose name needs to change
         """
+        logger.debug(f"LocationsList.on_click_name_change {location_id}")
         location = self.ui["locations"][location_id]
 
         # Update display
@@ -266,6 +271,7 @@ class LocationsList:
         location_id : int
             The ID of the location whose name needs to change
         """
+        logger.debug(f"LocationsList.on_validate_name_change {location_id}")
         location = self.ui["locations"][location_id]
         # Save the change
         try:
@@ -294,6 +300,7 @@ class LocationsList:
         location_id : int
             The ID of the location whose path needs to change
         """
+        logger.debug(f"LocationsList.on_validate_path_change {location_id}")
         location = self.ui["locations"][location_id]
 
         # Save the change (for existing models)
@@ -312,7 +319,7 @@ class LocationsList:
 
     def on_click_new_location(self):
         """Displays all the fields to create a new location"""
-
+        logger.info("LocationsList.on_click_new_location")
         # Move the New button to another row
         self.ui["layout"].addWidget(
             self.ui["add_new"], len(self.ui["locations"]) + 2, 1
@@ -366,6 +373,7 @@ class LocationsList:
 
     def on_validate_new_location(self):
         """Saves a new location"""
+        logger.debug("LocationsList.on_validate_new_location")
         location = self.ui["locations"][0]
 
         if not self.new_location:
@@ -391,6 +399,9 @@ class LocationsList:
 
         self.database.session.add(self.new_location)
         self.database.session.commit()
+        logger.info(
+            f"LocationsList.on_validate_new_location New location created {self.new_location}"
+        )
 
         # Remove all "new location" fields (error fields were removed before)
         self.ui["layout"].removeWidget(location["name"])
@@ -425,6 +436,7 @@ class LocationsList:
         location_id : int
             The ID of the location which should be deleted
         """
+        logger.debug("LocationsList.on_click_delete_location")
         dialog = QtWidgets.QMessageBox(self.ui["main"])
         dialog.setWindowTitle("Please confirm")
         dialog.setText("Do you really want to delete this storage location?")
@@ -436,6 +448,9 @@ class LocationsList:
             location = self.ui["locations"][location_id]
             self.database.delete(location["model"])
             del location["model"]
+            logger.info(
+                f"LocationsList.on_click_delete_location Deleted location {location}"
+            )
             # Delete all the corresponding fields
             if "error" in location:
                 for i in location["error"]:
@@ -460,6 +475,9 @@ class LocationsList:
         message : str
             The error to display
         """
+        logger.debug(
+            f"LocationsList.display_error {message} for {field} on {location_id}"
+        )
         location = self.ui["locations"][location_id]
         if field in location["error"]:
             location["error"][field].setText(message)
@@ -491,13 +509,14 @@ class LocationsList:
         field : str
             The name of the field for which to clear the error
         """
+        logger.debug(f"LocationsList.clear_error for {field} on {location_id}")
         location = self.ui["locations"][location_id]
         if field in location["error"]:
             location["error"][field].setText("")
 
     def refresh_display(self):
         """Updates the locations names & paths displayed on screen"""
-
+        logger.debug("LocationsList.refresh_display")
         # Refresh list of locations
         for location in self.ui["locations"].values():
             location["name_label"].setText(location["model"].name)
@@ -590,6 +609,7 @@ class ConversionMethodsList:
         parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
             The window displaying this controller
         """
+        logger.debug("ConversionMethodsList.init")
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.ui = {}
@@ -641,6 +661,7 @@ class ConversionMethodsList:
         method_model : models.conversionmethod.ConversionMethod
             The conversion method to display
         """
+        logger.info(f"ConversionMethodsList.add_method_ui {method_model.name}")
         self.ui["methods"][method_model.id] = {}
         method = self.ui["methods"][method_model.id]
         method["model"] = method_model
@@ -721,6 +742,9 @@ class ConversionMethodsList:
         method_id : int
             The ID of the method whose name needs to change
         """
+        logger.debug(
+            f"ConversionMethodsList.on_click_field_change {field} for {method_id}"
+        )
         method = self.ui["methods"][method_id]
 
         # Update display
@@ -743,6 +767,9 @@ class ConversionMethodsList:
         method_id : int
             The ID of the method whose name needs to change
         """
+        logger.info(
+            f"ConversionMethodsList.on_validate_field_change {field} for {method_id}"
+        )
         method = self.ui["methods"][method_id]
         # Save the change
         try:
@@ -763,7 +790,7 @@ class ConversionMethodsList:
 
     def on_click_new_method(self):
         """Displays all the fields to create a new method"""
-
+        logger.debug("ConversionMethodsList.on_click_new_method")
         # Move the New button to another row
         self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 2, 1)
 
@@ -803,6 +830,7 @@ class ConversionMethodsList:
 
     def on_validate_new_method(self):
         """Saves a new conversion method"""
+        logger.info("ConversionMethodsList.on_validate_new_method")
         method = self.ui["methods"][0]
 
         if not self.new_method:
@@ -826,6 +854,9 @@ class ConversionMethodsList:
             return
 
         self.database.session.add(self.new_method)
+        logger.debug(
+            f"ConversionMethodsList.on_validate_new_method: New method created {self.new_method}"
+        )
         self.database.session.commit()
 
         # Remove all "new method" fields (error fields were removed before)
@@ -851,6 +882,7 @@ class ConversionMethodsList:
         method_id : int
             The ID of the method which should be deleted
         """
+        logger.debug("ConversionMethodsList.on_click_delete_method")
         dialog = QtWidgets.QMessageBox(self.ui["main"])
         dialog.setWindowTitle(_("Please confirm"))
         dialog.setText(_("Do you really want to delete this conversion method?"))
@@ -861,6 +893,9 @@ class ConversionMethodsList:
         if button == QtWidgets.QMessageBox.Yes:
             method = self.ui["methods"][method_id]
             self.database.delete(method["model"])
+            logger.info(
+                f"ConversionMethodsList.on_click_delete_method: Deleted {method}"
+            )
             del method["model"]
             # Delete all the corresponding fields
             if "error" in method:
@@ -886,6 +921,9 @@ class ConversionMethodsList:
         message : str
             The error to display
         """
+        logger.debug(
+            f"ConversionMethodsList.display_error: {message} for {field} on {method_id}"
+        )
         method = self.ui["methods"][method_id]
         if field in method["error"]:
             method["error"][field].setText(message)
@@ -915,13 +953,14 @@ class ConversionMethodsList:
         field : str
             The name of the field for which to clear the error
         """
+        logger.debug(f"ConversionMethodsList.clear_error for {field} on {method_id}")
         method = self.ui["methods"][method_id]
         if field in method["error"]:
             method["error"][field].setText("")
 
     def refresh_display(self):
         """Updates the methods names & paths displayed on screen"""
-
+        logger.debug("ConversionMethodsList.refresh_display")
         # Refresh list of methods
         for method in self.ui["methods"].values():
             for field in ["name", "suffix", "command"]:
@@ -977,6 +1016,7 @@ class SettingsController:
         parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
             The window displaying this controller
         """
+        logger.debug("SettingsController.init")
         self.parent_window = parent_window
         self.database = parent_window.database
         self.locations_list = LocationsList(self, "folder")
@@ -1008,7 +1048,6 @@ class SettingsController:
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
-
         return self.ui["main"]
 
     @property
@@ -1023,6 +1062,6 @@ class SettingsController:
 
     def refresh_display(self):
         """Updates the locations names & paths displayed on screen"""
-
+        logger.debug("SettingsController.refresh_display")
         self.locations_list.refresh_display()
         self.conversion_methods_list.refresh_display()

@@ -1,5 +1,6 @@
 """Main application module"""
 import gettext
+import logging
 import sys
 import os
 import platformdirs
@@ -8,6 +9,9 @@ import PyQt5
 import models
 import controllers.mainwindow
 import models.database
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # Define some constants
 LOCALE_FOLDER = "./locale"
@@ -22,6 +26,7 @@ if "--real" in sys.argv:
     DATABASE_FILE = (
         platformdirs.user_data_dir("piratjack-pydive", "PiratJack") + "/prod.sqlite"
     )
+    logger.setLevel(logging.ERROR)
 
 # Setup translation
 gettext.bindtextdomain("messages", LOCALE_FOLDER)

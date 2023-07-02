@@ -10,8 +10,10 @@ Picture
 """
 import os
 import gettext
+import logging
 
 _ = gettext.gettext
+logger = logging.getLogger(__name__)
 
 
 class StorageLocationCollision(ValueError):
@@ -59,6 +61,7 @@ class Picture:
         path : str
             Image's file path
         """
+        logger.debug(f"Picture.init: {storage_locations}, {path}")
         self.path = path
         # In which folder / storage location is the picture?
         storage_location = [

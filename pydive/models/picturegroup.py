@@ -6,12 +6,14 @@ PictureGroup
     A group of images that belong together, based on their file name
 """
 import gettext
+import logging
 from PyQt5 import QtCore
 
 from .picture import Picture as PictureModel
 from .storagelocation import StorageLocation
 
 _ = gettext.gettext
+logger = logging.getLogger(__name__)
 
 
 class PictureGroup(QtCore.QObject):
@@ -57,6 +59,7 @@ class PictureGroup(QtCore.QObject):
         group_name : str
             The name of the picture group
         """
+        logger.debug(f"PictureGroup.init {group_name}")
         super().__init__()
         self.name = group_name
         self.trip = None
@@ -77,6 +80,9 @@ class PictureGroup(QtCore.QObject):
         picture : Picture
             The picture to add
         """
+        logger.debug(
+            f"PictureGroup.add_picture: {picture.filename} to {self.name} in {self.trip}"
+        )
         # Check trip matches the group's trip
         if not self.trip:
             self.trip = picture.trip
@@ -113,6 +119,9 @@ class PictureGroup(QtCore.QObject):
             picture.location.name, []
         ) + [picture]
 
+        logger.debug(
+            f"PictureGroup.add_picture: emit pictureAdded: {picture.filename} to {self.name} in {self.trip}"
+        )
         self.pictureAdded.emit(picture, conversion_type)
 
     def remove_picture(self, picture):
@@ -128,6 +137,9 @@ class PictureGroup(QtCore.QObject):
         picture : Picture
             The picture to remove
         """
+        logger.debug(
+            f"PictureGroup.remove_picture: {picture.filename} from {self.name} in {self.trip}"
+        )
         # Check trip matches the group's trip
         if picture.trip and picture.trip != self.trip:
             raise ValueError(
@@ -147,11 +159,17 @@ class PictureGroup(QtCore.QObject):
         if not self.locations[picture.location.name]:
             del self.locations[picture.location.name]
 
+        logger.debug(
+            f"PictureGroup.remove_picture: emit pictureRemoved: {picture.filename} from {self.name} in {self.trip}"
+        )
         self.pictureRemoved.emit(conversion_type, picture.location)
         del picture
 
         if not self.pictures:
             # TODO: Picture group: emit deletion only if no pending task?
+            logger.debug(
+                f"PictureGroup.remove_picture: emit pictureGroupDeleted for {self.name} in {self.trip}"
+            )
             self.pictureGroupDeleted.emit(self.trip, self.name)
             del self
 

@@ -9,6 +9,7 @@ PicturesController
     Picture organization, selection & link to trips
 """
 import gettext
+import logging
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
@@ -17,6 +18,7 @@ import models.repository
 from controllers.widgets.basetreewidget import BaseTreeWidget
 
 _ = gettext.gettext
+logger = logging.getLogger(__name__)
 
 
 class PicturesTree(BaseTreeWidget):
@@ -65,7 +67,7 @@ class PicturesTree(BaseTreeWidget):
         repository : models.repository.Repository
             A reference to the picture repository
         """
-
+        logger.debug("PicturesTree.init")
         super().__init__(parent_controller)
         self.parent_controller = parent_controller
         self.database = parent_controller.database
@@ -279,9 +281,7 @@ class PicturesTree(BaseTreeWidget):
         target_trip : str
             The target name of the trip
         """
-        # Find the source trip widget - there should be only 1
-        print(f"PicturesTree.change_trip_name: {source_trip} to {target_trip}")
-
+        logger.info(f"PicturesTree.change_trip_name: {source_trip} to {target_trip}")
         # Source trip widget will be deleted thanks to remove_picture_group
         # We simply need to add a new one if needed, and to connect the picture groups to it
 
@@ -294,10 +294,12 @@ class PicturesTree(BaseTreeWidget):
             # There should be at most 1 match
             target_trip_widget = widgets[0]
 
-        # Need to refresh the repository, otherwise it'll fail
+        # Need to refresh the repository, otherwise it'll be missing pictures
         self.repository.load_pictures(self.parent_controller.folders)
         picture_groups = self.repository.trips[target_trip].values()
-        print(f"PicturesTree.change_trip_name: processing {picture_groups}")
+        logger.debug(
+            f"PicturesTree.change_trip_name: processing {len(picture_groups)} groups"
+        )
         # Remove any existing children
         target_trip_widget.takeChildren()
         for picture_group in picture_groups:
@@ -385,6 +387,9 @@ class PicturesTree(BaseTreeWidget):
         target_trip : str
             The trip in which to move the picture group
         """
+        logger.info(
+            f"PicturesTree.change_picture_group_trip: {source_trip} to {target_trip} for {picture_group_name}"
+        )
         # Does the target already exist in the tree?
         widgets = self.findItems(target_trip, Qt.MatchExactly, 0)
         widgets = [w for w in widgets if not w.parent()]
@@ -413,6 +418,7 @@ class PicturesTree(BaseTreeWidget):
         folders : list of models.storagelocations.StorageLocations
             The list of folders to display as columns in the tree
         """
+        logger.info(f"PicturesTree.set_folders: displaying {len(folders)} folders")
         self.columns = [self.columns[0]]
         for folder in folders:
             self.columns.append(
@@ -429,6 +435,7 @@ class PicturesTree(BaseTreeWidget):
 
     def fill_tree(self):
         """Adds all trips & pictures to the tree"""
+        logger.info("PicturesTree.fill_tree")
         self.clear()
         for trip, picture_groups in self.repository.trips.items():
             trip_widget = self.add_trip(trip)
@@ -443,6 +450,7 @@ class PicturesTree(BaseTreeWidget):
         trip : str
             Name of the trip
         """
+        logger.debug(f"PicturesTree.add_trip {trip}")
         data = [trip]
         trip_widget = QtWidgets.QTreeWidgetItem(data)
         self.addTopLevelItem(trip_widget)
@@ -464,10 +472,7 @@ class PicturesTree(BaseTreeWidget):
         picture_group_widget : QtWidgets.QTreeWidgetItem
             If provided, will update the item. Otherwise, creates a new one
         """
-
-        if not trip_widget:
-            return
-        print(
+        logger.debug(
             f"PicturesTree.add_picture_group: {picture_group.name} in {trip_widget.data(0, Qt.DisplayRole)}"
         )
         data = [picture_group.name]
@@ -511,20 +516,18 @@ class PicturesTree(BaseTreeWidget):
         picture_group_widget : QtWidgets.QTreeWidgetItem
             The picture group to remove
         """
-        if not picture_group_widget:
-            return
+        logger.debug(
+            f"PicturesTree.remove_picture_group: {picture_group_widget.data(0, Qt.DisplayRole)} from {picture_group_widget.parent().data(0, Qt.DisplayRole)}"
+        )
         trip_widget = picture_group_widget.parent()
         # This means it has been deleted from the tree before
         if not trip_widget:
             return
-        print(
-            f"PicturesTree.remove_picture_group: {picture_group_widget.data(0, Qt.DisplayRole)} in {trip_widget.data(0, Qt.DisplayRole)}"
-        )
         trip_widget.removeChild(picture_group_widget)
-        print(
-            f"PicturesTree.remove_picture_group: {trip_widget.childCount()} children remain"
-        )
         if trip_widget.childCount() == 0:
+            logger.info(
+                f"PicturesTree.remove_picture_group: Removing trip {picture_group_widget.parent().data(0, Qt.DisplayRole)}"
+            )
             self.takeTopLevelItem(self.indexOfTopLevelItem(trip_widget))
 
     def on_item_clicked(self, item):
@@ -535,6 +538,7 @@ class PicturesTree(BaseTreeWidget):
         item : QtWidgets.QTreeWidgetItem
             The item that was clicked"""
         # Exclude clicks on trips
+        logger.info(f"PicturesTree.on_item_clicked: {item.data(0, Qt.DisplayRole)}")
         if not item.parent():
             return
 
@@ -592,6 +596,7 @@ class PictureGrid:
         ----------
         parent_controller : PicturesController
             A reference to the parent controller"""
+        logger.debug("PictureGrid.init")
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.repository = parent_controller.repository
@@ -613,6 +618,9 @@ class PictureGrid:
         ----------
         picture_group : models.picturegroup.PictureGroup
             The group of pictures to display"""
+        logger.debug(
+            f"PictureGrid.display_picture_group {picture_group.trip}/{picture_group.name}"
+        )
         # TODO: Picture grid > Allow to filter which pictures to display (via checkbox)
         self.clear_display()
         self.picture_group = picture_group
@@ -695,6 +703,7 @@ class PictureGrid:
         conversion_type : str
             The suffix of the conversion type (as a picture_group.pictures key)
         """
+        logger.debug(f"PictureGrid.picture_added {picture.filename}")
         self.display_picture_group(self.picture_group)
 
     def picture_removed(self, conversion_type, location):
@@ -707,10 +716,14 @@ class PictureGrid:
         location : StorageLocation
             The storage location of the picture
         """
+        logger.debug(
+            f"PictureGrid.picture_removed {conversion_type.name} from {location.name}"
+        )
         self.display_picture_group(self.picture_group)
 
     def clear_display(self):
         """Removes all widgets from the display & deletes them properly"""
+        logger.info("PictureGrid.clear_display")
         for row in self.grid:
             for element in row:
                 if type(element) == PictureContainer:
@@ -727,6 +740,7 @@ class PictureGrid:
         if self.picture_group:
             self.picture_group.pictureAdded.disconnect(self.picture_added)
             self.picture_group.pictureRemoved.disconnect(self.picture_removed)
+            self.picture_group.pictureGroupDeleted.disconnect(self.picture_removed)
             self.picture_group = None
 
     def generate_image(self, row, column):
@@ -739,6 +753,7 @@ class PictureGrid:
             The row in which to generate the image
         column : int
             The column in which to generate the image"""
+        logger.debug(f"PictureGrid.generate_image row {row}, column {column}")
 
         target_location = self.grid[row][0].model
         try:
@@ -752,6 +767,9 @@ class PictureGrid:
         try:
             label = _("Convert 1 image in {location}").format(
                 location=target_location.name
+            )
+            logger.info(
+                f"PictureGrid.generate_image {self.picture_group.trip}/{self.picture_group.name} using {method} to {target_location.name}"
             )
             self.repository.generate_pictures(
                 label, target_location, [method], picture_group=self.picture_group
@@ -769,6 +787,7 @@ class PictureGrid:
             The row in which to copy the image
         column : int
             The column in which to copy the image"""
+        logger.debug(f"PictureGrid.copy_image row {row}, column {column}")
 
         target_location = self.grid[row][0].model
         try:
@@ -778,6 +797,9 @@ class PictureGrid:
 
         try:
             label = _("Copy 1 image to {target}").format(target=target_location.name)
+            logger.info(
+                f"PictureGrid.copy_image {self.picture_group.trip}/{self.picture_group.name} using {method} to {target_location.name}"
+            )
             self.repository.copy_pictures(
                 label,
                 target_location,
@@ -797,6 +819,7 @@ class PictureGrid:
             The row in which to copy the image
         column : int
             The column in which to copy the image"""
+        logger.debug(f"PictureGrid.delete_image row {row}, column {column}")
 
         try:
             picture = self.picture_containers[row][column].picture
@@ -805,6 +828,9 @@ class PictureGrid:
             return
 
         label = _("Remove 1 image in {target}").format(target=picture.location.name)
+        logger.info(
+            f"PictureGrid.delete_image {self.picture_group.trip}/{self.picture_group.name}/{picture.filename} in {picture.location.name}"
+        )
         self.repository.remove_pictures(label, None, self.picture_group, picture)
         self.picture_containers[row][column].set_empty_picture()
 
@@ -866,6 +892,7 @@ class PictureContainer:
             The row where the picture should be displayed
         column: int
             The row where the picture should be displayed"""
+        logger.debug(f"PictureContainer.init row {row}, column {column}")
         self.parent_controller = parent_controller
         self.row = row
         self.column = column
@@ -878,6 +905,9 @@ class PictureContainer:
 
     def set_empty_picture(self):
         """Displays an empty image as well as action buttons"""
+        logger.debug(
+            f"PictureContainer.set_empty_picture row {self.row}, column {self.column}"
+        )
         self.clear_display()
         self.picture = None
 
@@ -906,6 +936,9 @@ class PictureContainer:
         picture : models.picture.Picture
             The picture to display
         """
+        logger.debug(
+            f"PictureContainer.set_picture {picture.filename} in row {self.row}, column {self.column}"
+        )
         self.clear_display()
         self.picture = picture
 
@@ -929,6 +962,7 @@ class PictureContainer:
 
             # Delete button
             # TODO: Ensure delete button is next to image (by default the image takes all the vertical space)
+            # TODO: Display delete button for RAW images
             self.ui["elements"]["delete"] = QtWidgets.QPushButton(
                 QtGui.QIcon("assets/images/delete.png"), ""
             )
@@ -969,6 +1003,7 @@ class PictureContainer:
         message : str
             The message to display
         """
+        logger.debug(f"PictureContainer.display_error {message}")
         if "error" not in self.ui["elements"]:
             self.ui["elements"]["error"] = QtWidgets.QLabel(message)
             self.ui["elements"]["error"].setProperty("class", "validation_warning")
@@ -1062,6 +1097,7 @@ class PicturesController:
         parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
             The window displaying this controller
         """
+        logger.debug("PicturesController.init")
         self.parent_window = parent_window
         self.repository = models.repository.Repository()
         self.database = parent_window.database
@@ -1125,12 +1161,16 @@ class PicturesController:
 
     def on_load_pictures(self):
         """User clicks 'load pictures' => reload the tree of pictures"""
+        logger.debug(
+            f"PicturesController.on_load_pictures on {len(self.folders)} folders"
+        )
         self.repository.load_pictures(self.folders)
 
         self.ui["picture_tree"].fill_tree()
 
     def refresh_folders(self):
         """Refreshes the list of folders from DB"""
+        logger.debug("PicturesController.refresh_folders")
         # Load list from DB
         self.folders = self.database.storagelocations_get_folders()
 
@@ -1166,6 +1206,7 @@ class PicturesController:
 
     def refresh_display(self):
         """Refreshes the display - update trips & pictures"""
+        logger.debug("PicturesController.refresh_display")
         # Refresh folder names
         self.refresh_folders()
 

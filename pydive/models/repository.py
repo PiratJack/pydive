@@ -23,6 +23,7 @@ ProcessSignals
 import os
 import shutil
 import gettext
+import logging
 
 from PyQt5 import QtCore
 from .picture import Picture as PictureModel
@@ -30,6 +31,7 @@ from .picturegroup import PictureGroup
 from .storagelocation import StorageLocation
 
 _ = gettext.gettext
+logger = logging.getLogger(__name__)
 
 
 class Repository:
@@ -66,6 +68,7 @@ class Repository:
 
     def __init__(self):
         """Defines default attributes"""
+        logger.debug("Repository.init")
         self.storage_locations = []
         self.picture_groups = []
         self.process_groups = []
@@ -83,6 +86,7 @@ class Repository:
             The storage locations
         """
         # Find all pictures
+        logger.info(f"Repository.load_pictures in {storage_locations}")
         self.storage_locations += storage_locations.copy()
         self.storage_locations = list(set(self.storage_locations))
         self.picture_groups = []
@@ -105,6 +109,9 @@ class Repository:
                     # Therefore groups with shorter names are processed first
                     group = matching_groups[0]
                 group.add_picture(picture)
+            logger.info(
+                f"Repository.load_pictures: found {len(pictures)} images in {location.name}"
+            )
 
     def read_folder(self, pictures, path):
         """Reads a given folder recursively to find pictures
@@ -116,6 +123,7 @@ class Repository:
         path : str
             The path to explore (will do nothing if it's not a folder)
         """
+        logger.debug(f"Repository.read_folder init : {path}, {len(pictures)} pictures")
         if not os.path.isdir(path):
             return pictures
         for element in os.listdir(path):
@@ -130,6 +138,7 @@ class Repository:
                 ]
                 if matching_extension:
                     pictures.append(PictureModel(self.storage_locations, full_path))
+        logger.debug(f"Repository.read_folder done : {path}, {len(pictures)} pictures")
         return pictures
 
     def add_picture(self, picture_group, location, path):
@@ -146,6 +155,9 @@ class Repository:
         path : str
             The file path of the picture to add
         """
+        logger.info(
+            f"Repository.add_picture for {picture_group.trip}/{picture_group.name} in {location.name} - {path}"
+        )
         picture = PictureModel([location], path)
         picture_group.add_picture(picture)
 
@@ -161,6 +173,9 @@ class Repository:
         path : str
             The file path on hard drive
         """
+        logger.info(
+            f"Repository.remove_picture from {picture_group.trip}/{picture_group.name} in {location.name} - {path}"
+        )
         picture = [p for p in picture_group.locations[location.name] if p.path == path]
         if picture and len(picture) == 1:
             picture_group.remove_picture(picture[0])
@@ -202,6 +217,10 @@ class Repository:
         process_group : ProcessGroup
             The group of background processes copying pictures
         """
+        logger.info(f"Repository.copy_pictures {label}")
+        logger.debug(
+            f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name}{(' (only ' + conversion_method +')') if conversion_method else ''}"
+        )
         # Determine all the picture groups to process
         picture_groups = None
         if picture_group:
@@ -281,6 +300,10 @@ class Repository:
             The group of background processes generating pictures
         """
         # Determine all the picture groups to process
+        logger.info(f"Repository.generate_pictures {label}")
+        logger.debug(
+            f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name} (only {conversion_methods})"
+        )
         if picture_group:
             picture_groups = [picture_group]
             trip = picture_group.trip
@@ -359,6 +382,10 @@ class Repository:
         process_group : ProcessGroup
             The group of background processes deleting pictures
         """
+        logger.info(f"Repository.remove_pictures {label}")
+        logger.debug(
+            f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'}/{picture.filename if picture else '*'}"
+        )
 
         if not picture and not picture_group and trip is None:
             raise ValueError("Either trip, picture_group or picture must be provided")
@@ -423,6 +450,10 @@ class Repository:
         process_group : ProcessGroup
             The group of background processes copying pictures
         """
+        logger.info(f"Repository.change_trip_pictures {label}")
+        logger.debug(
+            f"#Args: {picture_group.name if picture_group else '*'} from {source_trip if source_trip is not None else '*'} to {target_trip}"
+        )
         # Determine all the picture groups to process
         picture_groups = None
         if picture_group:
@@ -492,6 +523,10 @@ class Repository:
         process_group : ProcessGroup
             The group of background processes copying pictures
         """
+        logger.info("Repository.change_trip_pictures_finished")
+        logger.debug(
+            f"#Args: {source_picture_group}/{picture.filename} to {target_picture_group.name} - {path}"
+        )
         self.remove_picture(source_picture_group, picture.location, picture.path)
         picture.trip = target_picture_group.trip
         picture.path = path
@@ -541,6 +576,7 @@ class ProcessGroup(QtCore.QObject):
         label : str
             The name of the task to display
         """
+        logger.info(f"ProcessGroup.init {label}")
         super().__init__()
         self.progress = 0
         self.tasks = []
@@ -554,6 +590,7 @@ class ProcessGroup(QtCore.QObject):
         process : *Process
             The process to add
         """
+        logger.debug("ProcessGroup.add_task")
         task = {"status": "Queued"}
         self.tasks.append(task)
         process.signals.taskFinished.connect(
@@ -573,6 +610,7 @@ class ProcessGroup(QtCore.QObject):
         path : str
             The path of the newly created image
         """
+        logger.debug("ProcessGroup.task_done")
         task["status"] = "Stopped"
         task["file_path"] = path
         self.update_progress()
@@ -587,6 +625,7 @@ class ProcessGroup(QtCore.QObject):
         error : str
             The error message
         """
+        logger.debug("ProcessGroup.task_error")
         task["status"] = "Stopped"
         task["error"] = error
         self.update_progress()
@@ -596,6 +635,7 @@ class ProcessGroup(QtCore.QObject):
         done = len([t for t in self.tasks if t["status"] == "Stopped"])
         self.progress = done / len(self.tasks)
         if done == len(self.tasks):
+            logger.info(f"ProcessGroup finished {self.label}")
             self.finished.emit()
 
     def __repr__(self):
@@ -625,6 +665,9 @@ class CopyProcess(QtCore.QRunnable):
         target_location : StorageLocation
             The location where to copy the picture
         """
+        logger.debug(
+            f"CopyProcess.init {picture_group.trip}/{picture_group.name}/{source_picture.filename} to {target_location.name}"
+        )
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
@@ -659,6 +702,9 @@ class CopyProcess(QtCore.QRunnable):
         # Run the actual processes
         os.makedirs(os.path.dirname(self.target_file), exist_ok=True)
         shutil.copy2(self.source_file, self.target_file)
+        logger.info(
+            f"CopyProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name}"
+        )
         self.signals.taskFinished.emit(
             self.picture_group,
             self.target_location,
@@ -691,6 +737,9 @@ class GenerateProcess(QtCore.QRunnable):
         method : ConversionMethod
             The method to convert the image
         """
+        logger.debug(
+            f"GenerateProcess.init: {picture_group.trip}/{picture_group.name}/{source_picture.filename} to {location.name} using {method}"
+        )
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
@@ -729,6 +778,9 @@ class GenerateProcess(QtCore.QRunnable):
             os.makedirs(self.target_folder, exist_ok=True)
 
         os.system(self.command)
+        logger.info(
+            f"GenerateProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name}..{os.path.basename(self.target_file)}"
+        )
         self.signals.taskFinished.emit(
             self.picture_group,
             self.location,
@@ -760,6 +812,9 @@ class RemoveProcess(QtCore.QRunnable):
         picture : Picture
             The picture to delete
         """
+        logger.debug(
+            f"RemoveProcess.init: {picture_group.trip}/{picture_group.name}/{picture.filename}"
+        )
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
@@ -791,13 +846,19 @@ class RemoveProcess(QtCore.QRunnable):
             return
 
         try:
-            os.unlink(self.parameters["file"])
+            os.unlink(self.file)
+            logger.info(
+                f"RemoveProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}"
+            )
             self.signals.taskFinished.emit(
                 self.picture_group,
                 self.location,
-                self.parameters["file"],
+                self.file,
             )
         except Exception as e:
+            logger.warning(
+                f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: {e.args}"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
@@ -831,10 +892,14 @@ class ChangeTripProcess(QtCore.QRunnable):
         target_trip : str
             The trip in which to put the picture
         """
+        logger.debug(
+            f"ChangeTripProcess.init: {picture_group.trip}/{picture_group.name}/{picture.filename} from {picture_group.trip} to {target_trip}"
+        )
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
         self.target_location = picture.location
+        self.target_trip = target_trip
 
         # Determine the command to run
         self.source_file = picture.path
@@ -864,12 +929,18 @@ class ChangeTripProcess(QtCore.QRunnable):
 
         try:
             os.rename(self.source_file, self.target_file)
+            logger.info(
+                f"ChangeTripProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}"
+            )
             self.signals.taskFinished.emit(
                 self.picture_group,
                 self.target_location,
                 self.target_file,
             )
         except Exception as e:
+            logger.warning(
+                f"ChangeTripProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}: {e.args}"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.target_location,
