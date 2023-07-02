@@ -32,6 +32,7 @@ from .storagelocation import StorageLocation
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
+# TODO: Background processes > handle errors & display log somehow (depending on gravity / type of error)
 
 
 class Repository:
@@ -687,9 +688,6 @@ class CopyProcess(QtCore.QRunnable):
             source_picture.filename,
         )
 
-    def __repr__(self):
-        return "Copy task: " + self.source_file + " to " + self.target_file
-
     def run(self):
         """Runs the copy, after making sure it won't create issues
 
@@ -716,6 +714,9 @@ class CopyProcess(QtCore.QRunnable):
             self.target_location,
             self.target_file,
         )
+
+    def __repr__(self):
+        return "Copy task: " + self.source_file + " to " + self.target_file
 
 
 class GenerateProcess(QtCore.QRunnable):
