@@ -243,7 +243,7 @@ class Repository:
         process_group = ProcessGroup(label)
         for picture_group in picture_groups:
             source_pictures = []
-            if conversion_method:
+            if conversion_method is not None:
                 # If a conversion method is preferred: take the first available picture
                 if conversion_method not in picture_group.pictures:
                     raise FileNotFoundError(_("No source image found"))
@@ -646,7 +646,7 @@ class ProcessGroup(QtCore.QObject):
             self.finished.emit()
 
     def __repr__(self):
-        return (self.task_type, self.trip).__repr__()
+        return f"{self.label} ({len(self.tasks)} tasks)"
 
 
 class CopyProcess(QtCore.QRunnable):
@@ -696,6 +696,9 @@ class CopyProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         if os.path.exists(self.target_file):
+            logger.warning(
+                f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Target file exists"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.target_location,
@@ -716,7 +719,7 @@ class CopyProcess(QtCore.QRunnable):
         )
 
     def __repr__(self):
-        return "Copy task: " + self.source_file + " to " + self.target_file
+        return f"Copy picture: {self.source_file} to {self.target_file}"
 
 
 class GenerateProcess(QtCore.QRunnable):
@@ -774,6 +777,9 @@ class GenerateProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         if os.path.exists(self.target_file):
+            logger.warning(
+                f"GenerateProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name} - Target file exists"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
@@ -795,7 +801,7 @@ class GenerateProcess(QtCore.QRunnable):
         )
 
     def __repr__(self):
-        return "Generate task: " + self.command
+        return f"Generate picture: {self.command}"
 
 
 class RemoveProcess(QtCore.QRunnable):
@@ -838,6 +844,9 @@ class RemoveProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         if not os.path.exists(self.file):
+            logger.warning(
+                f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: File does not exist"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
@@ -845,6 +854,9 @@ class RemoveProcess(QtCore.QRunnable):
             )
             return
         if os.path.isdir(self.file):
+            logger.warning(
+                f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: Element to delete is not a file"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.location,
@@ -873,7 +885,7 @@ class RemoveProcess(QtCore.QRunnable):
             )
 
     def __repr__(self):
-        return "Delete picture: " + self.parameters["command"]
+        return f"Delete picture: {self.file}"
 
 
 class ChangeTripProcess(QtCore.QRunnable):
@@ -924,6 +936,9 @@ class ChangeTripProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         if os.path.exists(self.target_file):
+            logger.warning(
+                f"ChangeTripProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}: Target file exists"
+            )
             self.signals.taskError.emit(
                 self.picture_group,
                 self.target_location,
@@ -955,7 +970,7 @@ class ChangeTripProcess(QtCore.QRunnable):
             )
 
     def __repr__(self):
-        return "Change trip task: " + self.source_file + " to " + self.target_file
+        return f"Change trip: {self.source_file} to {self.target_file}"
 
 
 class ProcessSignals(QtCore.QObject):
