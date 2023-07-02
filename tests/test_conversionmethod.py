@@ -1,10 +1,13 @@
 import os
 import unittest
+import logging
 
 import pydive.models.database as databasemodel
 
 from pydive.models.base import ValidationException
 from pydive.models.conversionmethod import ConversionMethod
+
+logging.basicConfig(level=logging.WARNING)
 
 DATABASE_FILE = "test.sqlite"
 database = databasemodel.Database(DATABASE_FILE)
