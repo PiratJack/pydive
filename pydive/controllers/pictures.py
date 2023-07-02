@@ -526,7 +526,7 @@ class PicturesTree(BaseTreeWidget):
         trip_widget.removeChild(picture_group_widget)
         if trip_widget.childCount() == 0:
             logger.info(
-                f"PicturesTree.remove_picture_group: Removing trip {picture_group_widget.parent().data(0, Qt.DisplayRole)}"
+                f"PicturesTree.remove_picture_group: Removing trip {trip_widget.data(0, Qt.DisplayRole)}"
             )
             self.takeTopLevelItem(self.indexOfTopLevelItem(trip_widget))
 
@@ -617,16 +617,17 @@ class PictureGrid:
         Parameters
         ----------
         picture_group : models.picturegroup.PictureGroup
-            The group of pictures to display"""
+            The group of pictures to display
+        """
         logger.debug(
             f"PictureGrid.display_picture_group {picture_group.trip}/{picture_group.name}"
         )
         # TODO: Picture grid > Allow to filter which pictures to display (via checkbox)
         self.clear_display()
         self.picture_group = picture_group
-        if self.picture_group:
-            self.picture_group.pictureAdded.connect(self.picture_added)
-            self.picture_group.pictureRemoved.connect(self.picture_removed)
+        self.picture_group.pictureAdded.connect(self.picture_added)
+        self.picture_group.pictureRemoved.connect(self.picture_removed)
+        self.picture_group.pictureGroupDeleted.connect(self.clear_display)
 
         # Include locations from the DB + "" for the header
         rows = {"": ""}
@@ -634,7 +635,7 @@ class PictureGrid:
 
         # Include conversion types for existing pictures
         # "" is added for RAW files
-        columns = [""] + list(picture_group.pictures.keys())
+        columns = [""] + list(self.picture_group.pictures.keys())
         # Add conversion types based on conversion methods
         columns = columns + [m.suffix for m in self.database.conversionmethods_get()]
         # "" is added for header row
@@ -669,12 +670,12 @@ class PictureGrid:
                 picture_container = PictureContainer(self, row, column)
 
                 # No picture at all for this conversion type
-                if conversion_type not in picture_group.pictures:
+                if conversion_type not in self.picture_group.pictures:
                     picture_container.set_empty_picture()
                 else:
                     picture = [
                         p
-                        for p in picture_group.pictures[conversion_type]
+                        for p in self.picture_group.pictures[conversion_type]
                         if p.location.name == location_name
                     ]
                     if not picture:
@@ -717,7 +718,7 @@ class PictureGrid:
             The storage location of the picture
         """
         logger.debug(
-            f"PictureGrid.picture_removed {conversion_type.name} from {location.name}"
+            f"PictureGrid.picture_removed {conversion_type} from {location.name}"
         )
         self.display_picture_group(self.picture_group)
 
@@ -740,7 +741,7 @@ class PictureGrid:
         if self.picture_group:
             self.picture_group.pictureAdded.disconnect(self.picture_added)
             self.picture_group.pictureRemoved.disconnect(self.picture_removed)
-            self.picture_group.pictureGroupDeleted.disconnect(self.picture_removed)
+            self.picture_group.pictureGroupDeleted.disconnect(self.clear_display)
             self.picture_group = None
 
     def generate_image(self, row, column):
