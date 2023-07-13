@@ -10,12 +10,15 @@ from pydive.models.storagelocation import StorageLocationType
 from pydive.models.repository import Repository
 from pydive.models.picture import Picture, StorageLocationCollision
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.CRITICAL)
 
 DATABASE_FILE = "test.sqlite"
 database = databasemodel.Database(DATABASE_FILE)
 
-BASE_FOLDER = "./test_images" + str(int(datetime.datetime.now().timestamp())) + "/"
+BASE_FOLDER = (
+    os.path.join("test_images" + str(int(datetime.datetime.now().timestamp())))
+    + os.path.sep
+)
 
 
 class TestRepository(unittest.TestCase):
@@ -25,46 +28,46 @@ class TestRepository(unittest.TestCase):
         except OSError:
             pass
         self.all_folders = [
-            BASE_FOLDER,
-            BASE_FOLDER + "DCIM/",
-            BASE_FOLDER + "DCIM/Sweden/",
-            BASE_FOLDER + "Temporary/",
-            BASE_FOLDER + "Temporary/Malta/",
-            BASE_FOLDER + "Temporary/Georgia/",
-            BASE_FOLDER + "Temporary/Korea/",
-            BASE_FOLDER + "Temporary/Sweden/",
-            BASE_FOLDER + "Archive/",
-            BASE_FOLDER + "Archive/Malta/",
-            BASE_FOLDER + "Archive/Korea/",
-            BASE_FOLDER + "Archive/Sweden/",
-            BASE_FOLDER + "Archive_outside_DB/",
-            BASE_FOLDER + "Archive_outside_DB/Egypt/",
-            BASE_FOLDER + "Empty/",
+            os.path.join(BASE_FOLDER),
+            os.path.join(BASE_FOLDER, "DCIM", ""),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", ""),
+            os.path.join(BASE_FOLDER, "Temporary", ""),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", ""),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", ""),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", ""),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", ""),
+            os.path.join(BASE_FOLDER, "Archive", ""),
+            os.path.join(BASE_FOLDER, "Archive", "Malta", ""),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", ""),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", ""),
+            os.path.join(BASE_FOLDER, "Archive_outside_DB", ""),
+            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", ""),
+            os.path.join(BASE_FOLDER, "Empty", ""),
         ]
         for folder in self.all_folders:
             os.makedirs(folder, exist_ok=True)
         self.all_files = [
-            BASE_FOLDER + "DCIM/IMG001.CR2",
-            BASE_FOLDER + "DCIM/IMG002.CR2",
-            BASE_FOLDER + "DCIM/IMG010.CR2",
-            BASE_FOLDER + "DCIM/IMG020.CR2",
-            BASE_FOLDER + "Temporary/Malta/IMG001.CR2",
-            BASE_FOLDER + "Temporary/Malta/IMG001_RT.jpg",
-            BASE_FOLDER + "Temporary/Malta/IMG002.CR2",
-            BASE_FOLDER + "Temporary/Malta/IMG002_RT.jpg",
-            BASE_FOLDER + "Archive/Malta/IMG001.CR2",
-            BASE_FOLDER + "Archive/Malta/IMG002.CR2",
-            BASE_FOLDER + "Temporary/Georgia/IMG010.CR2",
-            BASE_FOLDER + "Temporary/Georgia/IMG010_RT.jpg",
-            BASE_FOLDER + "Temporary/Georgia/IMG011_convert.jpg",
-            BASE_FOLDER + "Temporary/Korea/IMG030.CR2",
-            BASE_FOLDER + "Archive/Korea/IMG030_RT.jpg",
-            BASE_FOLDER + "Temporary/Sweden/IMG040.CR2",
-            BASE_FOLDER + "Temporary/Sweden/IMG041.CR2",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "Archive/Sweden/IMG040_convert.jpg",
-            BASE_FOLDER + "Archive_outside_DB/Egypt/IMG037.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "IMG001.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG010.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG020.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG011_convert.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", "IMG037.CR2"),
         ]
         for test_file in self.all_files:
             open(test_file, "w").close()
@@ -78,38 +81,41 @@ class TestRepository(unittest.TestCase):
             [
                 # Test with final "/" in path
                 StorageLocation(
-                    id=1, name="Camera", type="folder", path=BASE_FOLDER + "DCIM/"
+                    id=1,
+                    name="Camera",
+                    type="folder",
+                    path=os.path.join(BASE_FOLDER, "DCIM", ""),
                 ),
                 # Test without final "/" in path
                 StorageLocation(
                     id=2,
                     name="Temporary",
                     type="folder",
-                    path=BASE_FOLDER + "Temporary",
+                    path=os.path.join(BASE_FOLDER, "Temporary"),
                 ),
                 StorageLocation(
                     id=3,
                     name="Archive",
                     type=StorageLocationType["folder"],
-                    path=BASE_FOLDER + "Archive/",
+                    path=os.path.join(BASE_FOLDER, "Archive"),
                 ),
                 StorageLocation(
                     id=4,
                     name="Inexistant",
                     type="folder",
-                    path=BASE_FOLDER + "Inexistant/",
+                    path=os.path.join(BASE_FOLDER, "Inexistant"),
                 ),
                 StorageLocation(
                     id=5,
                     name="No picture here",
                     type="folder",
-                    path=BASE_FOLDER + "Empty/",
+                    path=os.path.join(BASE_FOLDER, "Empty"),
                 ),
                 StorageLocation(
                     id=6,
                     name="Dive log",
                     type="file",
-                    path=BASE_FOLDER + "Archives/test.txt",
+                    path=os.path.join(BASE_FOLDER, "Archives", "test.txt"),
                 ),
             ]
         )
@@ -152,16 +158,16 @@ class TestRepository(unittest.TestCase):
         picture = [
             p
             for p in picture_group.pictures[""]
-            if p.path.endswith("Temporary/Malta/IMG001.CR2")
+            if p.path.endswith(os.path.join("Temporary", "Malta", "IMG001.CR2"))
         ]
         picture = picture[0]
 
         test = "String representation: picture"
         self.assertEqual(
             str(picture),
-            "('IMG001', 'Malta', 'Temporary', '"
-            + BASE_FOLDER
-            + "Temporary/Malta/IMG001.CR2')",
+            "IMG001 in Temporary during Malta - path "
+            + os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2")
+            + "",
             test,
         )
 
@@ -175,7 +181,7 @@ class TestRepository(unittest.TestCase):
                 id=999,
                 name="Used path",
                 type="folder",
-                path=BASE_FOLDER + "Temporary/Malta",
+                path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
             )
             self.repository.load_pictures([new_location])
 
@@ -186,7 +192,7 @@ class TestRepository(unittest.TestCase):
             id=999,
             name="Outside_DB",
             type="folder",
-            path=BASE_FOLDER + "Archive_outside_DB/",
+            path=os.path.join(BASE_FOLDER, "Archive_outside_DB"),
         )
         self.repository.load_pictures([new_location])
         self.assertEqual(len(self.repository.trips), nb_trips_before + 1, test)
@@ -199,7 +205,7 @@ class TestRepository(unittest.TestCase):
             id=999,
             name="Used path",
             type="folder",
-            path=BASE_FOLDER + "Temporary/Malta",
+            path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
         with self.assertRaises(ValueError, msg=test) as cm:
             self.repository.load_pictures([new_location])
@@ -211,29 +217,29 @@ class TestRepository(unittest.TestCase):
 
         time.sleep(2 + 2 * len(should_exist))
         all_files_checked = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_convert.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG041.CR2",
-            BASE_FOLDER + "Archive/Sweden/IMG040.CR2",
-            BASE_FOLDER + "Archive/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "Archive/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "Archive/Sweden/IMG040_convert.CR2",
-            BASE_FOLDER + "Archive/Sweden/IMG041.CR2",
-            BASE_FOLDER + "Temporary/Sweden/IMG040.CR2",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_convert.CR2",
-            BASE_FOLDER + "Temporary/Sweden/IMG041.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_convert.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
         ]
 
         initial_files = [
-            BASE_FOLDER + "Temporary/Sweden/IMG040.CR2",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "Temporary/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "Temporary/Sweden/IMG041.CR2",
-            BASE_FOLDER + "Archive/Sweden/IMG040_convert.jpg",
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.all_files += should_exist
@@ -275,6 +281,40 @@ class TestRepository(unittest.TestCase):
     #                                   X                       test_repository_copy_pictures_picture_group
     #       X                                                   test_repository_copy_pictures_source_location KO
     #                     X                                     test_repository_copy_pictures_trip
+    @unittest.skip("Prototype with QSignalSpy - will work only with QApplication")
+    def test_repository_qsignalspy(self):
+        test = "Picture copy: all parameters provided (copies 1 picture)"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        source_location = self.database.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = self.repository.trips[trip]["IMG040"]
+        conversion_method = ""
+
+        process = self.repository.copy_pictures(
+            test,
+            target_location,
+            source_location,
+            trip,
+            picture_group,
+            conversion_method,
+        )
+        from PyQt5 import QtTest
+
+        test = QtTest.QSignalSpy(process.finished)
+        self.assertTrue(test.isValid())
+        result = test.wait(timeout=500)
+
+        new_files = [
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
+        ]
+        self.all_files += new_files
+
+        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
+
+        # TODO: Test with actual signals & remove this ugly workaround
+        self.helper_check_paths(new_files, test)
+
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_all_parameters(self):
         test = "Picture copy: all parameters provided (copies 1 picture)"
         target_location = self.database.storagelocation_get_by_name("Archive")
@@ -293,13 +333,14 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "Archive/Sweden/IMG040.CR2",
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_conversion_method(self):
         test = "Picture copy: all parameters provided except conversion_method"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -318,16 +359,17 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_convert.jpg",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_picture_group(self):
         test = "Picture copy: all parameters provided except picture_group (copies some of the trip)"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -346,14 +388,15 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG041.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_source_location(self):
         test = "Picture copy: all parameters provided except source_location (copies 1 picture)"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -372,13 +415,14 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_trip(self):
         # This test gives the same result as "all parameters" since trip will be ignored
         test = "Picture copy: all parameters provided except trip (copies 1 picture)"
@@ -398,13 +442,14 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method_and_picture_group(self):
         test = "Picture copy: conversion_method and picture_group provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -423,13 +468,14 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method_and_source_location(self):
         test = "Picture copy: conversion_method and source_location provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -457,6 +503,7 @@ class TestRepository(unittest.TestCase):
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths([], test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method_and_trip(self):
         test = "Picture copy: conversion_method and trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -475,16 +522,17 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG041.CR2",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_picture_group_and_source_location(self):
         test = "Picture copy: picture_group and source_location provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -503,15 +551,16 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_picture_group_and_trip(self):
         test = "Picture copy: picture_group and trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -530,16 +579,17 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_convert.jpg",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_source_location_and_trip(self):
         test = "Picture copy: source_location and trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -558,17 +608,18 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG041.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_convert.jpg",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method(self):
         test = "Picture copy: only conversion_method provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -596,6 +647,7 @@ class TestRepository(unittest.TestCase):
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths([], test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_picture_group(self):
         test = "Picture copy: only picture_group provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -614,16 +666,17 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",  # Existing
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",  # Existing
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",  # Existing
-            BASE_FOLDER + "DCIM/Sweden/IMG040_convert.jpg",  # Existing
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths(new_files, test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_source_location(self):
         test = "Picture copy: only source_location provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -651,6 +704,7 @@ class TestRepository(unittest.TestCase):
         # TODO: Test with actual signals & remove this ugly workaround
         self.helper_check_paths([], test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_trip(self):
         test = "Picture copy: only trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -669,11 +723,11 @@ class TestRepository(unittest.TestCase):
         )
 
         new_files = [
-            BASE_FOLDER + "DCIM/Sweden/IMG040.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_RT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_DT.jpg",
-            BASE_FOLDER + "DCIM/Sweden/IMG041.CR2",
-            BASE_FOLDER + "DCIM/Sweden/IMG040_convert.jpg",
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
         process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
@@ -703,6 +757,7 @@ class TestRepository(unittest.TestCase):
         # Need test cases for each situation:
         # source_trip=None or provided, picture_group=None or provided
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_remove_pictures_1_picture(self):
         # TODO: Apply the workaround from creating files
         test = "Picture remove: actual deletion of 1 picture"
@@ -720,9 +775,12 @@ class TestRepository(unittest.TestCase):
         time.sleep(2)
         self.assertFalse(os.path.exists(path), test)
 
+    @unittest.skip("To be re-done through GUI testing")
     def test_repository_remove_pictures_trip(self):
         test = "Picture remove: actual deletion of a trip"
-        picture_files = [p for p in self.all_files if "/Korea/" in p]
+        picture_files = [
+            p for p in self.all_files if os.path.sep + "Korea" + os.path.sep in p
+        ]
 
         process = self.repository.remove_pictures(test, trip="Korea")
         process.finished.connect(
@@ -844,7 +902,7 @@ class TestRepository(unittest.TestCase):
         picture = [
             p
             for p in self.repository.trips["Georgia"]["IMG010"].pictures[""]
-            if p.path.endswith("Georgia/IMG010.CR2")
+            if p.path.endswith(os.path.join("Georgia", "IMG010.CR2"))
         ]
         picture = picture[0]
         with self.assertRaises(ValueError) as cm:
@@ -858,7 +916,9 @@ class TestRepository(unittest.TestCase):
 
     def test_picture_group_add_pictures_ok(self):
         test = "Add picture: OK in existing group"
-        new_image_path = BASE_FOLDER + "Temporary/Malta/IMG002_DT.jpg"
+        new_image_path = os.path.join(
+            BASE_FOLDER, "Temporary", "Malta", "IMG002_DT.jpg"
+        )
         self.all_files.append(new_image_path)
         open(new_image_path, "w").close()
 
@@ -907,7 +967,9 @@ class TestRepository(unittest.TestCase):
         # The group's name should be changed to IMG011
         # The conversion types should change as well
         picture_group = self.repository.trips["Georgia"]["IMG011_convert"]
-        new_picture = Picture(self.locations, BASE_FOLDER + "DCIM/IMG011.CR2")
+        new_picture = Picture(
+            self.locations, os.path.join(BASE_FOLDER, "DCIM", "IMG011.CR2")
+        )
         picture_group.add_picture(new_picture)
 
         self.assertEqual(

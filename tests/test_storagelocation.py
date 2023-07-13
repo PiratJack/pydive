@@ -25,19 +25,28 @@ class TestStorageLocation(unittest.TestCase):
         self.database.session.add_all(
             [
                 StorageLocation(
-                    id=1, name="Camera", type="folder", path="/.../SD_Card/"
+                    id=1,
+                    name="Camera",
+                    type="folder",
+                    path=os.path.join("...", "SD_Card"),
                 ),
                 StorageLocation(
-                    id=2, name="Temporary", type="folder", path="/tmp/Pictures/"
+                    id=2,
+                    name="Temporary",
+                    type="folder",
+                    path=os.path.join("tmp", "Pictures"),
                 ),
                 StorageLocation(
                     id=3,
                     name="Archive",
                     type=StorageLocationType["folder"],
-                    path="/Archives/",
+                    path=os.path.join("", "Archives"),
                 ),
                 StorageLocation(
-                    id=4, name="Dive log", type="file", path="/Archives/test.txt"
+                    id=4,
+                    name="Dive log",
+                    type="file",
+                    path=os.path.join("", "Archives", "test.txt"),
                 ),
             ]
         )
@@ -85,7 +94,7 @@ class TestStorageLocation(unittest.TestCase):
         # String representation
         self.assertEqual(
             str(storage_location),
-            "Temporary @ /tmp/Pictures/",
+            "Temporary @ " + os.path.join("tmp", "Pictures", ""),
             "The Temporary folder is at /tmp/Pictures/",
         )
 
@@ -113,7 +122,7 @@ class TestStorageLocation(unittest.TestCase):
             id=45,
             name="USB stick",
             type="folder",
-            path="/usb_stick/",
+            path="usb_stick",
         )
 
         # Test forbidden values
