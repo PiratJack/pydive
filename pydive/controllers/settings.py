@@ -133,9 +133,7 @@ class LocationsList:
             )
             self.ui["add_new"].clicked.connect(lambda: self.on_click_new_location())
 
-            self.ui["layout"].addWidget(
-                self.ui["add_new"], len(self.ui["locations"]) + 1, 1
-            )
+            self.ui["layout"].addWidget(self.ui["add_new"], len(locations) + 1, 1)
 
         else:
             # Divelog ==> do not allow to create new ones
