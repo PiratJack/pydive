@@ -78,7 +78,20 @@ class Picture:
             self.name = os.path.basename(path).rsplit(".", 1)[-2]
             self.filename = os.path.basename(path)
         else:
+            logger.warning(
+                f"Picture recognition failed: found matches {', '.join([s.name for s in storage_location])} for {path} - Searched in {', '.join([s.name for s in storage_locations])}"
+            )
             raise StorageLocationCollision("recognition failed", path)
 
     def __repr__(self):
-        return (self.name, self.trip, self.location.name, self.path).__repr__()
+        return " ".join(
+            [
+                self.name,
+                "in",
+                self.location.name,
+                "during",
+                self.trip,
+                "- path",
+                self.path,
+            ]
+        )
