@@ -12,6 +12,7 @@ StorageLocation
 import gettext
 import enum
 import sqlalchemy.orm
+import os.path
 
 from sqlalchemy import Column, Integer, String, Enum
 
@@ -92,6 +93,11 @@ class StorageLocation(Base):
     @sqlalchemy.orm.validates("path")
     def validate_path(self, key, value):
         self.validate_missing_field(key, value)
+        if self.type:
+            if self.type in ("folder", StorageLocationType["folder"]):
+                if not value.endswith(os.path.sep):
+                    value += os.path.sep
+
         return value
 
     def validate_missing_field(self, key, value):
