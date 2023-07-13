@@ -81,7 +81,7 @@ class PictureGroup(QtCore.QObject):
             The picture to add
         """
         logger.debug(
-            f"PictureGroup.add_picture: {picture.filename} to {self.name} in {self.trip}"
+            f"PictureGroup.add_picture: {picture.filename} to {self.name} during {self.trip}"
         )
         # Check trip matches the group's trip
         if not self.trip:
@@ -122,7 +122,7 @@ class PictureGroup(QtCore.QObject):
         ) + [picture]
 
         logger.debug(
-            f"PictureGroup.add_picture: emit pictureAdded: {picture.filename} to {self.name} in {self.trip}"
+            f"PictureGroup.add_picture: emit pictureAdded: {picture.filename} to {self.name} during {self.trip}"
         )
         self.pictureAdded.emit(picture, conversion_type)
 
@@ -140,7 +140,7 @@ class PictureGroup(QtCore.QObject):
             The picture to remove
         """
         logger.debug(
-            f"PictureGroup.remove_picture: {picture.filename} from {self.name} in {self.trip}"
+            f"PictureGroup.remove_picture: {picture.filename} from {self.name} during {self.trip}"
         )
         # Check trip matches the group's trip
         if picture.trip and picture.trip != self.trip:
@@ -162,7 +162,7 @@ class PictureGroup(QtCore.QObject):
             del self.locations[picture.location.name]
 
         logger.debug(
-            f"PictureGroup.remove_picture: emit pictureRemoved: {picture.filename} from {self.name} in {self.trip}"
+            f"PictureGroup.remove_picture: emit pictureRemoved: {picture.filename} from {self.name} during {self.trip}"
         )
         self.pictureRemoved.emit(conversion_type, picture.location)
         del picture
@@ -170,7 +170,7 @@ class PictureGroup(QtCore.QObject):
         if not self.pictures:
             # TODO: Picture group: emit deletion only if no pending task?
             logger.debug(
-                f"PictureGroup.remove_picture: emit pictureGroupDeleted for {self.name} in {self.trip}"
+                f"PictureGroup.remove_picture: emit pictureGroupDeleted for {self.name} during {self.trip}"
             )
             self.pictureGroupDeleted.emit(self.trip, self.name)
 
