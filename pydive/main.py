@@ -43,7 +43,8 @@ class PyDive:
         self.database = models.database.Database(self.DATABASE_FILE)
 
         # Change platform to avoid Wayland-related warning messages
-        os.environ["QT_QPA_PLATFORM"] = "xcb"
+        if sys.platform == "linux":
+            os.environ["QT_QPA_PLATFORM"] = "xcb"
 
     def run(self):
         app = PyQt5.QtWidgets.QApplication(sys.argv)
