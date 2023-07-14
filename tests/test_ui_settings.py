@@ -10,9 +10,7 @@ sys.path.append("pydive")
 
 import pydive.models.database as databasemodel
 import pydive
-import pydive.controllers as controllers
 import pydive.controllers.mainwindow
-import pydive.controllers.widgets.iconbutton
 import pydive.controllers.widgets.pathselectbutton
 
 from pydive.models.storagelocation import StorageLocation
@@ -23,8 +21,6 @@ logging.basicConfig(level=logging.WARNING)
 
 DATABASE_FILE = "test.sqlite"
 BASE_FOLDER = "./test_images" + str(int(datetime.datetime.now().timestamp())) + "/"
-
-app = QtWidgets.QApplication(sys.argv)
 
 
 class TestUiSettings(unittest.TestCase):
@@ -141,16 +137,20 @@ class TestUiSettings(unittest.TestCase):
         self.database.session.close()
         self.database.engine.dispose()
 
+        if sys.platform == "linux":
+            os.environ["QT_QPA_PLATFORM"] = "xcb"
+        self.app = QtWidgets.QApplication(sys.argv)
         self.mainwindow = pydive.controllers.mainwindow.MainWindow(self.database)
 
     def tearDown(self):
         self.mainwindow.close()
         self.mainwindow.database.session.close()
         self.mainwindow.database.engine.dispose()
-        # Delete database
+        self.app.quit()
+        # ## Delete database
         os.remove(DATABASE_FILE)
 
-        # Delete folders
+        # ## Delete folders
         for test_file in self.all_files:
             if os.path.exists(test_file):
                 os.remove(test_file)
@@ -174,7 +174,7 @@ class TestUiSettings(unittest.TestCase):
         )
         self.assertEqual(
             locationList.ui["layout"].rowCount(),
-            6,
+            7,
             "Locations have the right number of rows",
         )
 
@@ -184,7 +184,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_label.text(), location.name, "Name field displays the expected data"
         )
 
@@ -195,32 +195,44 @@ class TestUiSettings(unittest.TestCase):
             "Change name field is a QWidget",
         )
         change_name_button = change_name_widget.layout().currentWidget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_name_button, pydive.controllers.widgets.iconbutton.IconButton), "Change name button is a IconButton")
+        self.assertEqual(
+            change_name_button.__class__.__name__,
+            "IconButton",
+            "Change name button is a IconButton",
+        )
 
         # Check path display
         path_widget = locationList.ui["layout"].itemAtPosition(1, 2).widget()
         self.assertTrue(
             isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         )
-        self.assertEquals(
+        self.assertEqual(
             path_widget.text(), location.path, "Path field displays the expected data"
         )
 
         # Check "change path" display
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_path_widget, pydive.controllers.widgets.pathselectbutton.PathSelectButton), "Change path button is a PathSelectButton")
+        self.assertEqual(
+            change_path_widget.__class__.__name__,
+            "PathSelectButton",
+            "Change path button is a PathSelectButton",
+        )
 
         # Check Delete display
         delete_widget = locationList.ui["layout"].itemAtPosition(1, 4).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(delete_widget, pydive.controllers.widgets.iconbutton.IconButton), "Delete button is a IconButton")
+        self.assertEqual(
+            delete_widget.__class__.__name__,
+            "IconButton",
+            "Delete button is a IconButton",
+        )
 
         # Check "Add new" display
-        add_new_widget = locationList.ui["layout"].itemAtPosition(5, 1).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(add_new_widget, pydive.controllers.widgets.iconbutton.IconButton), "Add new button is a IconButton")
+        add_new_widget = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        self.assertEqual(
+            add_new_widget.__class__.__name__,
+            "IconButton",
+            "Add new button is a IconButton",
+        )
 
     def test_settings_location_list_edit_name(self):
         settingsController = self.mainwindow.controllers["Settings"]
@@ -246,7 +258,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             name_change_start_signalspy.isValid(), "Name change start signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_start_signalspy),
             1,
             "Name change start signal is emitted once",
@@ -257,7 +269,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_edit, QtWidgets.QLineEdit), "Name edit field now displayed"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_edit.text(),
             name_label.text(),
             "Name edit field contains the location's name",
@@ -265,7 +277,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Name edit button changed
         name_change_end = name_change_layout.currentWidget()
-        self.assertNotEquals(
+        self.assertNotEqual(
             name_change_start, name_change_end, "Edit button replaced by Save button"
         )
 
@@ -281,10 +293,10 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             name_change_end_signalspy.isValid(), "Name change end signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_end_signalspy), 1, "Name change end signal is emitted once"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_start_signalspy),
             1,
             "Name change start signal is not emitted a second time",
@@ -292,15 +304,15 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         location = self.database.storagelocation_get_by_id(1)
-        self.assertEquals(location.name, "SD Card", "Name is updated in database")
+        self.assertEqual(location.name, "SD Card", "Name is updated in database")
 
         # Display is back to initial state
         name_widget = name_layout.currentWidget()
-        self.assertEquals(name_widget, name_label, "Saving displays the name as QLabel")
-        self.assertEquals(name_label.text(), "SD Card", "Name is updated on display")
+        self.assertEqual(name_widget, name_label, "Saving displays the name as QLabel")
+        self.assertEqual(name_label.text(), "SD Card", "Name is updated on display")
 
         name_change_widget = name_change_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             name_change_widget, name_change_start, "Save button replaced by Edit button"
         )
 
@@ -310,7 +322,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Get change path button
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
-        self.assertEquals(change_path_widget.target_type, "folder")
+        self.assertEqual(change_path_widget.target_type, "folder")
 
         # Check event receivers
         self.assertEqual(
@@ -325,10 +337,10 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             path_change_signalspy.isValid(), "Path change signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(path_change_signalspy), 1, "Path change signal is emitted once"
         )
-        self.assertEquals(
+        self.assertEqual(
             path_change_signalspy[0],
             ["This is a new path"],
             "Path change signal has the correct data",
@@ -336,7 +348,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         location = self.database.storagelocation_get_by_id(1)
-        self.assertEquals(
+        self.assertEqual(
             location.path,
             os.path.join("This is a new path", ""),
             "Path is updated in database",
@@ -344,7 +356,7 @@ class TestUiSettings(unittest.TestCase):
 
         # New path is displayed
         path_widget = locationList.ui["layout"].itemAtPosition(1, 2).widget()
-        self.assertEquals(
+        self.assertEqual(
             path_widget.text(), "This is a new path", "Path is updated on display"
         )
 
@@ -358,13 +370,13 @@ class TestUiSettings(unittest.TestCase):
 
         # Check there is no change in DB
         def check_location_exists():
-            messagebox = app.activeModalWidget()
+            messagebox = self.app.activeModalWidget()
             QtTest.QTest.mouseClick(
                 messagebox.button(QtWidgets.QMessageBox.No), Qt.LeftButton
             )
 
             location = self.database.storagelocation_get_by_id(1)
-            self.assertEquals(location.name, "Camera", "Location still exists")
+            self.assertEqual(location.name, "Camera", "Location still exists")
             print("test_exists")
 
         # Click delete, then "No" in the dialog
@@ -384,22 +396,22 @@ class TestUiSettings(unittest.TestCase):
         delete_widget = locationList.ui["layout"].itemAtPosition(2, 4).widget()
 
         def check_location_deleted():
-            messagebox = app.activeModalWidget()
+            messagebox = self.app.activeModalWidget()
             QtTest.QTest.mouseClick(
                 messagebox.button(QtWidgets.QMessageBox.Yes), Qt.LeftButton
             )
 
             # Check the DB has been updated
             location = self.database.storagelocation_get_by_id(2)
-            self.assertEquals(location, None, "Location has been deleted")
+            self.assertEqual(location, None, "Location has been deleted")
 
             # Location no longer visible in UI
-            self.assertEquals(
+            self.assertEqual(
                 locationList.ui["layout"].rowCount(),
                 5,
                 "Locations have the right number of rows",
             )
-            self.assertEquals(
+            self.assertEqual(
                 locationList.ui["layout"].rowCount(),
                 5,
                 "Locations have the right number of rows",
@@ -439,7 +451,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_label.text(), divelog.name, "Name field displays the expected data"
         )
 
@@ -450,26 +462,32 @@ class TestUiSettings(unittest.TestCase):
             "Change name field is a QWidget",
         )
         change_name_button = change_name_widget.layout().currentWidget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_name_button, pydive.controllers.widgets.iconbutton.IconButton), "Change name button is a IconButton")
+        self.assertEqual(
+            change_name_button.__class__.__name__,
+            "IconButton",
+            "Change name button is a IconButton",
+        )
 
         # Check path display
         path_widget = divelogList.ui["layout"].itemAtPosition(1, 2).widget()
         self.assertTrue(
             isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         )
-        self.assertEquals(
+        self.assertEqual(
             path_widget.text(), divelog.path, "Path field displays the expected data"
         )
 
         # Check "change path" display
         change_path_widget = divelogList.ui["layout"].itemAtPosition(1, 3).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_path_widget, pydive.controllers.widgets.pathselectbutton.PathSelectButton), "Change path button is a PathSelectButton")
+        self.assertEqual(
+            change_path_widget.__class__.__name__,
+            "PathSelectButton",
+            "Change path button is a PathSelectButton",
+        )
 
         # Check Delete display
         delete_widget = divelogList.ui["layout"].itemAtPosition(1, 4)
-        self.assertEquals(delete_widget, None, "Impossible to delete divelog file")
+        self.assertEqual(delete_widget, None, "Impossible to delete divelog file")
 
     def test_settings_divelog_edit_name(self):
         settingsController = self.mainwindow.controllers["Settings"]
@@ -495,7 +513,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             name_change_start_signalspy.isValid(), "Name change start signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_start_signalspy),
             1,
             "Name change start signal is emitted once",
@@ -506,7 +524,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_edit, QtWidgets.QLineEdit), "Name edit field now displayed"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_edit.text(),
             name_label.text(),
             "Name edit field contains the dive log's name",
@@ -514,7 +532,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Name edit button changed
         name_change_end = name_change_layout.currentWidget()
-        self.assertNotEquals(
+        self.assertNotEqual(
             name_change_start, name_change_end, "Edit button replaced by Save button"
         )
 
@@ -530,10 +548,10 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             name_change_end_signalspy.isValid(), "Name change end signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_end_signalspy), 1, "Name change end signal is emitted once"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_start_signalspy),
             1,
             "Name change start signal is not emitted a second time",
@@ -541,19 +559,17 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         divelog = self.database.storagelocation_get_by_id(6)
-        self.assertEquals(
-            divelog.name, "Subsurface file", "Name is updated in database"
-        )
+        self.assertEqual(divelog.name, "Subsurface file", "Name is updated in database")
 
         # Display is back to initial state
         name_widget = name_layout.currentWidget()
-        self.assertEquals(name_widget, name_label, "Saving displays the name as QLabel")
-        self.assertEquals(
+        self.assertEqual(name_widget, name_label, "Saving displays the name as QLabel")
+        self.assertEqual(
             name_label.text(), "Subsurface file", "Name is updated on display"
         )
 
         name_change_widget = name_change_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             name_change_widget, name_change_start, "Save button replaced by Edit button"
         )
 
@@ -563,7 +579,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Get change path button
         change_path_widget = divelogList.ui["layout"].itemAtPosition(1, 3).widget()
-        self.assertEquals(change_path_widget.target_type, "file")
+        self.assertEqual(change_path_widget.target_type, "file")
 
         # Check event receivers
         self.assertEqual(
@@ -578,10 +594,10 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             path_change_signalspy.isValid(), "Path change signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(path_change_signalspy), 1, "Path change signal is emitted once"
         )
-        self.assertEquals(
+        self.assertEqual(
             path_change_signalspy[0],
             ["This is a new path"],
             "Path change signal has the correct data",
@@ -589,13 +605,13 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         divelog = self.database.storagelocation_get_by_id(6)
-        self.assertEquals(
+        self.assertEqual(
             divelog.path, "This is a new path", "Path is updated in database"
         )
 
         # New path is displayed
         path_widget = divelogList.ui["layout"].itemAtPosition(1, 2).widget()
-        self.assertEquals(
+        self.assertEqual(
             path_widget.text(), "This is a new path", "Path is updated on display"
         )
 
@@ -622,7 +638,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_label.text(), method.name, "Name field displays the expected data"
         )
 
@@ -633,8 +649,11 @@ class TestUiSettings(unittest.TestCase):
             "Change name field is a QWidget",
         )
         change_name_button = change_name_widget.layout().currentWidget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_name_button, pydive.controllers.widgets.iconbutton.IconButton), "Change name button is a IconButton")
+        self.assertEqual(
+            change_name_button.__class__.__name__,
+            "IconButton",
+            "Change name button is a IconButton",
+        )
 
         # Check suffix display
         suffix_layout = methodList.ui["layout"].itemAtPosition(1, 2).widget().layout()
@@ -642,7 +661,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(suffix_label, QtWidgets.QLabel), "Suffix field is a QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             suffix_label.text(),
             method.suffix,
             "Suffix field displays the expected data",
@@ -650,8 +669,16 @@ class TestUiSettings(unittest.TestCase):
 
         # Check "change suffix" display
         change_suffix_widget = methodList.ui["layout"].itemAtPosition(1, 3).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_suffix_widget, pydive.controllers.widgets.iconbutton.IconButton), "Change suffix button is a IconButton")
+        self.assertTrue(
+            isinstance(change_suffix_widget, QtWidgets.QWidget),
+            "Change suffix field is a QWidget",
+        )
+        change_suffix_button = change_suffix_widget.layout().currentWidget()
+        self.assertEqual(
+            change_suffix_button.__class__.__name__,
+            "IconButton",
+            "Change suffix button is a IconButton",
+        )
 
         # Check command display
         command_layout = methodList.ui["layout"].itemAtPosition(1, 4).widget().layout()
@@ -659,26 +686,40 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(command_label, QtWidgets.QLabel), "Command field is a QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             command_label.text(),
             method.command,
             "Command field displays the expected data",
         )
 
         # Check "change command" display
-        change_command_widget = methodList.ui["layout"].itemAtPosition(1, 5).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(change_command_widget, pydive.controllers.widgets.iconbutton.IconButton), "Change command button is a IconButton")
+        change_command_widget = methodList.ui["layout"].itemAtPosition(1, 3).widget()
+        self.assertTrue(
+            isinstance(change_command_widget, QtWidgets.QWidget),
+            "Change command field is a QWidget",
+        )
+        change_command_button = change_command_widget.layout().currentWidget()
+        self.assertEqual(
+            change_command_button.__class__.__name__,
+            "IconButton",
+            "Change command button is a IconButton",
+        )
 
         # Check Delete display
         delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(delete_widget, pydive.controllers.widgets.iconbutton.IconButton), "Delete button is a IconButton")
+        self.assertEqual(
+            delete_widget.__class__.__name__,
+            "IconButton",
+            "Delete button is a IconButton",
+        )
 
         # Check "Add new" display
         add_new_widget = methodList.ui["layout"].itemAtPosition(3, 1).widget()
-        # TODO The below assertion should be True, but it's not...
-        # self.assertTrue(isinstance(add_new_widget, pydive.controllers.widgets.iconbutton.IconButton), "Add new button is a IconButton")
+        self.assertEqual(
+            add_new_widget.__class__.__name__,
+            "IconButton",
+            "Add new button is a IconButton",
+        )
 
     def test_settings_method_edit_name(self):
         settingsController = self.mainwindow.controllers["Settings"]
@@ -704,7 +745,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             name_change_start_signalspy.isValid(), "Name change start signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_start_signalspy),
             1,
             "Name change start signal is emitted once",
@@ -715,7 +756,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_edit, QtWidgets.QLineEdit), "Name edit field now displayed"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_edit.text(),
             name_label.text(),
             "Name edit field contains the dive log's name",
@@ -723,7 +764,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Name edit button changed
         name_change_end = name_change_layout.currentWidget()
-        self.assertNotEquals(
+        self.assertNotEqual(
             name_change_start, name_change_end, "Edit button replaced by Save button"
         )
 
@@ -739,10 +780,10 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             name_change_end_signalspy.isValid(), "Name change end signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_end_signalspy), 1, "Name change end signal is emitted once"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(name_change_start_signalspy),
             1,
             "Name change start signal is not emitted a second time",
@@ -750,19 +791,19 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         method = self.database.conversionmethods_get_by_suffix("DT")
-        self.assertEquals(
+        self.assertEqual(
             method.name, "DarkTherapee updated", "Name is updated in database"
         )
 
         # Display is back to initial state
         name_widget = name_layout.currentWidget()
-        self.assertEquals(name_widget, name_label, "Saving displays the name as QLabel")
-        self.assertEquals(
+        self.assertEqual(name_widget, name_label, "Saving displays the name as QLabel")
+        self.assertEqual(
             name_label.text(), "DarkTherapee updated", "Name is updated on display"
         )
 
         name_change_widget = name_change_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             name_change_widget, name_change_start, "Save button replaced by Edit button"
         )
 
@@ -791,7 +832,7 @@ class TestUiSettings(unittest.TestCase):
             suffix_change_start_signalspy.isValid(),
             "Suffix change start signal is emitted",
         )
-        self.assertEquals(
+        self.assertEqual(
             len(suffix_change_start_signalspy),
             1,
             "Suffix change start signal is emitted once",
@@ -803,7 +844,7 @@ class TestUiSettings(unittest.TestCase):
             isinstance(suffix_edit, QtWidgets.QLineEdit),
             "Suffix edit field now displayed",
         )
-        self.assertEquals(
+        self.assertEqual(
             suffix_edit.text(),
             suffix_label.text(),
             "Suffix edit field contains the dive log's suffix",
@@ -811,7 +852,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Suffix edit button changed
         suffix_change_end = suffix_change_layout.currentWidget()
-        self.assertNotEquals(
+        self.assertNotEqual(
             suffix_change_start,
             suffix_change_end,
             "Edit button replaced by Save button",
@@ -829,12 +870,12 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             suffix_change_end_signalspy.isValid(), "Suffix change end signal is emitted"
         )
-        self.assertEquals(
+        self.assertEqual(
             len(suffix_change_end_signalspy),
             1,
             "Suffix change end signal is emitted once",
         )
-        self.assertEquals(
+        self.assertEqual(
             len(suffix_change_start_signalspy),
             1,
             "Suffix change start signal is not emitted a second time",
@@ -842,17 +883,17 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         method = self.database.conversionmethods_get_by_name("DarkTherapee")
-        self.assertEquals(method.suffix, "DTU", "Suffix is updated in database")
+        self.assertEqual(method.suffix, "DTU", "Suffix is updated in database")
 
         # Display is back to initial state
         suffix_widget = suffix_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             suffix_widget, suffix_label, "Saving displays the suffix as QLabel"
         )
-        self.assertEquals(suffix_label.text(), "DTU", "Suffix is updated on display")
+        self.assertEqual(suffix_label.text(), "DTU", "Suffix is updated on display")
 
         suffix_change_widget = suffix_change_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             suffix_change_widget,
             suffix_change_start,
             "Save button replaced by Edit button",
@@ -885,7 +926,7 @@ class TestUiSettings(unittest.TestCase):
             command_change_start_signalspy.isValid(),
             "Command change start signal is emitted",
         )
-        self.assertEquals(
+        self.assertEqual(
             len(command_change_start_signalspy),
             1,
             "Command change start signal is emitted once",
@@ -897,7 +938,7 @@ class TestUiSettings(unittest.TestCase):
             isinstance(command_edit, QtWidgets.QLineEdit),
             "Command edit field now displayed",
         )
-        self.assertEquals(
+        self.assertEqual(
             command_edit.text(),
             command_label.text(),
             "Command edit field contains the dive log's command",
@@ -905,7 +946,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Command edit button changed
         command_change_end = command_change_layout.currentWidget()
-        self.assertNotEquals(
+        self.assertNotEqual(
             command_change_start,
             command_change_end,
             "Edit button replaced by Save button",
@@ -924,12 +965,12 @@ class TestUiSettings(unittest.TestCase):
             command_change_end_signalspy.isValid(),
             "Command change end signal is emitted",
         )
-        self.assertEquals(
+        self.assertEqual(
             len(command_change_end_signalspy),
             1,
             "Command change end signal is emitted once",
         )
-        self.assertEquals(
+        self.assertEqual(
             len(command_change_start_signalspy),
             1,
             "Command change start signal is not emitted a second time",
@@ -937,7 +978,7 @@ class TestUiSettings(unittest.TestCase):
 
         # Changes are saved in DB
         method = self.database.conversionmethods_get_by_name("DarkTherapee")
-        self.assertEquals(
+        self.assertEqual(
             method.command,
             "../conversion.py -type DT",
             "Command is updated in database",
@@ -945,17 +986,17 @@ class TestUiSettings(unittest.TestCase):
 
         # Display is back to initial state
         command_widget = command_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             command_widget, command_label, "Saving displays the command as QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             command_label.text(),
             "../conversion.py -type DT",
             "Command is updated on display",
         )
 
         command_change_widget = command_change_layout.currentWidget()
-        self.assertEquals(
+        self.assertEqual(
             command_change_widget,
             command_change_start,
             "Save button replaced by Edit button",
