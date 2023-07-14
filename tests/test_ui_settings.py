@@ -147,6 +147,7 @@ class TestUiSettings(unittest.TestCase):
         self.mainwindow.database.session.close()
         self.mainwindow.database.engine.dispose()
         self.app.quit()
+        self.app.deleteLater()
         # ## Delete database
         os.remove(DATABASE_FILE)
 
@@ -360,7 +361,9 @@ class TestUiSettings(unittest.TestCase):
             path_widget.text(), "This is a new path", "Path is updated on display"
         )
 
-    @unittest.skip("TODO Does not work, triggers with same callback twice")
+    @unittest.skip(
+        "TODO Does not work, either does not trigger or qMessageBox not displayed"
+    )
     def test_settings_location_list_delete_cancel(self):
         settingsController = self.mainwindow.controllers["Settings"]
         locationList = settingsController.locations_list
@@ -377,7 +380,6 @@ class TestUiSettings(unittest.TestCase):
 
             location = self.database.storagelocation_get_by_id(1)
             self.assertEqual(location.name, "Camera", "Location still exists")
-            print("test_exists")
 
         # Click delete, then "No" in the dialog
         timer = QtCore.QTimer(self.mainwindow)
