@@ -183,7 +183,10 @@ class TestRepository(unittest.TestCase):
                 type="folder",
                 path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
             )
+            logger = logging.getLogger("pydive.models.picture")
+            logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
+            logger.setLevel(logging.WARNING)
 
     def test_storage_location_add(self):
         test = "Add a storage location: Count trips"
@@ -208,7 +211,10 @@ class TestRepository(unittest.TestCase):
             path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
         with self.assertRaises(ValueError, msg=test) as cm:
+            logger = logging.getLogger("pydive.models.picture")
+            logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
+            logger.setLevel(logging.WARNING)
             self.assertEqual(type(cm.exception), StorageLocationCollision, test)
 
     def helper_check_paths(self, should_exist, test):
@@ -302,7 +308,6 @@ class TestRepository(unittest.TestCase):
 
         test = QtTest.QSignalSpy(process.finished)
         self.assertTrue(test.isValid())
-        result = test.wait(timeout=500)
 
         new_files = [
             os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
