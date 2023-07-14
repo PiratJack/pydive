@@ -3,14 +3,13 @@ import sys
 import unittest
 import datetime
 import logging
-from PyQt5 import QtWidgets, QtTest, QtCore
+from PyQt5 import QtWidgets, QtTest
 from PyQt5.QtCore import Qt
 
 sys.path.append("pydive")
 
 import pydive.models.database as databasemodel
 import pydive
-import pydive.controllers as controllers
 import pydive.controllers.mainwindow
 import pydive.controllers.widgets.iconbutton
 import pydive.controllers.widgets.pathselectbutton
@@ -23,8 +22,6 @@ logging.basicConfig(level=logging.WARNING)
 
 DATABASE_FILE = "test.sqlite"
 BASE_FOLDER = "./test_images" + str(int(datetime.datetime.now().timestamp())) + "/"
-
-app = QtWidgets.QApplication(sys.argv)
 
 
 class TestUiSettings(unittest.TestCase):
@@ -141,12 +138,16 @@ class TestUiSettings(unittest.TestCase):
         self.database.session.close()
         self.database.engine.dispose()
 
+        if sys.platform == "linux":
+            os.environ["QT_QPA_PLATFORM"] = "xcb"
+        self.app = QtWidgets.QApplication(sys.argv)
         self.mainwindow = pydive.controllers.mainwindow.MainWindow(self.database)
 
     def tearDown(self):
         self.mainwindow.close()
         self.mainwindow.database.session.close()
         self.mainwindow.database.engine.dispose()
+        self.app.quit()
         # Delete database
         os.remove(DATABASE_FILE)
 
@@ -180,7 +181,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
         )
-        self.assertEquals(
+        self.assertEqual(
             name_label.text(), folders[0].name, "Name field displays the expected data"
         )
 
@@ -189,7 +190,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertTrue(
             isinstance(path_label, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         )
-        self.assertEquals(
+        self.assertEqual(
             path_label.text(), folders[0].path, "Path field displays the expected data"
         )
 
@@ -210,14 +211,14 @@ class TestUiSettings(unittest.TestCase):
         QtTest.QTest.mouseClick(load_pictures_button, Qt.LeftButton)
 
         # Check tree top level items
-        self.assertEquals(
+        self.assertEqual(
             picturesTree.topLevelItemCount(), 5, "Found the right number of trips"
         )
 
         # Check Malta's images
         malta = picturesTree.topLevelItem(3)
-        self.assertEquals(malta.childCount(), 2, "Malta's children count is OK")
+        self.assertEqual(malta.childCount(), 2, "Malta's children count is OK")
         malta_children = [malta.child(i).text(0) for i in range(malta.childCount())]
-        self.assertEquals(
+        self.assertEqual(
             malta_children, ["IMG001", "IMG002"], "Malta's children are OK"
         )
