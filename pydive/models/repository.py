@@ -216,7 +216,7 @@ class Repository:
         picture_group : PictureGroup
             The picture group to copy. Ignored if blank.
             Either trip or picture_group must be provided
-        conversion_method : str
+        conversion_method : str or ConversionMethod
             Copy only pictures with a specific conversion method. If blank, copies all pictures.
 
         Returns
@@ -245,10 +245,13 @@ class Repository:
             source_pictures = []
             if conversion_method is not None:
                 # If a conversion method is preferred: take the first available picture
-                if conversion_method not in picture_group.pictures:
+                suffix = conversion_method
+                if not isinstance(suffix, str):
+                    suffix = conversion_method.suffix
+                if suffix not in picture_group.pictures:
                     raise FileNotFoundError(_("No source image found"))
 
-                source_pictures.append(picture_group.pictures[conversion_method][0])
+                source_pictures.append(picture_group.pictures[suffix][0])
             else:
                 # Otherwise, just pick 1 picture for each available method
                 for method in picture_group.pictures:
