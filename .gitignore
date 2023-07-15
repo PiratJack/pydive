@@ -2,3 +2,4 @@ __pycache__
 *.sqlite
 translation_update.sh
 *~
+test_photos*
