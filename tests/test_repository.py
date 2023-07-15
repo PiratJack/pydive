@@ -49,11 +49,10 @@ class TestRepository(unittest.TestCase):
         for folder in self.all_folders:
             os.makedirs(folder, exist_ok=True)
         self.all_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG020.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG050.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG001.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG010.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG020.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
@@ -234,48 +233,18 @@ class TestRepository(unittest.TestCase):
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
         QtCore.QThreadPool.globalInstance().waitForDone()
-        all_files_checked = (
-            [
-                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.CR2"),
-                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
-                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
-                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
-                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_DT.jpg"),
-                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.CR2"),
-                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG041.CR2"),
-                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_convert.CR2"),
-                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-            ]
-            + should_exist
-            + should_not_exist
-        )
-        all_files_checked = set(all_files_checked)
-
-        initial_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
-        ]
-
+        # Add "should exist" to "all_files" so they get deleted later
         self.all_files += should_exist
-        should_exist += initial_files
-        for path in should_not_exist:
-            if path in should_exist:
-                should_exist.remove(path)
+        self.all_files = list(set(self.all_files))
+
+        # We check all files: both existing and non-existing
+        all_files_checked = set(self.all_files + should_not_exist)
+        should_exist = [f for f in self.all_files if f not in should_not_exist]
         for path in all_files_checked:
             if path in should_exist:
                 self.assertTrue(os.path.exists(path), f"{test} - File {path}")
             else:
                 self.assertFalse(os.path.exists(path), f"{test} - File {path}")
-        self.all_files = list(set(self.all_files))
 
     # List of Repository.copy_pictures tests - "KO" denotes when a ValueError is raised
     # source_location   trip    picture_group   conversion_method
