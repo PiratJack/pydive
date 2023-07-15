@@ -27,6 +27,3 @@ class PathSelectButton(IconButton):
         if self.target:
             self.pathSelected.emit(self.target)
             return self.target
-
-    def set_path(self, path):
-        self.target = path
