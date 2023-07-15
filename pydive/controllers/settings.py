@@ -1046,6 +1046,7 @@ class SettingsController:
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
+        self.refresh_display()
         return self.ui["main"]
 
     @property
