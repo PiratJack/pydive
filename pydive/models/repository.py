@@ -29,6 +29,7 @@ from PyQt5 import QtCore
 from .picture import Picture as PictureModel
 from .picturegroup import PictureGroup
 from .storagelocation import StorageLocation
+from .conversionmethod import ConversionMethod
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
@@ -314,6 +315,7 @@ class Repository:
         logger.debug(
             f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name} (only {conversion_methods})"
         )
+        picture_groups = None
         if picture_group:
             picture_groups = [picture_group]
             trip = picture_group.trip
@@ -343,8 +345,59 @@ class Repository:
                 source_picture = picture_group.pictures[""]
             source_picture = source_picture[0]
 
+            # Type conversion for input
+            actual_methods = []
+            if isinstance(conversion_methods, str):
+                try:
+                    actual_methods.append(
+                        self.database.conversionmethods_get_by_suffix(
+                            conversion_methods
+                        )
+                    )
+                except:
+                    try:
+                        actual_methods.append(
+                            self.database.conversionmethods_get_by_name(
+                                conversion_methods
+                            )
+                        )
+                    except:
+                        raise ValueError(
+                            f"ConversionMethod {conversion_methods} could not be found in database"
+                        )
+            elif isinstance(conversion_methods, ConversionMethod):
+                actual_methods = [conversion_methods]
+            else:
+                try:
+                    for method in conversion_methods:
+                        if isinstance(method, ConversionMethod):
+                            actual_methods.append(method)
+                        elif isinstance(method, str):
+                            try:
+                                actual_methods.append(
+                                    self.database.conversionmethods_get_by_suffix(
+                                        method
+                                    )
+                                )
+                            except:
+                                try:
+                                    actual_methods.append(
+                                        self.database.conversionmethods_get_by_name(
+                                            method
+                                        )
+                                    )
+                                except:
+                                    raise ValueError(
+                                        f"ConversionMethod {method} could not be found in database"
+                                    )
+
+                except:
+                    raise ValueError(
+                        "ConversionMethods needs to be an iterable of ConversionMethod"
+                    )
+
             # Generate tasks for each generation
-            for conversion_method in conversion_methods:
+            for conversion_method in actual_methods:
                 if (
                     source_location
                     and source_picture.location.name != source_location.name
