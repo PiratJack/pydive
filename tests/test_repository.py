@@ -2,9 +2,11 @@ import os
 import unittest
 import datetime
 import logging
+from PyQt5 import QtCore, QtTest
 
 import pydive.models.database as databasemodel
 
+from pydive.models.conversionmethod import ConversionMethod
 from pydive.models.storagelocation import StorageLocation
 from pydive.models.storagelocation import StorageLocationType
 from pydive.models.repository import Repository
@@ -47,10 +49,11 @@ class TestRepository(unittest.TestCase):
         for folder in self.all_folders:
             os.makedirs(folder, exist_ok=True)
         self.all_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG020.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG001.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG010.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG020.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "IMG050.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
@@ -116,6 +119,18 @@ class TestRepository(unittest.TestCase):
                     name="Dive log",
                     type="file",
                     path=os.path.join(BASE_FOLDER, "Archives", "test.txt"),
+                ),
+                ConversionMethod(
+                    id=1,
+                    name="DarkTherapee",
+                    suffix="DT",
+                    command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c DT > /dev/null",
+                ),
+                ConversionMethod(
+                    id=2,
+                    name="RawTherapee",
+                    suffix="RT",
+                    command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c RT > /dev/null",
                 ),
             ]
         )
@@ -217,28 +232,30 @@ class TestRepository(unittest.TestCase):
             logger.setLevel(logging.WARNING)
             self.assertEqual(type(cm.exception), StorageLocationCollision, test)
 
-    def helper_check_paths(self, should_exist, test):
-        # TODO: Test with actual signals & remove this ugly workaround
-        import time
-
-        time.sleep(2 + 2 * len(should_exist))
-        all_files_checked = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_convert.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-        ]
+    def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
+        QtCore.QThreadPool.globalInstance().waitForDone()
+        all_files_checked = (
+            [
+                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
+                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.CR2"),
+                os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
+                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
+                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_DT.jpg"),
+                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.CR2"),
+                os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG041.CR2"),
+                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_convert.CR2"),
+                os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
+            ]
+            + should_exist
+            + should_not_exist
+        )
+        all_files_checked = set(all_files_checked)
 
         initial_files = [
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
@@ -249,25 +266,18 @@ class TestRepository(unittest.TestCase):
         ]
 
         self.all_files += should_exist
+        should_exist += initial_files
+        for path in should_not_exist:
+            if path in should_exist:
+                should_exist.remove(path)
         for path in all_files_checked:
-            if path in should_exist or path in initial_files:
+            if path in should_exist:
                 self.assertTrue(os.path.exists(path), f"{test} - File {path}")
             else:
                 self.assertFalse(os.path.exists(path), f"{test} - File {path}")
         self.all_files = list(set(self.all_files))
 
-        # #file_list = "\n".join(sorted(self.all_files))
-        # #print('self.files')
-        # #print(file_list)
-
-        # #file_list = "\n".join(sorted(initial_files))
-        # #print('initial_files')
-        # #print(file_list)
-
-        # #print('system')
-        # #os.system(f'find {BASE_FOLDER} -type f')
-
-    # List of Repository.copy_pictures tests
+    # List of Repository.copy_pictures tests - "KO" denotes when a ValueError is raised
     # source_location   trip    picture_group   conversion_method
     #       X             X             X               X       test_repository_copy_pictures_all_parameters
 
@@ -287,8 +297,8 @@ class TestRepository(unittest.TestCase):
     #                                   X                       test_repository_copy_pictures_picture_group
     #       X                                                   test_repository_copy_pictures_source_location KO
     #                     X                                     test_repository_copy_pictures_trip
-    @unittest.skip("Prototype with QSignalSpy - will work only with QApplication")
-    def test_repository_qsignalspy(self):
+
+    def test_repository_process_group_finished_signal(self):
         test = "Picture copy: all parameters provided (copies 1 picture)"
         target_location = self.database.storagelocation_get_by_name("Archive")
         source_location = self.database.storagelocation_get_by_name("Temporary")
@@ -304,22 +314,18 @@ class TestRepository(unittest.TestCase):
             picture_group,
             conversion_method,
         )
-        from PyQt5 import QtTest
+        QtCore.QThreadPool.globalInstance().waitForDone()
 
-        test = QtTest.QSignalSpy(process.finished)
-        self.assertTrue(test.isValid())
+        expected_signal = QtTest.QSignalSpy(process.finished)
+        self.assertTrue(expected_signal.isValid())
 
         new_files = [
             os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
         ]
         self.all_files += new_files
 
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
+        self.helper_check_paths(test, new_files)
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
-
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_all_parameters(self):
         test = "Picture copy: all parameters provided (copies 1 picture)"
         target_location = self.database.storagelocation_get_by_name("Archive")
@@ -328,7 +334,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips[trip]["IMG040"]
         conversion_method = ""
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -340,12 +346,9 @@ class TestRepository(unittest.TestCase):
         new_files = [
             os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_conversion_method(self):
         test = "Picture copy: all parameters provided except conversion_method"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -354,7 +357,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips[trip]["IMG040"]
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -367,14 +370,10 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_picture_group(self):
         test = "Picture copy: all parameters provided except picture_group (copies some of the trip)"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -383,7 +382,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = ""
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -396,12 +395,9 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_source_location(self):
         test = "Picture copy: all parameters provided except source_location (copies 1 picture)"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -410,7 +406,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips[trip]["IMG040"]
         conversion_method = ""
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -422,12 +418,9 @@ class TestRepository(unittest.TestCase):
         new_files = [
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_missing_trip(self):
         # This test gives the same result as "all parameters" since trip will be ignored
         test = "Picture copy: all parameters provided except trip (copies 1 picture)"
@@ -437,7 +430,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips["Sweden"]["IMG040"]
         conversion_method = ""
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -449,12 +442,9 @@ class TestRepository(unittest.TestCase):
         new_files = [
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method_and_picture_group(self):
         test = "Picture copy: conversion_method and picture_group provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -463,7 +453,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips["Sweden"]["IMG040"]
         conversion_method = ""
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -475,12 +465,9 @@ class TestRepository(unittest.TestCase):
         new_files = [
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method_and_source_location(self):
         test = "Picture copy: conversion_method and source_location provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -505,10 +492,8 @@ class TestRepository(unittest.TestCase):
                 test,
             )
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths([], test)
+        self.helper_check_paths(test)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method_and_trip(self):
         test = "Picture copy: conversion_method and trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -517,7 +502,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -532,12 +517,9 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_picture_group_and_source_location(self):
         test = "Picture copy: picture_group and source_location provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -546,7 +528,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips["Sweden"]["IMG040"]
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -560,12 +542,9 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_picture_group_and_trip(self):
         test = "Picture copy: picture_group and trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -574,7 +553,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips["Sweden"]["IMG040"]
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -589,12 +568,9 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_source_location_and_trip(self):
         test = "Picture copy: source_location and trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -603,7 +579,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -617,14 +593,10 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_conversion_method(self):
         test = "Picture copy: only conversion_method provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -649,10 +621,8 @@ class TestRepository(unittest.TestCase):
                 test,
             )
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths([], test)
+        self.helper_check_paths(test)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_picture_group(self):
         test = "Picture copy: only picture_group provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -661,7 +631,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips["Sweden"]["IMG040"]
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -676,12 +646,9 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
+        self.helper_check_paths(test, new_files)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_source_location(self):
         test = "Picture copy: only source_location provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -706,10 +673,8 @@ class TestRepository(unittest.TestCase):
                 test,
             )
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths([], test)
+        self.helper_check_paths(test)
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_copy_pictures_trip(self):
         test = "Picture copy: only trip provided"
         target_location = self.database.storagelocation_get_by_name("Camera")
@@ -718,7 +683,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = None
 
-        process = self.repository.copy_pictures(
+        self.repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -734,81 +699,43 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
-        process.finished.connect(lambda: self.helper_check_paths(new_files, test))
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        self.helper_check_paths(new_files, test)
-
-    def test_repository_generate_pictures(self):
-        # Generate / convert pictures
-        # TODO: test > write this function
-        pass
-        # Need test cases for each situation:
-        # source_location=None or provided, trip=None or provided, picture_group=None or provided, different conversion_methods
+        self.helper_check_paths(test, new_files)
 
     def test_repository_change_trip_pictures(self):
         # Change trip (with actual changes)
         # TODO: test > write this function
-        pass
-
         # Need test cases for each situation:
         # source_trip=None or provided, picture_group=None or provided
+        pass
 
     def test_repository_change_trip_pictures_finished(self):
         # Change trip (without actual changes - meant to increase coverage
         # TODO: test > write this function
-        pass
-
         # Need test cases for each situation:
         # source_trip=None or provided, picture_group=None or provided
+        pass
 
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_remove_pictures_1_picture(self):
-        # TODO: Apply the workaround from creating files
         test = "Picture remove: actual deletion of 1 picture"
         picture_group = self.repository.trips["Malta"]["IMG002"]
         picture = picture_group.locations["Temporary"][0]
         path = picture.path
+
         process = self.repository.remove_pictures(test, None, picture_group, picture)
-        process.finished.connect(lambda: self.assertFalse(os.path.exists(path), test))
 
         self.assertEqual(str(process), test + " (1 tasks)", test)
+        self.helper_check_paths(test, [], [path])
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        import time
-
-        time.sleep(2)
-        self.assertFalse(os.path.exists(path), test)
-
-    @unittest.skip("To be re-done through GUI testing")
     def test_repository_remove_pictures_trip(self):
         test = "Picture remove: actual deletion of a trip"
         picture_files = [
             p for p in self.all_files if os.path.sep + "Korea" + os.path.sep in p
         ]
 
-        process = self.repository.remove_pictures(test, trip="Korea")
-        process.finished.connect(
-            lambda: all(
-                self.assertFalse(
-                    os.path.exists(path),
-                    test,
-                )
-                for path in picture_files
-            )
-        )
+        self.repository.remove_pictures(test, trip="Korea")
 
-        # TODO: Test with actual signals & remove this ugly workaround
-        import time
-
-        time.sleep(2)
-        all(
-            self.assertFalse(
-                os.path.exists(path),
-                test,
-            )
-            for path in picture_files
-        )
+        self.helper_check_paths(test, [], picture_files)
 
     def test_repository_remove_pictures_validations(self):
         # Delete image without changing structure of .pictures and .locations
@@ -836,7 +763,7 @@ class TestRepository(unittest.TestCase):
 
     def test_repository_remove_picture_no_structure_change(self):
         # Remove image without deleting the actual files
-        # This is because coverage doesn't realize it has been tested indirectly
+        # This allows detection by coverage
         test = "Remove picture, keep .pictures and.locations"
         picture_group = self.repository.trips["Malta"]["IMG002"]
         picture = picture_group.locations["Temporary"][0]
@@ -861,7 +788,7 @@ class TestRepository(unittest.TestCase):
 
     def test_repository_remove_picture_structure_change(self):
         # Remove image without deleting the actual files
-        # This is because coverage doesn't realize it has been tested indirectly
+        # This allows detection by coverage
         test = "Remove picture, remove keys from .pictures and.locations"
         picture_group = self.repository.trips["Korea"]["IMG030"]
         picture = picture_group.pictures["RT"][0]
