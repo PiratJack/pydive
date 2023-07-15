@@ -71,7 +71,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.layout.addWidget(self.controllers[element].display_widget)
             self.toolbar.addAction(self.controllers[element].toolbar_button)
 
-        self.layout.setCurrentIndex(0)
+        self.display_tab("Settings")
 
     def display_tab(self, tab):
         """User clicks on toolbar item => display the subwindow
