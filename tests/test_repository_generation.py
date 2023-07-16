@@ -181,8 +181,11 @@ class TestRepositoryGeneration(unittest.TestCase):
     #                         X             X      test_repository_generate_pictures_missing_picture_group
 
     #       X                                      test_repository_generate_pictures_picture_group
-    #                         X                    test_repository_generate_pictures_source_location
+    #                         X                    test_repository_generate_pictures_source_location KO
     #                                       X      test_repository_generate_pictures_trip
+
+    #                                              test_repository_generate_pictures_no_parameter KO
+
     def test_repository_generate_pictures_all_parameters_multiple_methods(self):
         test = "Picture generate: all parameters provided (multiple methods)"
         target_location = self.database.storagelocation_get_by_name("Archive")
@@ -406,3 +409,29 @@ class TestRepositoryGeneration(unittest.TestCase):
         ]
 
         self.helper_check_paths(test, new_files, should_not_exist)
+
+    def test_repository_generate_pictures_no_parameter(self):
+        test = "Picture generate: no parameter provided"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        conversion_methods = self.database.conversionmethods_get_by_suffix("DT")
+        source_location = None
+        trip = None
+        picture_group = None
+
+        with self.assertRaises(ValueError) as cm:
+            self.repository.generate_pictures(
+                test,
+                target_location,
+                conversion_methods,
+                source_location,
+                trip,
+                picture_group,
+            )
+            self.assertEqual(type(cm.exception), ValueError, test)
+            self.assertEqual(
+                cm.exception.args[0],
+                "Either trip or picture_group must be provided",
+                test,
+            )
+
+        self.helper_check_paths(test)
