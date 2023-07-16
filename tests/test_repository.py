@@ -267,6 +267,8 @@ class TestRepository(unittest.TestCase):
     #       X                                                   test_repository_copy_pictures_source_location KO
     #                     X                                     test_repository_copy_pictures_trip
 
+    #                                                           test_repository_copy_pictures_no_parameter
+
     def test_repository_process_group_finished_signal(self):
         test = "Picture copy: all parameters provided (copies 1 picture)"
         target_location = self.database.storagelocation_get_by_name("Archive")
@@ -671,12 +673,151 @@ class TestRepository(unittest.TestCase):
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_change_trip_pictures(self):
-        # Change trip (with actual changes)
-        # TODO: test > write this function
-        # Need test cases for each situation:
-        # source_trip=None or provided, picture_group=None or provided
-        pass
+    def test_repository_copy_pictures_no_parameter(self):
+        test = "Picture copy: no parameter provided"
+        target_location = self.database.storagelocation_get_by_name("Camera")
+        source_location = None
+        trip = None
+        picture_group = None
+        conversion_method = None
+
+        with self.assertRaises(ValueError) as cm:
+            self.repository.copy_pictures(
+                test,
+                target_location,
+                source_location,
+                trip,
+                picture_group,
+                conversion_method,
+            )
+            self.assertEqual(type(cm.exception), ValueError, test)
+            self.assertEqual(
+                cm.exception.args[0],
+                "Either trip or picture_group must be provided",
+                test,
+            )
+
+        self.helper_check_paths(test)
+
+    # List of Repository.change_trip_pictures tests - "KO" denotes when a ValueError is raised
+    #  picture_group   source_trip
+    #       X                X        test_repository_change_trip_all_parameters
+
+    #       X                         test_repository_change_trip_picture_group
+    #                        X        test_repository_change_trip_source_trip
+
+    #                                 test_repository_change_trip_no_parameter
+
+    def test_repository_change_trip_all_parameters(self):
+        test = "Picture change trip: all parameters provided"
+        target_trip = "Korea"
+        source_trip = "Sweden"
+        picture_group = self.repository.trips[source_trip]["IMG040"]
+
+        self.repository.change_trip_pictures(
+            test,
+            target_trip,
+            source_trip,
+            picture_group,
+        )
+
+        new_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG040_convert.jpg"),
+        ]
+
+        should_not_exist = [
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+        ]
+
+        self.helper_check_paths(test, new_files, should_not_exist)
+
+    def test_repository_change_trip_picture_group(self):
+        test = "Picture change trip: only picture group provided"
+        target_trip = "Korea"
+        source_trip = None
+        picture_group = self.repository.trips["Sweden"]["IMG040"]
+
+        self.repository.change_trip_pictures(
+            test,
+            target_trip,
+            source_trip,
+            picture_group,
+        )
+
+        new_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG040_convert.jpg"),
+        ]
+
+        should_not_exist = [
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+        ]
+
+        self.helper_check_paths(test, new_files, should_not_exist)
+
+    def test_repository_change_trip_source_trip(self):
+        test = "Picture change trip: only trip provided"
+        target_trip = "Korea"
+        source_trip = "Sweden"
+        picture_group = None
+
+        self.repository.change_trip_pictures(
+            test,
+            target_trip,
+            source_trip,
+            picture_group,
+        )
+
+        new_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG040_convert.jpg"),
+        ]
+
+        should_not_exist = [
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+        ]
+
+        self.helper_check_paths(test, new_files, should_not_exist)
+
+    def test_repository_change_trip_no_parameter(self):
+        test = "Picture change trip: no parameter provided"
+        target_trip = "Korea"
+        source_trip = None
+        picture_group = None
+
+        with self.assertRaises(ValueError) as cm:
+            self.repository.change_trip_pictures(
+                test,
+                target_trip,
+                source_trip,
+                picture_group,
+            )
+            self.assertEqual(type(cm.exception), ValueError, test)
+            self.assertEqual(
+                cm.exception.args[0],
+                "Either trip or picture_group must be provided",
+                test,
+            )
+
+        self.helper_check_paths(test)
 
     def test_repository_change_trip_pictures_finished(self):
         # Change trip (without actual changes - meant to increase coverage
