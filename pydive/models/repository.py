@@ -68,12 +68,13 @@ class Repository:
 
     allowed_extensions = [".cr2", ".jpg", ".jpeg"]
 
-    def __init__(self):
+    def __init__(self, database):
         """Defines default attributes"""
         logger.debug("Repository.init")
         self.storage_locations = []
         self.picture_groups = []
         self.process_groups = []
+        self.database = database
         # TODO: Darktherapee prevents multithreading, hence this (ugly) workaround
         QtCore.QThreadPool.globalInstance().setMaxThreadCount(1)
 
@@ -328,9 +329,7 @@ class Repository:
         # Determine the source: find the RAW image
         process_group = ProcessGroup(label)
         for picture_group in picture_groups:
-            # Determine source (RAW) picture
-            if "" not in picture_group.pictures:
-                raise FileNotFoundError(_("No source image found"))
+            # Determine source (RAW) picture - filter by name + location (if provided)
             if source_location:
                 source_picture = [
                     p
@@ -398,12 +397,6 @@ class Repository:
 
             # Generate tasks for each generation
             for conversion_method in actual_methods:
-                if (
-                    source_location
-                    and source_picture.location.name != source_location.name
-                ):
-                    continue
-
                 process = GenerateProcess(
                     target_location, picture_group, source_picture, conversion_method
                 )

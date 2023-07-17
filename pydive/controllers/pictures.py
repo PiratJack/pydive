@@ -1100,8 +1100,8 @@ class PicturesController:
         """
         logger.debug("PicturesController.init")
         self.parent_window = parent_window
-        self.repository = models.repository.Repository()
         self.database = parent_window.database
+        self.repository = models.repository.Repository(parent_window.database)
 
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
