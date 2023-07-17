@@ -227,7 +227,7 @@ class Repository:
         """
         logger.info(f"Repository.copy_pictures {label}")
         logger.debug(
-            f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name}{(' (only ' + conversion_method +')') if conversion_method else ''}"
+            f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name}{(' (only ' + (conversion_method.name if isinstance(conversion_method, ConversionMethod) else conversion_method) +')') if conversion_method else ''}"
         )
         # Determine all the picture groups to process
         picture_groups = None
