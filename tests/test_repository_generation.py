@@ -139,7 +139,7 @@ class TestRepositoryGeneration(unittest.TestCase):
 
         # Load the pictures
         self.locations = self.database.storagelocations_get_folders()
-        self.repository = Repository()
+        self.repository = Repository(self.database)
         self.repository.load_pictures(self.locations)
 
     def tearDown(self):
@@ -295,7 +295,7 @@ class TestRepositoryGeneration(unittest.TestCase):
     def test_repository_generate_pictures_missing_picture_group(self):
         test = "Picture generate: missing picture group"
         target_location = self.database.storagelocation_get_by_name("Archive")
-        conversion_methods = self.database.conversionmethods_get_by_suffix("DT")
+        conversion_methods = ["DarkTherapee"]
         source_location = self.database.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
         picture_group = None
@@ -328,7 +328,7 @@ class TestRepositoryGeneration(unittest.TestCase):
     def test_repository_generate_pictures_picture_group(self):
         test = "Picture generate: only picture_group provided"
         target_location = self.database.storagelocation_get_by_name("Archive")
-        conversion_methods = self.database.conversionmethods_get_by_suffix("DT")
+        conversion_methods = ["DT"]
         source_location = None
         trip = None
         picture_group = self.repository.trips["Malta"]["IMG001"]
@@ -356,7 +356,7 @@ class TestRepositoryGeneration(unittest.TestCase):
     def test_repository_generate_pictures_source_location(self):
         test = "Picture generate: only source_location provided"
         target_location = self.database.storagelocation_get_by_name("Archive")
-        conversion_methods = self.database.conversionmethods_get_by_suffix("DT")
+        conversion_methods = "DarkTherapee"
         source_location = self.database.storagelocation_get_by_name("Temporary")
         trip = None
         picture_group = None
@@ -370,7 +370,6 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
@@ -382,7 +381,7 @@ class TestRepositoryGeneration(unittest.TestCase):
     def test_repository_generate_pictures_trip(self):
         test = "Picture generate: only trip provided"
         target_location = self.database.storagelocation_get_by_name("Archive")
-        conversion_methods = self.database.conversionmethods_get_by_suffix("DT")
+        conversion_methods = "DT"
         source_location = None
         trip = "Malta"
         picture_group = None
@@ -427,10 +426,109 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
+                test,
+            )
+
+        self.helper_check_paths(test)
+
+    def test_repository_generate_pictures_no_source_file(self):
+        test = "Picture generate: no source file available in chosen location"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        conversion_methods = self.database.conversionmethods_get()
+        source_location = self.database.storagelocation_get_by_name("Archive")
+        trip = "Sweden"
+        picture_group = self.repository.trips[trip]["IMG040"]
+
+        with self.assertRaises(FileNotFoundError) as cm:
+            self.repository.generate_pictures(
+                test,
+                target_location,
+                conversion_methods,
+                source_location,
+                trip,
+                picture_group,
+            )
+            self.assertEqual(
+                cm.exception.args[0],
+                "No source image found in specified location",
+                test,
+            )
+
+        self.helper_check_paths(test)
+
+    def test_repository_generate_pictures_inexistant_as_str(self):
+        test = "Picture generate: inexistant conversion method (as str)"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        conversion_methods = "This is a test"
+        source_location = self.database.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = self.repository.trips[trip]["IMG040"]
+
+        with self.assertRaises(ValueError) as cm:
+            self.repository.generate_pictures(
+                test,
+                target_location,
+                conversion_methods,
+                source_location,
+                trip,
+                picture_group,
+            )
+            self.assertEqual(
+                cm.exception.args[0],
+                "ConversionMethod This is a test could not be found in database",
+                test,
+            )
+
+        self.helper_check_paths(test)
+
+    def test_repository_generate_pictures_inexistant_in_array(self):
+        test = "Picture generate: inexistant conversion method (in array)"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        conversion_methods = ["This is a test"]
+        source_location = self.database.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = self.repository.trips[trip]["IMG040"]
+
+        with self.assertRaises(ValueError) as cm:
+            self.repository.generate_pictures(
+                test,
+                target_location,
+                conversion_methods,
+                source_location,
+                trip,
+                picture_group,
+            )
+            self.assertEqual(
+                cm.exception.args[0],
+                "ConversionMethod ['This is a test'] could not be found in database",
+                test,
+            )
+
+        self.helper_check_paths(test)
+
+    def test_repository_generate_pictures_inexistant_as_int(self):
+        test = "Picture generate: inexistant conversion method (as int)"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        conversion_methods = 123
+        source_location = self.database.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = self.repository.trips[trip]["IMG040"]
+
+        with self.assertRaises(ValueError) as cm:
+            self.repository.generate_pictures(
+                test,
+                target_location,
+                conversion_methods,
+                source_location,
+                trip,
+                picture_group,
+            )
+            self.assertEqual(
+                cm.exception.args[0],
+                "ConversionMethods needs to be an iterable of ConversionMethod",
                 test,
             )
 

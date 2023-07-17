@@ -42,6 +42,8 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "Archive", "Malta", ""),
             os.path.join(BASE_FOLDER, "Archive", "Korea", ""),
             os.path.join(BASE_FOLDER, "Archive", "Sweden", ""),
+            os.path.join(BASE_FOLDER, "Archive", "Romania", ""),
+            os.path.join(BASE_FOLDER, "Archive", "Island", ""),
             os.path.join(BASE_FOLDER, "Archive_outside_DB", ""),
             os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", ""),
             os.path.join(BASE_FOLDER, "Empty", ""),
@@ -69,6 +71,9 @@ class TestRepository(unittest.TestCase):
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
             os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050_convert.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Island", "IMG050.CR2"),
             os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", "IMG037.CR2"),
         ]
         for test_file in self.all_files:
@@ -137,7 +142,7 @@ class TestRepository(unittest.TestCase):
 
         # Load the pictures
         self.locations = self.database.storagelocations_get_folders()
-        self.repository = Repository()
+        self.repository = Repository(self.database)
         self.repository.load_pictures(self.locations)
 
     def tearDown(self):
@@ -156,7 +161,7 @@ class TestRepository(unittest.TestCase):
     def test_load_pictures_trip_recognition(self):
         # Check if recognition worked
         test = "Load pictures: Count trips"
-        self.assertEqual(len(self.repository.trips), 5, test)
+        self.assertEqual(len(self.repository.trips), 7, test)
 
         test = "Load pictures: Count pictures with no trips"
         self.assertEqual(len(self.repository.trips[""]), 4, test)
@@ -216,20 +221,22 @@ class TestRepository(unittest.TestCase):
 
     def test_storage_location_add_with_collision(self):
         test = "Add a storage location: subfolder of existing folder"
-        test_repo = Repository()
-        test_repo.load_pictures(self.locations)
         new_location = StorageLocation(
             id=999,
             name="Used path",
             type="folder",
             path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
-        with self.assertRaises(ValueError, msg=test) as cm:
+        with self.assertRaises(StorageLocationCollision, msg=test) as cm:
             logger = logging.getLogger("pydive.models.picture")
             logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
             logger.setLevel(logging.WARNING)
-            self.assertEqual(type(cm.exception), StorageLocationCollision, test)
+            self.assertEqual(
+                cm.exception.args[0],
+                "recognition failed",
+                test,
+            )
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
         QtCore.QThreadPool.globalInstance().waitForDone()
@@ -275,7 +282,7 @@ class TestRepository(unittest.TestCase):
         source_location = self.database.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
         picture_group = self.repository.trips[trip]["IMG040"]
-        conversion_method = ""
+        conversion_method = self.database.conversionmethods_get_by_suffix("RT")
 
         process = self.repository.copy_pictures(
             test,
@@ -291,7 +298,7 @@ class TestRepository(unittest.TestCase):
         self.assertTrue(expected_signal.isValid())
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
         ]
         self.all_files += new_files
 
@@ -456,7 +463,6 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
@@ -585,7 +591,6 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
@@ -637,7 +642,6 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
@@ -690,10 +694,34 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
+                test,
+            )
+
+        self.helper_check_paths(test)
+
+    def test_repository_copy_pictures_picture_inexistant(self):
+        test = "Picture copy: inexistant picture for given parameters"
+        target_location = self.database.storagelocation_get_by_name("Archive")
+        source_location = self.database.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = self.repository.trips[trip]["IMG040"]
+        conversion_method = "ZZZ"
+
+        with self.assertRaises(FileNotFoundError) as cm:
+            self.repository.copy_pictures(
+                test,
+                target_location,
+                source_location,
+                trip,
+                picture_group,
+                conversion_method,
+            )
+            self.assertEqual(
+                cm.exception.args[0],
+                "No source image found",
                 test,
             )
 
@@ -810,7 +838,6 @@ class TestRepository(unittest.TestCase):
                 source_trip,
                 picture_group,
             )
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip or picture_group must be provided",
@@ -818,6 +845,35 @@ class TestRepository(unittest.TestCase):
             )
 
         self.helper_check_paths(test)
+
+    def test_repository_change_trip_target_exists(self):
+        test = "Picture change trip: target group exists"
+        target_trip = "Island"
+        source_trip = "Romania"
+        picture_group = self.repository.trips[source_trip]["IMG050"]
+
+        logger = logging.getLogger("pydive.models.repository")
+        logger.setLevel(logging.CRITICAL)
+        self.repository.change_trip_pictures(
+            test,
+            target_trip,
+            source_trip,
+            picture_group,
+        )
+        logger.setLevel(logging.WARNING)
+
+        new_files = [
+            os.path.join(BASE_FOLDER, "Archive", "Island", "IMG050.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Island", "IMG050_convert.jpg"),
+        ]
+
+        should_not_exist = [
+            # This will still exist since the target file exists
+            # #os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050_convert.jpg"),
+        ]
+
+        self.helper_check_paths(test, new_files, should_not_exist)
 
     def test_repository_change_trip_pictures_finished(self):
         # Change trip (without actual changes - meant to increase coverage
@@ -852,7 +908,6 @@ class TestRepository(unittest.TestCase):
         test = "Remove picture: At least 1 trip/picture reference is required"
         with self.assertRaises(ValueError) as cm:
             self.repository.remove_pictures(test)
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip, picture_group or picture must be provided",
@@ -864,7 +919,6 @@ class TestRepository(unittest.TestCase):
         picture = picture_group.locations["Temporary"][0]
         with self.assertRaises(ValueError) as cm:
             self.repository.remove_pictures(test, picture=picture)
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Either trip, picture_group or picture must be provided",
@@ -931,7 +985,6 @@ class TestRepository(unittest.TestCase):
         picture = picture[0]
         with self.assertRaises(ValueError) as cm:
             picture_group.add_picture(picture)
-        self.assertEqual(type(cm.exception), ValueError, test)
         self.assertEqual(
             cm.exception.args[0],
             "Picture IMG002 does not belong to group IMG001",
@@ -949,7 +1002,6 @@ class TestRepository(unittest.TestCase):
         picture = picture[0]
         with self.assertRaises(ValueError) as cm:
             picture_group.add_picture(picture)
-        self.assertEqual(type(cm.exception), ValueError, test)
         self.assertEqual(
             cm.exception.args[0],
             "Picture IMG010 has the wrong trip for group IMG001",
@@ -979,7 +1031,6 @@ class TestRepository(unittest.TestCase):
         picture = self.repository.trips["Georgia"]["IMG010"].pictures[""][0]
         with self.assertRaises(ValueError) as cm:
             picture_group.remove_picture(picture)
-            self.assertEqual(type(cm.exception), ValueError, test)
             self.assertEqual(
                 cm.exception.args[0],
                 "Picture IMG010 has the wrong trip for group IMG002",
