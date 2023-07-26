@@ -12,7 +12,7 @@ from pydive.models.storagelocation import StorageLocation
 from pydive.models.storagelocation import StorageLocationType
 from pydive.models.repository import Repository
 
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.WARNING)
 
 DATABASE_FILE = "test.sqlite"
 database = databasemodel.Database(DATABASE_FILE)
