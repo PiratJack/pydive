@@ -418,7 +418,6 @@ class TestUiSettings(unittest.TestCase):
                 5,
                 "Locations have the right number of rows",
             )
-            print("test_delete")
 
         # Click delete, then "Yes" in the dialog
         timer2 = QtCore.QTimer(settingsController.ui["main"])
