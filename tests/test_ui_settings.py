@@ -6,16 +6,16 @@ import logging
 from PyQt5 import QtWidgets, QtTest, QtCore
 from PyQt5.QtCore import Qt
 
-sys.path.append("pydive")
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import pydive.models.database as databasemodel
-import pydive
-import pydive.controllers.mainwindow
-import pydive.controllers.widgets.pathselectbutton
+import models.database as databasemodel
+import controllers.mainwindow
+import controllers.widgets.pathselectbutton
 
-from pydive.models.storagelocation import StorageLocation
-from pydive.models.storagelocation import StorageLocationType
-from pydive.models.conversionmethod import ConversionMethod
+from models.storagelocation import StorageLocation
+from models.storagelocation import StorageLocationType
+from models.conversionmethod import ConversionMethod
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -140,7 +140,7 @@ class TestUiSettings(unittest.TestCase):
         if sys.platform == "linux":
             os.environ["QT_QPA_PLATFORM"] = "xcb"
         self.app = QtWidgets.QApplication(sys.argv)
-        self.mainwindow = pydive.controllers.mainwindow.MainWindow(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
 
     def tearDown(self):
         self.mainwindow.close()
@@ -180,7 +180,10 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check name display
-        name_layout = locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        name_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        )
+        name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
@@ -203,7 +206,10 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check path display
-        path_widget = locationList.ui["layout"].itemAtPosition(1, 2).widget()
+        path_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 2).widget().layout()
+        )
+        path_widget = path_wrapper_layout.itemAt(0).widget()
         self.assertTrue(
             isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         )
@@ -240,7 +246,10 @@ class TestUiSettings(unittest.TestCase):
         locationList = settingsController.locations_list
 
         # Get name-related widgets
-        name_layout = locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        name_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        )
+        name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
 
         name_change_layout = (
@@ -317,6 +326,37 @@ class TestUiSettings(unittest.TestCase):
             name_change_widget, name_change_start, "Save button replaced by Edit button"
         )
 
+    def test_settings_location_list_edit_name_error(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        locationList = settingsController.locations_list
+
+        # Get name-related widgets
+
+        name_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        )
+        name_change_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 1).widget().layout()
+        )
+        name_change_start = name_change_layout.currentWidget()
+
+        # Display edit fields
+        QtTest.QTest.mouseClick(name_change_start, Qt.LeftButton)
+
+        # Change the name
+        name_edit = name_wrapper_layout.itemAt(0).widget().layout().currentWidget()
+        name_edit.setText("")
+
+        # Save changes
+        name_change_end = name_change_layout.currentWidget()
+        QtTest.QTest.mouseClick(name_change_end, Qt.LeftButton)
+
+        # Check error is displayed
+        error_widget = name_wrapper_layout.itemAt(1).widget()
+        self.assertEqual(
+            error_widget.text(), "Missing storage location name", "Error gets displayed"
+        )
+
     def test_settings_location_list_edit_path(self):
         settingsController = self.mainwindow.controllers["Settings"]
         locationList = settingsController.locations_list
@@ -356,7 +396,10 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # New path is displayed
-        path_widget = locationList.ui["layout"].itemAtPosition(1, 2).widget()
+        path_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 2).widget().layout()
+        )
+        path_widget = path_wrapper_layout.itemAt(0).widget()
         self.assertEqual(
             path_widget.text(), "This is a new path", "Path is updated on display"
         )
@@ -447,7 +490,10 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check name display
-        name_layout = divelogList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        name_wrapper_layout = (
+            divelogList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        )
+        name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
@@ -470,7 +516,10 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check path display
-        path_widget = divelogList.ui["layout"].itemAtPosition(1, 2).widget()
+        path_wrapper_layout = (
+            divelogList.ui["layout"].itemAtPosition(1, 2).widget().layout()
+        )
+        path_widget = path_wrapper_layout.itemAt(0).widget()
         self.assertTrue(
             isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         )
@@ -495,13 +544,21 @@ class TestUiSettings(unittest.TestCase):
         divelogList = settingsController.divelog_list
 
         # Get name-related widgets
-        name_layout = divelogList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        name_wrapper_layout = (
+            divelogList.ui["layout"].itemAtPosition(1, 0).widget().layout()
+        )
+        name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
 
         name_change_layout = (
             divelogList.ui["layout"].itemAtPosition(1, 1).widget().layout()
         )
         name_change_start = name_change_layout.currentWidget()
+        self.assertEqual(
+            type(name_change_start),
+            controllers.widgets.iconbutton.IconButton,
+            "Name change button is a IconButton",
+        )
 
         # Check "name change start" receivers
         self.assertEqual(name_change_start.receivers(name_change_start.clicked), 1)
@@ -611,7 +668,10 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # New path is displayed
-        path_widget = divelogList.ui["layout"].itemAtPosition(1, 2).widget()
+        path_wrapper_layout = (
+            divelogList.ui["layout"].itemAtPosition(1, 2).widget().layout()
+        )
+        path_widget = path_wrapper_layout.itemAt(0).widget()
         self.assertEqual(
             path_widget.text(), "This is a new path", "Path is updated on display"
         )
@@ -1002,3 +1062,7 @@ class TestUiSettings(unittest.TestCase):
             command_change_start,
             "Save button replaced by Edit button",
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

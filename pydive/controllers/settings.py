@@ -164,15 +164,22 @@ class LocationsList:
         """
         logger.info(f"LocationsList.add_location_ui {location_model}")
         self.ui["locations"][location_model.id] = {}
+        row = len(self.ui["locations"])
+
         location = self.ui["locations"][location_model.id]
         location["model"] = location_model
         location["error"] = {}
 
         # Location name
+        location["name_wrapper"] = QtWidgets.QWidget()
+        location["name_wrapper_layout"] = QtWidgets.QVBoxLayout()
+        location["name_wrapper"].setLayout(location["name_wrapper_layout"])
+        self.ui["layout"].addWidget(location["name_wrapper"], row, 0)
+
         location["name"] = QtWidgets.QWidget()
         location["name_layout"] = QtWidgets.QStackedLayout()
         location["name"].setLayout(location["name_layout"])
-        self.ui["layout"].addWidget(location["name"], len(self.ui["locations"]), 0)
+        location["name_wrapper_layout"].addWidget(location["name"])
 
         # Location name - Display
         location["name_label"] = QtWidgets.QLabel()
@@ -189,9 +196,7 @@ class LocationsList:
         location["name_change"] = QtWidgets.QWidget()
         location["name_change_layout"] = QtWidgets.QStackedLayout()
         location["name_change"].setLayout(location["name_change_layout"])
-        self.ui["layout"].addWidget(
-            location["name_change"], len(self.ui["locations"]), 1
-        )
+        self.ui["layout"].addWidget(location["name_change"], row, 1)
 
         # Location name - Edit button
         location["name_change_start"] = IconButton(
@@ -212,9 +217,14 @@ class LocationsList:
         location["name_change_layout"].insertWidget(1, location["name_change_end"])
 
         # Location path
+        location["path_wrapper"] = QtWidgets.QWidget()
+        location["path_wrapper_layout"] = QtWidgets.QVBoxLayout()
+        location["path_wrapper"].setLayout(location["path_wrapper_layout"])
+        self.ui["layout"].addWidget(location["path_wrapper"], row, 2)
+
         location["path"] = QtWidgets.QLineEdit()
         location["path"].setEnabled(False)
-        self.ui["layout"].addWidget(location["path"], len(self.ui["locations"]), 2)
+        location["path_wrapper_layout"].addWidget(location["path"])
 
         # Location path change
         location["path_change"] = PathSelectButton(
@@ -225,9 +235,7 @@ class LocationsList:
                 location["model"].id, path
             )
         )
-        self.ui["layout"].addWidget(
-            location["path_change"], len(self.ui["locations"]), 3
-        )
+        self.ui["layout"].addWidget(location["path_change"], row, 3)
 
         if self.location_type == "folder":
             # Delete location
@@ -239,9 +247,7 @@ class LocationsList:
                     location["model"].id
                 )
             )
-            self.ui["layout"].addWidget(
-                location["delete"], len(self.ui["locations"]), 4
-            )
+            self.ui["layout"].addWidget(location["delete"], row, 4)
 
     def on_click_name_change(self, location_id):
         """Displays fields to modify the location name
@@ -337,17 +343,28 @@ class LocationsList:
             del self.ui["locations"][0]
 
         self.ui["locations"][0] = {}
+        row = len(self.ui["locations"])
         location = self.ui["locations"][0]
         location["error"] = {}
 
         # Location name
+        location["name_wrapper"] = QtWidgets.QWidget()
+        location["name_wrapper_layout"] = QtWidgets.QVBoxLayout()
+        location["name_wrapper"].setLayout(location["name_wrapper_layout"])
+        self.ui["layout"].addWidget(location["name_wrapper"], row, 0)
+
         location["name"] = QtWidgets.QLineEdit()
-        self.ui["layout"].addWidget(location["name"], len(self.ui["locations"]), 0)
+        location["name_wrapper_layout"].addWidget(location["name"])
 
         # Location path
+        location["path_wrapper"] = QtWidgets.QWidget()
+        location["path_wrapper_layout"] = QtWidgets.QVBoxLayout()
+        location["path_wrapper"].setLayout(location["path_wrapper_layout"])
+        self.ui["layout"].addWidget(location["path_wrapper"], row, 2)
+
         location["path"] = QtWidgets.QLineEdit()
         location["path"].setEnabled(False)
-        self.ui["layout"].addWidget(location["path"], len(self.ui["locations"]), 2)
+        location["path_wrapper_layout"].addWidget(location["path"])
 
         # Location path change
         location["path_change"] = PathSelectButton(
@@ -356,18 +373,14 @@ class LocationsList:
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(0, a)
         )
-        self.ui["layout"].addWidget(
-            location["path_change"], len(self.ui["locations"]), 3
-        )
+        self.ui["layout"].addWidget(location["path_change"], row, 3)
 
         # Location name - Validate button
         location["validate_new"] = IconButton(
             QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
         )
         location["validate_new"].clicked.connect(self.on_validate_new_location)
-        self.ui["layout"].addWidget(
-            location["validate_new"], len(self.ui["locations"]), 4
-        )
+        self.ui["layout"].addWidget(location["validate_new"], row, 4)
 
     def on_validate_new_location(self):
         """Saves a new location"""
@@ -482,18 +495,9 @@ class LocationsList:
         else:
             location["error"][field] = QtWidgets.QLabel(message)
             location["error"][field].setProperty("class", "validation_error")
-            column = 0 if field == "name" else 2
-            row = (
-                len(self.ui["locations"])
-                if location_id == 0
-                else len(
-                    [p for p in self.ui["locations"] if p <= location_id and p != 0]
-                )
-            )
-            self.ui["layout"].addWidget(
+            location[field + "_wrapper_layout"].addWidget(
                 location["error"][field],
-                row,
-                column,
+                1,
                 QtCore.Qt.AlignBottom,
             )
 
