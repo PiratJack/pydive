@@ -72,8 +72,6 @@ class Picture:
         if len(storage_location) == 1:
             location = storage_location[0]
             self.trip = os.path.dirname(path)[len(location.path) :]
-            if self.trip.startswith(os.path.sep):
-                self.trip = self.trip[len(os.path.sep) :]
             self.location = location
             self.name = os.path.basename(path).rsplit(".", 1)[-2]
             self.filename = os.path.basename(path)
