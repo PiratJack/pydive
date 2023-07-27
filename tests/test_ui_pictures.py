@@ -6,17 +6,18 @@ import logging
 from PyQt5 import QtWidgets, QtTest
 from PyQt5.QtCore import Qt
 
-sys.path.append("pydive")
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import pydive.models.database as databasemodel
-import pydive
-import pydive.controllers.mainwindow
-import pydive.controllers.widgets.iconbutton
-import pydive.controllers.widgets.pathselectbutton
 
-from pydive.models.storagelocation import StorageLocation
-from pydive.models.storagelocation import StorageLocationType
-from pydive.models.conversionmethod import ConversionMethod
+import models.database as databasemodel
+import controllers.mainwindow
+import controllers.widgets.iconbutton
+import controllers.widgets.pathselectbutton
+
+from models.storagelocation import StorageLocation
+from models.storagelocation import StorageLocationType
+from models.conversionmethod import ConversionMethod
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -141,7 +142,7 @@ class TestUiSettings(unittest.TestCase):
         if sys.platform == "linux":
             os.environ["QT_QPA_PLATFORM"] = "xcb"
         self.app = QtWidgets.QApplication(sys.argv)
-        self.mainwindow = pydive.controllers.mainwindow.MainWindow(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
 
     def tearDown(self):
         self.mainwindow.close()
@@ -222,3 +223,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertEqual(
             malta_children, ["IMG001", "IMG002"], "Malta's children are OK"
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

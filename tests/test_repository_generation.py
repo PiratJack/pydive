@@ -1,16 +1,21 @@
 import os
+import sys
 import unittest
 import datetime
 import logging
 from PyQt5 import QtCore
 import zipfile
 
-import pydive.models.database as databasemodel
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-from pydive.models.conversionmethod import ConversionMethod
-from pydive.models.storagelocation import StorageLocation
-from pydive.models.storagelocation import StorageLocationType
-from pydive.models.repository import Repository
+
+import models.database as databasemodel
+
+from models.conversionmethod import ConversionMethod
+from models.storagelocation import StorageLocation
+from models.storagelocation import StorageLocationType
+from models.repository import Repository
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -533,3 +538,7 @@ class TestRepositoryGeneration(unittest.TestCase):
             )
 
         self.helper_check_paths(test)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -4,11 +4,12 @@ import unittest
 import logging
 from PyQt5 import QtWidgets
 
-sys.path.append("pydive")
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import pydive
-import pydive.controllers.mainwindow
-import pydive.models.database as databasemodel
+
+import controllers.mainwindow
+import models.database as databasemodel
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -21,7 +22,7 @@ class TestUiSettings(unittest.TestCase):
         if sys.platform == "linux":
             os.environ["QT_QPA_PLATFORM"] = "xcb"
         self.app = QtWidgets.QApplication(sys.argv)
-        self.mainwindow = pydive.controllers.mainwindow.MainWindow(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
 
     def tearDown(self):
         self.mainwindow.close()
@@ -38,3 +39,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertEqual(
             self.mainwindow.layout.currentIndex(), 1, "Pictures screen now displayed"
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

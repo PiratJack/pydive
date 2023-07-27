@@ -5,18 +5,19 @@ import datetime
 import logging
 from PyQt5 import QtCore, QtTest, QtWidgets
 
-sys.path.append("pydive")
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import pydive
-import pydive.controllers.mainwindow
-import pydive.models.database as databasemodel
 
-from pydive.models.conversionmethod import ConversionMethod
-from pydive.models.picturegroup import PictureGroup
-from pydive.models.storagelocation import StorageLocation
-from pydive.models.storagelocation import StorageLocationType
-from pydive.models.repository import Repository
-from pydive.models.picture import Picture, StorageLocationCollision
+import controllers.mainwindow
+import models.database as databasemodel
+
+from models.conversionmethod import ConversionMethod
+from models.picturegroup import PictureGroup
+from models.storagelocation import StorageLocation
+from models.storagelocation import StorageLocationType
+from models.repository import Repository
+from models.picture import Picture, StorageLocationCollision
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -154,7 +155,7 @@ class TestRepository(unittest.TestCase):
         if sys.platform == "linux":
             os.environ["QT_QPA_PLATFORM"] = "xcb"
         self.app = QtWidgets.QApplication(sys.argv)
-        self.mainwindow = pydive.controllers.mainwindow.MainWindow(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
 
     def tearDown(self):
         # Delete database
@@ -217,7 +218,7 @@ class TestRepository(unittest.TestCase):
                 type="folder",
                 path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
             )
-            logger = logging.getLogger("pydive.models.picture")
+            logger = logging.getLogger("models.picture")
             logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
             logger.setLevel(logging.WARNING)
@@ -243,7 +244,7 @@ class TestRepository(unittest.TestCase):
             path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
         with self.assertRaises(StorageLocationCollision, msg=test) as cm:
-            logger = logging.getLogger("pydive.models.picture")
+            logger = logging.getLogger("models.picture")
             logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
             logger.setLevel(logging.WARNING)
@@ -872,7 +873,7 @@ class TestRepository(unittest.TestCase):
         source_trip = "Romania"
         picture_group = self.repository.trips[source_trip]["IMG050"]
 
-        logger = logging.getLogger("pydive.models.repository")
+        logger = logging.getLogger("models.repository")
         logger.setLevel(logging.CRITICAL)
         self.repository.change_trip_pictures(
             test,
@@ -1125,3 +1126,7 @@ class TestRepository(unittest.TestCase):
             picture_group.pictures,
             "Group name change: '_convert' conversion type exists",
         )
+
+
+if __name__ == "__main__":
+    unittest.main()

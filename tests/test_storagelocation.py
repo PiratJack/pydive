@@ -1,12 +1,17 @@
 import os
+import sys
 import unittest
 import logging
 
-import pydive.models.database as databasemodel
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-from pydive.models.base import ValidationException
-from pydive.models.storagelocation import StorageLocation
-from pydive.models.storagelocation import StorageLocationType
+
+import models.database as databasemodel
+
+from models.base import ValidationException
+from models.storagelocation import StorageLocation
+from models.storagelocation import StorageLocationType
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -154,3 +159,7 @@ class TestStorageLocation(unittest.TestCase):
                     value,
                     test_name + " - exception.invalid_value is wrong",
                 )
+
+
+if __name__ == "__main__":
+    unittest.main()
