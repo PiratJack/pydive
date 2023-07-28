@@ -11,7 +11,8 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 import models.database as databasemodel
 import controllers.mainwindow
-import controllers.widgets.pathselectbutton
+from controllers.widgets.pathselectbutton import PathSelectButton
+from controllers.widgets.iconbutton import IconButton
 
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
@@ -199,9 +200,8 @@ class TestUiSettings(unittest.TestCase):
             "Change name field is a QWidget",
         )
         change_name_button = change_name_widget.layout().currentWidget()
-        self.assertEqual(
-            change_name_button.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(change_name_button, IconButton),
             "Change name button is a IconButton",
         )
 
@@ -219,17 +219,15 @@ class TestUiSettings(unittest.TestCase):
 
         # Check "change path" display
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
-        self.assertEqual(
-            change_path_widget.__class__.__name__,
-            "PathSelectButton",
+        self.assertTrue(
+            isinstance(change_path_widget, PathSelectButton),
             "Change path button is a PathSelectButton",
         )
 
         # Check Delete display
         delete_widget = locationList.ui["layout"].itemAtPosition(1, 4).widget()
-        self.assertEqual(
-            delete_widget.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(delete_widget, IconButton),
             "Delete button is a IconButton",
         )
 
@@ -363,7 +361,9 @@ class TestUiSettings(unittest.TestCase):
 
         # Get change path button
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
-        self.assertEqual(change_path_widget.target_type, "folder")
+        self.assertEqual(
+            change_path_widget.target_type, "folder", "Path change looks for folders"
+        )
 
         # Check event receivers
         self.assertEqual(
@@ -402,6 +402,26 @@ class TestUiSettings(unittest.TestCase):
         path_widget = path_wrapper_layout.itemAt(0).widget()
         self.assertEqual(
             path_widget.text(), "This is a new path", "Path is updated on display"
+        )
+
+    def test_settings_location_list_edit_path_error(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        locationList = settingsController.locations_list
+
+        # Get change path button
+        change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
+        self.assertEqual(change_path_widget.target_type, "folder")
+
+        # Simulating the actual dialog is impossible (it's OS-provided)
+        change_path_widget.pathSelected.emit("")
+
+        # Error message is displayed
+        path_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(1, 2).widget().layout()
+        )
+        error_widget = path_wrapper_layout.itemAt(1).widget()
+        self.assertEqual(
+            error_widget.text(), "Missing storage location path", "Error gets displayed"
         )
 
     @unittest.skip(
@@ -468,6 +488,59 @@ class TestUiSettings(unittest.TestCase):
         timer2.start(300)
         QtTest.QTest.mouseClick(delete_widget, Qt.LeftButton)
 
+    def test_settings_location_list_create_location_display(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        locationList = settingsController.locations_list
+
+        # Get "add new" button
+        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+
+        # Check "add new" receivers
+        self.assertEqual(add_new.receivers(add_new.clicked), 1)
+        add_new_signalspy = QtTest.QSignalSpy(add_new.clicked)
+
+        # Display edit fields
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # Check signal is emitted
+        self.assertTrue(add_new_signalspy.isValid(), "Add new signal is emitted")
+        self.assertEqual(
+            len(add_new_signalspy),
+            1,
+            "Add new signal is emitted once",
+        )
+
+        # New fields are now displayed
+        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        name_label = name_wrapper.itemAt(0).widget()
+        self.assertTrue(
+            isinstance(name_label, QtWidgets.QLineEdit),
+            "Add new - name is a QLineEdit",
+        )
+        self.assertEqual(
+            name_label.text(),
+            "",
+            "Add new - name field is empty",
+        )
+
+        path_wrapper = locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
+        path_label = path_wrapper.itemAt(0).widget()
+        self.assertTrue(
+            isinstance(path_label, QtWidgets.QLineEdit),
+            "Add new - path is a QLineEdit",
+        )
+        self.assertEqual(
+            path_label.text(),
+            "",
+            "Add new - path field is empty",
+        )
+
+        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        self.assertTrue(
+            isinstance(path_change, IconButton),
+            "Add new - path change is an IconButton",
+        )
+
     def test_settings_divelog_display(self):
         divelog = self.database.storagelocation_get_by_id(6)
         settingsController = self.mainwindow.controllers["Settings"]
@@ -509,9 +582,8 @@ class TestUiSettings(unittest.TestCase):
             "Change name field is a QWidget",
         )
         change_name_button = change_name_widget.layout().currentWidget()
-        self.assertEqual(
-            change_name_button.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(change_name_button, IconButton),
             "Change name button is a IconButton",
         )
 
@@ -529,9 +601,8 @@ class TestUiSettings(unittest.TestCase):
 
         # Check "change path" display
         change_path_widget = divelogList.ui["layout"].itemAtPosition(1, 3).widget()
-        self.assertEqual(
-            change_path_widget.__class__.__name__,
-            "PathSelectButton",
+        self.assertTrue(
+            isinstance(change_path_widget, PathSelectButton),
             "Change path button is a PathSelectButton",
         )
 
@@ -554,9 +625,8 @@ class TestUiSettings(unittest.TestCase):
             divelogList.ui["layout"].itemAtPosition(1, 1).widget().layout()
         )
         name_change_start = name_change_layout.currentWidget()
-        self.assertEqual(
-            type(name_change_start),
-            controllers.widgets.iconbutton.IconButton,
+        self.assertTrue(
+            isinstance(name_change_start, IconButton),
             "Name change button is a IconButton",
         )
 
@@ -710,9 +780,8 @@ class TestUiSettings(unittest.TestCase):
             "Change name field is a QWidget",
         )
         change_name_button = change_name_widget.layout().currentWidget()
-        self.assertEqual(
-            change_name_button.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(change_name_button, IconButton),
             "Change name button is a IconButton",
         )
 
@@ -735,9 +804,8 @@ class TestUiSettings(unittest.TestCase):
             "Change suffix field is a QWidget",
         )
         change_suffix_button = change_suffix_widget.layout().currentWidget()
-        self.assertEqual(
-            change_suffix_button.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(change_suffix_button, IconButton),
             "Change suffix button is a IconButton",
         )
 
@@ -760,25 +828,22 @@ class TestUiSettings(unittest.TestCase):
             "Change command field is a QWidget",
         )
         change_command_button = change_command_widget.layout().currentWidget()
-        self.assertEqual(
-            change_command_button.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(change_command_button, IconButton),
             "Change command button is a IconButton",
         )
 
         # Check Delete display
         delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
-        self.assertEqual(
-            delete_widget.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(delete_widget, IconButton),
             "Delete button is a IconButton",
         )
 
         # Check "Add new" display
         add_new_widget = methodList.ui["layout"].itemAtPosition(3, 1).widget()
-        self.assertEqual(
-            add_new_widget.__class__.__name__,
-            "IconButton",
+        self.assertTrue(
+            isinstance(add_new_widget, IconButton),
             "Add new button is a IconButton",
         )
 
