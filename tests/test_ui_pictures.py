@@ -12,8 +12,6 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 import models.database as databasemodel
 import controllers.mainwindow
-import controllers.widgets.iconbutton
-import controllers.widgets.pathselectbutton
 
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
