@@ -324,11 +324,6 @@ class LocationsList:
     def on_click_new_location(self):
         """Displays all the fields to create a new location"""
         logger.info("LocationsList.on_click_new_location")
-        # Move the New button to another row
-        self.ui["layout"].addWidget(
-            self.ui["add_new"], len(self.ui["locations"]) + 2, 1
-        )
-
         # Create fields for new location
         if 0 in self.ui["locations"]:
             location = self.ui["locations"][0]
@@ -338,7 +333,8 @@ class LocationsList:
                     location["error"][i].deleteLater()
                 del location["error"]
             for i in location:
-                self.ui["layout"].removeWidget(location[i])
+                if isinstance(location[i], QtWidgets.QWidget):
+                    self.ui["layout"].removeWidget(location[i])
                 location[i].deleteLater()
             del self.ui["locations"][0]
 
@@ -382,6 +378,11 @@ class LocationsList:
         location["validate_new"].clicked.connect(self.on_validate_new_location)
         self.ui["layout"].addWidget(location["validate_new"], row, 4)
 
+        # Move the New button to another row
+        self.ui["layout"].addWidget(
+            self.ui["add_new"], len(self.ui["locations"]) + 1, 1
+        )
+
     def on_validate_new_location(self):
         """Saves a new location"""
         logger.debug("LocationsList.on_validate_new_location")
@@ -415,18 +416,17 @@ class LocationsList:
         )
 
         # Remove all "new location" fields (error fields were removed before)
-        self.ui["layout"].removeWidget(location["name"])
-        self.ui["layout"].removeWidget(location["path"])
-        self.ui["layout"].removeWidget(location["path_change"])
-        self.ui["layout"].removeWidget(location["validate_new"])
-        location["name"].deleteLater()
-        location["path"].deleteLater()
-        location["path_change"].deleteLater()
-        location["validate_new"].deleteLater()
-        del location["name"]
-        del location["path"]
-        del location["path_change"]
-        del location["validate_new"]
+        for field in [
+            "name_wrapper",
+            "name",
+            "path_wrapper",
+            "path",
+            "path_change",
+            "validate_new",
+        ]:
+            self.ui["layout"].removeWidget(location[field])
+            location[field].deleteLater()
+            del location[field]
         del self.ui["locations"][0]
 
         # Add fields for the newly created location (as "normal" fields)
