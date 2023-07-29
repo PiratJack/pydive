@@ -541,6 +541,117 @@ class TestUiSettings(unittest.TestCase):
             "Add new - path change is an IconButton",
         )
 
+    def test_settings_location_list_create_location_save(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        locationList = settingsController.locations_list
+
+        # Get "add new" button
+        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+
+        # Display edit fields
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # Enter a new name
+        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        name_label = name_wrapper.itemAt(0).widget()
+
+        name_label.setText("New location")
+
+        # Enter a new path
+        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        self.assertEqual(
+            path_change.target_type, "folder", "Path change looks for folders"
+        )
+        # Simulating the actual dialog is impossible (it's OS-provided)
+        path_change.pathSelected.emit("New path")
+
+        # Save changes
+        save_button = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+        self.assertTrue(
+            isinstance(save_button, IconButton), "Save button is an IconButton"
+        )
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        # Data is saved in DB
+        location = self.database.storagelocation_get_by_name("New location")
+        self.assertEqual(location.name, "New location", "Name is saved in database")
+        self.assertEqual(
+            location.path, "New path" + os.path.sep, "Path is saved in database"
+        )
+        self.assertEqual(
+            location.type.value["name"], "folder", "Location type is saved in database"
+        )
+
+        # Display is now similar as other locations
+        self.assertEqual(locationList.ui["layout"].rowCount(), 8, "New line is added")
+        # Check name display
+        name_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        )
+
+        name_layout = name_wrapper_layout.itemAt(0).widget().layout()
+        name_label = name_layout.currentWidget()
+        self.assertTrue(
+            isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
+        )
+        self.assertEqual(
+            name_label.text(), location.name, "Name field displays the expected data"
+        )
+
+        # Check "change name" display
+        change_name_widget = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        self.assertTrue(
+            isinstance(change_name_widget, QtWidgets.QWidget),
+            "Change name field is a QWidget",
+        )
+        change_name_button = change_name_widget.layout().currentWidget()
+        self.assertTrue(
+            isinstance(change_name_button, IconButton),
+            "Change name button is a IconButton",
+        )
+
+        # Check path display
+        path_wrapper_layout = (
+            locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
+        )
+        path_widget = path_wrapper_layout.itemAt(0).widget()
+        self.assertTrue(
+            isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
+        )
+        self.assertEqual(
+            path_widget.text(), location.path, "Path field displays the expected data"
+        )
+
+        # Check "change path" display
+        change_path_widget = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        self.assertTrue(
+            isinstance(change_path_widget, PathSelectButton),
+            "Change path button is a PathSelectButton",
+        )
+
+        # Check Delete display
+        delete_widget = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+        self.assertTrue(
+            isinstance(delete_widget, IconButton),
+            "Delete button is a IconButton",
+        )
+
+    def test_settings_location_list_add_new_twice(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        locationList = settingsController.locations_list
+
+        # Get "add new" button
+        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+
+        # Display edit fields
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # Display is now similar as other locations
+        self.assertEqual(
+            locationList.ui["layout"].rowCount(), 8, "Only 1 line is added"
+        )
+
     def test_settings_divelog_display(self):
         divelog = self.database.storagelocation_get_by_id(6)
         settingsController = self.mainwindow.controllers["Settings"]
