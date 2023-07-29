@@ -793,8 +793,6 @@ class ConversionMethodsList:
     def on_click_new_method(self):
         """Displays all the fields to create a new method"""
         logger.debug("ConversionMethodsList.on_click_new_method")
-        # Move the New button to another row
-        self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 2, 1)
 
         # Remove all existing fields
         if 0 in self.ui["methods"]:
@@ -805,7 +803,8 @@ class ConversionMethodsList:
                     method["error"][i].deleteLater()
                 del method["error"]
             for i in method:
-                self.ui["layout"].removeWidget(method[i])
+                if isinstance(method[i], QtWidgets.QWidget):
+                    self.ui["layout"].removeWidget(method[i])
                 method[i].deleteLater()
             del self.ui["methods"][0]
 
@@ -829,6 +828,9 @@ class ConversionMethodsList:
         )
         method["validate_new"].clicked.connect(self.on_validate_new_method)
         self.ui["layout"].addWidget(method["validate_new"], len(self.ui["methods"]), 7)
+
+        # Move the New button to another row
+        self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 1, 1)
 
     def on_validate_new_method(self):
         """Saves a new conversion method"""
