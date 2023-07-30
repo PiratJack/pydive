@@ -664,61 +664,59 @@ class ConversionMethodsList:
         method["model"] = method_model
         method["error"] = {}
 
+        row = len(self.ui["methods"])
         for column, field in enumerate(["name", "suffix", "command"]):
             # Layout for the grid cell
-            method[field] = QtWidgets.QWidget()
-            method[field + "_layout"] = QtWidgets.QStackedLayout()
-            method[field].setLayout(method[field + "_layout"])
-            self.ui["layout"].addWidget(
-                method[field], len(self.ui["methods"]), column * 2
-            )
+            method[field + "_wrapper"] = QtWidgets.QWidget(self.ui["main"])
+            method[field + "_wrapper_layout"] = QtWidgets.QVBoxLayout()
+            method[field + "_wrapper"].setLayout(method[field + "_wrapper_layout"])
+            self.ui["layout"].addWidget(method[field + "_wrapper"], row, column * 2)
+
+            method[field + "_stack"] = QtWidgets.QWidget(method[field + "_wrapper"])
+            method[field + "_stack_layout"] = QtWidgets.QStackedLayout()
+            method[field + "_stack"].setLayout(method[field + "_stack_layout"])
+            method[field + "_wrapper_layout"].addWidget(method[field + "_stack"])
 
             # Conversion method field - Display
-            method[field + "_label"] = QtWidgets.QLabel()
-            method[field + "_layout"].insertWidget(0, method[field + "_label"])
+            method[field + "_label"] = QtWidgets.QLabel(method[field + "_stack"])
+            method[field + "_stack_layout"].addWidget(method[field + "_label"])
 
             # Conversion method field - Edit box
-            method[field + "_edit"] = QtWidgets.QLineEdit()
+            method[field + "_edit"] = QtWidgets.QLineEdit(method[field + "_stack"])
             method[field + "_edit"].returnPressed.connect(
                 lambda field=field: self.on_validate_field_change(
                     field, method_model.id
                 )
             )
-            method[field + "_layout"].insertWidget(1, method[field + "_edit"])
+            method[field + "_stack_layout"].addWidget(method[field + "_edit"])
 
             # Conversion method field - Edit / validate button
-            method[field + "_change"] = QtWidgets.QWidget()
+            method[field + "_change"] = QtWidgets.QWidget(self.ui["main"])
             method[field + "_change_layout"] = QtWidgets.QStackedLayout()
             method[field + "_change"].setLayout(method[field + "_change_layout"])
-            self.ui["layout"].addWidget(
-                method[field + "_change"], len(self.ui["methods"]), column * 2 + 1
-            )
+            self.ui["layout"].addWidget(method[field + "_change"], row, column * 2 + 1)
 
             # Conversion method field - Edit button
             method[field + "_change_start"] = IconButton(
-                QtGui.QIcon("assets/images/modify.png"), "", self.ui["main"]
+                QtGui.QIcon("assets/images/modify.png"), "", method[field + "_change"]
             )
             method[field + "_change_start"].clicked.connect(
                 lambda a, field=field: self.on_click_field_change(
                     field, method["model"].id
                 )
             )
-            method[field + "_change_layout"].insertWidget(
-                0, method[field + "_change_start"]
-            )
+            method[field + "_change_layout"].addWidget(method[field + "_change_start"])
 
             # Conversion method field - Validate button
             method[field + "_change_end"] = IconButton(
-                QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
+                QtGui.QIcon("assets/images/done.png"), "", method[field + "_change"]
             )
             method[field + "_change_end"].clicked.connect(
                 lambda a, field=field: self.on_validate_field_change(
                     field, method["model"].id
                 )
             )
-            method[field + "_change_layout"].insertWidget(
-                1, method[field + "_change_end"]
-            )
+            method[field + "_change_layout"].addWidget(method[field + "_change_end"])
 
         # Delete Conversion method
         method["delete"] = IconButton(
@@ -751,7 +749,7 @@ class ConversionMethodsList:
             method[field + "_edit"].setToolTip(_(self.conversion_method_help))
 
         # Make widgets visible
-        method[field + "_layout"].setCurrentIndex(1)
+        method[field + "_stack_layout"].setCurrentIndex(1)
         method[field + "_change_layout"].setCurrentIndex(1)
 
     def on_validate_field_change(self, field, method_id):
@@ -782,7 +780,7 @@ class ConversionMethodsList:
         method[field + "_label"].setText(getattr(method["model"], field))
 
         # Make widgets visible
-        method[field + "_layout"].setCurrentIndex(0)
+        method[field + "_stack_layout"].setCurrentIndex(0)
         method[field + "_change_layout"].setCurrentIndex(0)
 
     def on_click_new_method(self):
@@ -790,18 +788,7 @@ class ConversionMethodsList:
         logger.debug("ConversionMethodsList.on_click_new_method")
 
         # Remove all existing fields
-        if 0 in self.ui["methods"]:
-            method = self.ui["methods"][0]
-            if "error" in method:
-                for i in method["error"]:
-                    self.ui["layout"].removeWidget(method["error"][i])
-                    method["error"][i].deleteLater()
-                del method["error"]
-            for i in method:
-                if isinstance(method[i], QtWidgets.QWidget):
-                    self.ui["layout"].removeWidget(method[i])
-                method[i].deleteLater()
-            del self.ui["methods"][0]
+        self.delete_fields_for_method(0)
 
         # Basic structure
         self.ui["methods"][0] = {}
@@ -810,10 +797,16 @@ class ConversionMethodsList:
 
         # Add all modifiable fields
         for column, field in enumerate(["name", "suffix", "command"]):
-            method[field] = QtWidgets.QLineEdit()
+            method[field + "_wrapper"] = QtWidgets.QWidget()
+            method[field + "_wrapper_layout"] = QtWidgets.QVBoxLayout()
+            method[field + "_wrapper"].setLayout(method[field + "_wrapper_layout"])
             self.ui["layout"].addWidget(
-                method[field], len(self.ui["methods"]), column * 2
+                method[field + "_wrapper"], len(self.ui["methods"]), column * 2
             )
+
+            method[field] = QtWidgets.QLineEdit()
+            method[field + "_wrapper_layout"].addWidget(method[field])
+
         # Note: _ is added here again because, otherwise, it doesn't translate
         method["command"].setToolTip(_(self.conversion_method_help))
 
@@ -822,7 +815,7 @@ class ConversionMethodsList:
             QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
         )
         method["validate_new"].clicked.connect(self.on_validate_new_method)
-        self.ui["layout"].addWidget(method["validate_new"], len(self.ui["methods"]), 7)
+        self.ui["layout"].addWidget(method["validate_new"], len(self.ui["methods"]), 6)
 
         # Move the New button to another row
         self.ui["layout"].addWidget(self.ui["add_new"], len(self.ui["methods"]) + 1, 1)
@@ -836,9 +829,8 @@ class ConversionMethodsList:
             self.new_method = models.conversionmethod.ConversionMethod()
 
         # Clear previous errors
-        for i in method["error"]:
-            self.ui["layout"].removeWidget(method["error"][i])
-            method["error"][i].deleteLater()
+        for field in ["name", "suffix", "command"]:
+            self.clear_error(0, field)
         method["error"] = {}
 
         # Apply values in each field
@@ -859,11 +851,7 @@ class ConversionMethodsList:
         self.database.session.commit()
 
         # Remove all "new method" fields (error fields were removed before)
-        for field in ["name", "suffix", "command", "validate_new"]:
-            self.ui["layout"].removeWidget(method[field])
-            method[field].deleteLater()
-            del method[field]
-        del self.ui["methods"][0]
+        self.delete_fields_for_method(0)
 
         # Add fields for the newly created method (as "normal" fields)
         self.add_method_ui(self.new_method)
@@ -895,18 +883,7 @@ class ConversionMethodsList:
             logger.info(
                 f"ConversionMethodsList.on_click_delete_method: Deleted {method}"
             )
-            del method["model"]
-            # Delete all the corresponding fields
-            if "error" in method:
-                for i in method["error"]:
-                    self.ui["layout"].removeWidget(method["error"][i])
-                    method["error"][i].deleteLater()
-                del method["error"]
-            for i in method:
-                if "layout" not in i:
-                    self.ui["layout"].removeWidget(method[i])
-                    method[i].deleteLater()
-            del self.ui["methods"][method_id]
+            self.delete_fields_for_method(method_id)
 
     def display_error(self, method_id, field, message):
         """Displays an error for the provided field
@@ -929,18 +906,7 @@ class ConversionMethodsList:
         else:
             method["error"][field] = QtWidgets.QLabel(message)
             method["error"][field].setProperty("class", "validation_error")
-            column = 0 if field == "name" else 2
-            row = (
-                len(self.ui["methods"])
-                if method_id == 0
-                else len([p for p in self.ui["methods"] if p <= method_id and p != 0])
-            )
-            self.ui["layout"].addWidget(
-                method["error"][field],
-                row,
-                column,
-                QtCore.Qt.AlignBottom,
-            )
+            method[field + "_wrapper_layout"].addWidget(method["error"][field])
 
     def clear_error(self, method_id, field):
         """Hides the error that was displayed for the provided field
@@ -955,7 +921,34 @@ class ConversionMethodsList:
         logger.debug(f"ConversionMethodsList.clear_error for {field} on {method_id}")
         method = self.ui["methods"][method_id]
         if field in method["error"]:
-            method["error"][field].setText("")
+            method[field + "_wrapper_layout"].removeWidget(method["error"][field])
+            method["error"][field].deleteLater()
+            del method["error"][field]
+
+    def delete_fields_for_method(self, method_id):
+        """Deletes all fields for a given method
+
+        Parameters
+        ----------
+        method_id : int
+            The ID of the method to delete (0 for new methods)
+        """
+        logger.debug(f"MethodsList.delete_fields_for_method for {method_id}")
+        if method_id not in self.ui["methods"]:
+            return
+        method = self.ui["methods"][method_id]
+
+        if "model" in method:
+            del method["model"]
+
+        for field in ["name", "suffix", "command"]:
+            self.clear_error(method_id, field)
+        del method["error"]
+        for field in method:
+            if "layout" not in field:
+                self.ui["layout"].removeWidget(method[field])
+            method[field].deleteLater()
+        del self.ui["methods"][method_id]
 
     def refresh_display(self):
         """Updates the methods names & paths displayed on screen"""
