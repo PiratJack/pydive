@@ -16,6 +16,7 @@ from PyQt5.QtCore import Qt
 
 import models.repository
 from controllers.widgets.basetreewidget import BaseTreeWidget
+from controllers.widgets.iconbutton import IconButton
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
@@ -795,6 +796,8 @@ class PictureGrid:
             method = self.grid[0][column].model.suffix
         except:
             method = self.grid[0][column].text()
+        if column == 1:
+            method = ""  # RAW images, label is overridden in code
 
         try:
             label = _("Copy 1 image to {target}").format(target=target_location.name)
@@ -964,8 +967,8 @@ class PictureContainer:
             # Delete button
             # TODO: Ensure delete button is next to image (by default the image takes all the vertical space)
             # TODO: Display delete button for RAW images
-            self.ui["elements"]["delete"] = QtWidgets.QPushButton(
-                QtGui.QIcon("assets/images/delete.png"), ""
+            self.ui["elements"]["delete"] = IconButton(
+                QtGui.QIcon("assets/images/delete.png")
             )
             self.ui["elements"]["delete"].clicked.connect(
                 lambda: self.on_click_delete()
@@ -1137,8 +1140,8 @@ class PicturesController:
         self.ui["right"].setLayout(self.ui["right_layout"])
         self.ui["layout"].addWidget(self.ui["right"], 5)
 
-        self.ui["pictures"] = PictureGrid(self)
-        self.ui["right_layout"].addWidget(self.ui["pictures"].display_widget)
+        self.ui["picture_grid"] = PictureGrid(self)
+        self.ui["right_layout"].addWidget(self.ui["picture_grid"].display_widget)
 
         # TODO: Pictures screen > display loading status for background tasks
 
@@ -1217,4 +1220,4 @@ class PicturesController:
 
     def display_picture_group(self, picture_group):
         """Displays pictures from a given group"""
-        self.ui["pictures"].display_picture_group(picture_group)
+        self.ui["picture_grid"].display_picture_group(picture_group)
