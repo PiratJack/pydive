@@ -26,6 +26,7 @@ BASE_FOLDER = (
     os.path.join("test_images" + str(int(datetime.datetime.now().timestamp())))
     + os.path.sep
 )
+PICTURE_ZIP_FILE = os.path.join(BASE_DIR, "test_photos.zip")
 
 # This requires actual image files, which are heavy & take time to process
 # Hence the separate test class
@@ -77,7 +78,7 @@ class TestRepositoryGeneration(unittest.TestCase):
             os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
             os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", "IMG037.CR2"),
         ]
-        with zipfile.ZipFile("test_photos.zip", "r") as zip_ref:
+        with zipfile.ZipFile(PICTURE_ZIP_FILE, "r") as zip_ref:
             zip_ref.extractall(".")
             os.rename("test_photos", BASE_FOLDER)
 
