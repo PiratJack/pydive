@@ -503,7 +503,7 @@ class LocationsList:
             del location["model"]
 
         for field in ["name", "path"]:
-            self.clear_error(0, field)
+            self.clear_error(location_id, field)
         del location["error"]
         for field in location:
             if "layout" not in field:
