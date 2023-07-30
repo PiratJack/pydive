@@ -97,14 +97,14 @@ class LocationsList:
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.ui = {}
-        self.ui["main"] = QtWidgets.QWidget()
+        self.ui["main"] = QtWidgets.QWidget(parent_controller.ui["main"])
         self.ui["layout"] = QtWidgets.QGridLayout()
         self.location_type = location_type
 
         # Add headers
         for i, col in enumerate(self.columns):
             # Note: _ is added here again because, otherwise, it doesn't translate
-            header = QtWidgets.QLabel(_(col["name"]))
+            header = QtWidgets.QLabel(_(col["name"]), self.ui["main"])
             header.setProperty("class", "grid_header")
             if "alignment" in col:
                 header.setAlignment(col["alignment"])
@@ -171,36 +171,36 @@ class LocationsList:
         location["error"] = {}
 
         # Location name
-        location["name_wrapper"] = QtWidgets.QWidget()
+        location["name_wrapper"] = QtWidgets.QWidget(self.ui["main"])
         location["name_wrapper_layout"] = QtWidgets.QVBoxLayout()
         location["name_wrapper"].setLayout(location["name_wrapper_layout"])
         self.ui["layout"].addWidget(location["name_wrapper"], row, 0)
 
-        location["name"] = QtWidgets.QWidget()
-        location["name_layout"] = QtWidgets.QStackedLayout()
-        location["name"].setLayout(location["name_layout"])
-        location["name_wrapper_layout"].addWidget(location["name"])
+        location["name_stack"] = QtWidgets.QWidget(location["name_wrapper"])
+        location["name_stack_layout"] = QtWidgets.QStackedLayout()
+        location["name_stack"].setLayout(location["name_stack_layout"])
+        location["name_wrapper_layout"].addWidget(location["name_stack"])
 
         # Location name - Display
-        location["name_label"] = QtWidgets.QLabel()
-        location["name_layout"].insertWidget(0, location["name_label"])
+        location["name_label"] = QtWidgets.QLabel(location["name_stack"])
+        location["name_stack_layout"].addWidget(location["name_label"])
 
         # Location name - Edit box
-        location["name_edit"] = QtWidgets.QLineEdit()
+        location["name_edit"] = QtWidgets.QLineEdit(location["name_stack"])
         location["name_edit"].returnPressed.connect(
             lambda: self.on_validate_name_change(location_model.id)
         )
-        location["name_layout"].insertWidget(1, location["name_edit"])
+        location["name_stack_layout"].addWidget(location["name_edit"])
 
         # Location name - Edit / validate button
-        location["name_change"] = QtWidgets.QWidget()
+        location["name_change"] = QtWidgets.QWidget(self.ui["main"])
         location["name_change_layout"] = QtWidgets.QStackedLayout()
         location["name_change"].setLayout(location["name_change_layout"])
         self.ui["layout"].addWidget(location["name_change"], row, 1)
 
         # Location name - Edit button
         location["name_change_start"] = IconButton(
-            QtGui.QIcon("assets/images/modify.png"), "", self.ui["main"]
+            QtGui.QIcon("assets/images/modify.png"), "", location["name_change"]
         )
         location["name_change_start"].clicked.connect(
             lambda: self.on_click_name_change(location["model"].id)
@@ -209,7 +209,7 @@ class LocationsList:
 
         # Location name - Validate button
         location["name_change_end"] = IconButton(
-            QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
+            QtGui.QIcon("assets/images/done.png"), "", location["name_change"]
         )
         location["name_change_end"].clicked.connect(
             lambda: self.on_validate_name_change(location["model"].id)
@@ -217,18 +217,20 @@ class LocationsList:
         location["name_change_layout"].insertWidget(1, location["name_change_end"])
 
         # Location path
-        location["path_wrapper"] = QtWidgets.QWidget()
+        location["path_wrapper"] = QtWidgets.QWidget(self.ui["main"])
         location["path_wrapper_layout"] = QtWidgets.QVBoxLayout()
         location["path_wrapper"].setLayout(location["path_wrapper_layout"])
         self.ui["layout"].addWidget(location["path_wrapper"], row, 2)
 
-        location["path"] = QtWidgets.QLineEdit()
-        location["path"].setEnabled(False)
-        location["path_wrapper_layout"].addWidget(location["path"])
+        location["path_edit"] = QtWidgets.QLineEdit(location["path_wrapper"])
+        location["path_edit"].setEnabled(False)
+        location["path_wrapper_layout"].addWidget(location["path_edit"])
 
         # Location path change
         location["path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"), location_model.type.name
+            QtGui.QIcon("assets/images/modify.png"),
+            self.ui["main"],
+            location_model.type.name,
         )
         location["path_change"].pathSelected.connect(
             lambda path, location=location: self.on_validate_path_change(
@@ -264,7 +266,7 @@ class LocationsList:
         location["name_edit"].setText(location["model"].name)
 
         # Make widgets visible
-        location["name_layout"].setCurrentIndex(1)
+        location["name_stack_layout"].setCurrentIndex(1)
         location["name_change_layout"].setCurrentIndex(1)
 
     def on_validate_name_change(self, location_id):
@@ -293,7 +295,7 @@ class LocationsList:
         location["name_label"].setText(location["model"].name)
 
         # Make widgets visible
-        location["name_layout"].setCurrentIndex(0)
+        location["name_stack_layout"].setCurrentIndex(0)
         location["name_change_layout"].setCurrentIndex(0)
 
     def on_validate_path_change(self, location_id, path):
@@ -319,52 +321,41 @@ class LocationsList:
                 return
 
         # Update display
-        location["path"].setText(path)
+        location["path_edit"].setText(path)
 
     def on_click_new_location(self):
         """Displays all the fields to create a new location"""
-        logger.info("LocationsList.on_click_new_location")
-        # Create fields for new location
-        if 0 in self.ui["locations"]:
-            location = self.ui["locations"][0]
-            if "error" in location:
-                for i in location["error"]:
-                    self.ui["layout"].removeWidget(location["error"][i])
-                    location["error"][i].deleteLater()
-                del location["error"]
-            for i in location:
-                if isinstance(location[i], QtWidgets.QWidget):
-                    self.ui["layout"].removeWidget(location[i])
-                location[i].deleteLater()
-            del self.ui["locations"][0]
+        logger.debug("LocationsList.on_click_new_location")
+        self.delete_fields_for_location(0)
 
+        # Create fields for new location
         self.ui["locations"][0] = {}
         row = len(self.ui["locations"])
         location = self.ui["locations"][0]
         location["error"] = {}
 
         # Location name
-        location["name_wrapper"] = QtWidgets.QWidget()
+        location["name_wrapper"] = QtWidgets.QWidget(self.ui["main"])
         location["name_wrapper_layout"] = QtWidgets.QVBoxLayout()
         location["name_wrapper"].setLayout(location["name_wrapper_layout"])
         self.ui["layout"].addWidget(location["name_wrapper"], row, 0)
 
-        location["name"] = QtWidgets.QLineEdit()
-        location["name_wrapper_layout"].addWidget(location["name"])
+        location["name_edit"] = QtWidgets.QLineEdit(location["name_wrapper"])
+        location["name_wrapper_layout"].addWidget(location["name_edit"])
 
         # Location path
-        location["path_wrapper"] = QtWidgets.QWidget()
+        location["path_wrapper"] = QtWidgets.QWidget(self.ui["main"])
         location["path_wrapper_layout"] = QtWidgets.QVBoxLayout()
         location["path_wrapper"].setLayout(location["path_wrapper_layout"])
         self.ui["layout"].addWidget(location["path_wrapper"], row, 2)
 
-        location["path"] = QtWidgets.QLineEdit()
-        location["path"].setEnabled(False)
-        location["path_wrapper_layout"].addWidget(location["path"])
+        location["path_edit"] = QtWidgets.QLineEdit(location["path_wrapper"])
+        location["path_edit"].setEnabled(False)
+        location["path_wrapper_layout"].addWidget(location["path_edit"])
 
         # Location path change
         location["path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"), self.location_type
+            QtGui.QIcon("assets/images/modify.png"), self.ui["main"], self.location_type
         )
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(0, a)
@@ -392,16 +383,15 @@ class LocationsList:
             self.new_location = models.storagelocation.StorageLocation()
 
         # Clear previous errors
-        for i in location["error"]:
-            self.ui["layout"].removeWidget(location["error"][i])
-            location["error"][i].deleteLater()
+        for field in ["name", "path"]:
+            self.clear_error(0, field)
         location["error"] = {}
 
         # Apply values in each field
         self.new_location.type = self.location_type
         for field in ["name", "path"]:
             try:
-                setattr(self.new_location, field, location[field].text())
+                setattr(self.new_location, field, location[field + "_edit"].text())
                 self.clear_error(0, field)
             except ValidationException as error:
                 self.display_error(0, field, error.message)
@@ -416,18 +406,7 @@ class LocationsList:
         )
 
         # Remove all "new location" fields (error fields were removed before)
-        for field in [
-            "name_wrapper",
-            "name",
-            "path_wrapper",
-            "path",
-            "path_change",
-            "validate_new",
-        ]:
-            self.ui["layout"].removeWidget(location[field])
-            location[field].deleteLater()
-            del location[field]
-        del self.ui["locations"][0]
+        self.delete_fields_for_location(0)
 
         # Add fields for the newly created location (as "normal" fields)
         self.add_location_ui(self.new_location)
@@ -458,21 +437,10 @@ class LocationsList:
         if button == QtWidgets.QMessageBox.Yes:
             location = self.ui["locations"][location_id]
             self.database.delete(location["model"])
-            del location["model"]
             logger.info(
-                f"LocationsList.on_click_delete_location Deleted location {location}"
+                f"LocationsList.on_click_delete_location Deleted location {location['model']}"
             )
-            # Delete all the corresponding fields
-            if "error" in location:
-                for i in location["error"]:
-                    self.ui["layout"].removeWidget(location["error"][i])
-                    location["error"][i].deleteLater()
-                del location["error"]
-            for i in location:
-                if "layout" not in i:
-                    self.ui["layout"].removeWidget(location[i])
-                    location[i].deleteLater()
-            del self.ui["locations"][location_id]
+            self.delete_fields_for_location(location_id)
 
     def display_error(self, location_id, field, message):
         """Displays an error for the provided field
@@ -514,7 +482,34 @@ class LocationsList:
         logger.debug(f"LocationsList.clear_error for {field} on {location_id}")
         location = self.ui["locations"][location_id]
         if field in location["error"]:
-            location["error"][field].setText("")
+            location[field + "_wrapper_layout"].removeWidget(location["error"][field])
+            location["error"][field].deleteLater()
+            del location["error"][field]
+
+    def delete_fields_for_location(self, location_id):
+        """Deletes all fields for a given location
+
+        Parameters
+        ----------
+        location_id : int
+            The ID of the location to delete (0 for new locations)
+        """
+        logger.debug(f"LocationsList.delete_fields_for_location for {location_id}")
+        if location_id not in self.ui["locations"]:
+            return
+        location = self.ui["locations"][location_id]
+
+        if "model" in location:
+            del location["model"]
+
+        for field in ["name", "path"]:
+            self.clear_error(0, field)
+        del location["error"]
+        for field in location:
+            if "layout" not in field:
+                self.ui["layout"].removeWidget(location[field])
+            location[field].deleteLater()
+        del self.ui["locations"][location_id]
 
     def refresh_display(self):
         """Updates the locations names & paths displayed on screen"""
@@ -523,7 +518,7 @@ class LocationsList:
         for location in self.ui["locations"].values():
             location["name_label"].setText(location["model"].name)
             location["name_edit"].setText(location["model"].name)
-            location["path"].setText(location["model"].path)
+            location["path_edit"].setText(location["model"].path)
             location["path_change"].target = location["model"].path
 
 
@@ -1023,26 +1018,26 @@ class SettingsController:
         logger.debug("SettingsController.init")
         self.parent_window = parent_window
         self.database = parent_window.database
-        self.locations_list = LocationsList(self, "folder")
-        self.divelog_list = LocationsList(self, "file")
-        self.conversion_methods_list = ConversionMethodsList(self)
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.ui["main"].setLayout(self.ui["layout"])
 
+        self.locations_list = LocationsList(self, "folder")
         self.ui["locations_list_label"] = QtWidgets.QLabel(_("Image storage locations"))
         self.ui["locations_list_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["locations_list_label"])
         self.ui["locations_list"] = self.locations_list.display_widget
         self.ui["layout"].addWidget(self.ui["locations_list"])
 
+        self.divelog_list = LocationsList(self, "file")
         self.ui["divelog_label"] = QtWidgets.QLabel(_("Dive log file"))
         self.ui["divelog_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["divelog_label"])
         self.ui["divelog"] = self.divelog_list.display_widget
         self.ui["layout"].addWidget(self.ui["divelog"])
 
+        self.conversion_methods_list = ConversionMethodsList(self)
         self.ui["methods_list_label"] = QtWidgets.QLabel(_("Conversion methods"))
         self.ui["methods_list_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["methods_list_label"])
