@@ -329,7 +329,6 @@ class TestUiSettings(unittest.TestCase):
         locationList = settingsController.locations_list
 
         # Get name-related widgets
-
         name_wrapper_layout = (
             locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
         )
@@ -348,12 +347,18 @@ class TestUiSettings(unittest.TestCase):
         # Save changes
         name_change_end = name_change_layout.currentWidget()
         QtTest.QTest.mouseClick(name_change_end, Qt.LeftButton)
+        # Triggered twice to test when errors were displayed before
+        QtTest.QTest.mouseClick(name_change_end, Qt.LeftButton)
 
         # Check error is displayed
         error_widget = name_wrapper_layout.itemAt(1).widget()
         self.assertEqual(
             error_widget.text(), "Missing storage location name", "Error gets displayed"
         )
+
+        # Changes are not saved in DB
+        location = self.database.storagelocation_get_by_id(1)
+        self.assertNotEqual(location.name, "", "Name is not modified to empty")
 
     def test_settings_location_list_edit_path(self):
         settingsController = self.mainwindow.controllers["Settings"]
@@ -488,7 +493,7 @@ class TestUiSettings(unittest.TestCase):
         timer2.start(300)
         QtTest.QTest.mouseClick(delete_widget, Qt.LeftButton)
 
-    def test_settings_location_list_create_location_display(self):
+    def test_settings_location_list_add_location_display(self):
         settingsController = self.mainwindow.controllers["Settings"]
         locationList = settingsController.locations_list
 
@@ -541,7 +546,7 @@ class TestUiSettings(unittest.TestCase):
             "Add new - path change is an IconButton",
         )
 
-    def test_settings_location_list_create_location_save(self):
+    def test_settings_location_list_add_location_save(self):
         settingsController = self.mainwindow.controllers["Settings"]
         locationList = settingsController.locations_list
 
@@ -931,7 +936,7 @@ class TestUiSettings(unittest.TestCase):
             path_widget.text(), "This is a new path", "Path is updated on display"
         )
 
-    def test_settings_conversion_method_display(self):
+    def test_settings_method_display(self):
         method = self.database.conversionmethods_get_by_name("DarkTherapee")
         settingsController = self.mainwindow.controllers["Settings"]
         methodList = settingsController.conversion_methods_list
@@ -949,8 +954,9 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check name display
-        name_layout = methodList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        name_label = name_layout.currentWidget()
+        name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
+        name_stack = name_wrapper.layout().itemAt(0).widget()
+        name_label = name_stack.layout().currentWidget()
         self.assertTrue(
             isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
         )
@@ -971,8 +977,9 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check suffix display
-        suffix_layout = methodList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        suffix_label = suffix_layout.currentWidget()
+        suffix_wrapper = methodList.ui["layout"].itemAtPosition(1, 2).widget()
+        suffix_stack = suffix_wrapper.layout().itemAt(0).widget()
+        suffix_label = suffix_stack.layout().currentWidget()
         self.assertTrue(
             isinstance(suffix_label, QtWidgets.QLabel), "Suffix field is a QLabel"
         )
@@ -995,8 +1002,9 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Check command display
-        command_layout = methodList.ui["layout"].itemAtPosition(1, 4).widget().layout()
-        command_label = command_layout.currentWidget()
+        command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
+        command_stack = command_wrapper.layout().itemAt(0).widget()
+        command_label = command_stack.layout().currentWidget()
         self.assertTrue(
             isinstance(command_label, QtWidgets.QLabel), "Command field is a QLabel"
         )
@@ -1037,8 +1045,9 @@ class TestUiSettings(unittest.TestCase):
         methodList = settingsController.conversion_methods_list
 
         # Get name-related widgets
-        name_layout = methodList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        name_label = name_layout.currentWidget()
+        name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
+        name_stack = name_wrapper.layout().itemAt(0).widget()
+        name_label = name_stack.layout().currentWidget()
 
         name_change_layout = (
             methodList.ui["layout"].itemAtPosition(1, 1).widget().layout()
@@ -1063,7 +1072,7 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Name is now editable & contains the name of the dive log
-        name_edit = name_layout.currentWidget()
+        name_edit = name_stack.layout().currentWidget()
         self.assertTrue(
             isinstance(name_edit, QtWidgets.QLineEdit), "Name edit field now displayed"
         )
@@ -1107,7 +1116,7 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Display is back to initial state
-        name_widget = name_layout.currentWidget()
+        name_widget = name_stack.layout().currentWidget()
         self.assertEqual(name_widget, name_label, "Saving displays the name as QLabel")
         self.assertEqual(
             name_label.text(), "DarkTherapee updated", "Name is updated on display"
@@ -1118,13 +1127,46 @@ class TestUiSettings(unittest.TestCase):
             name_change_widget, name_change_start, "Save button replaced by Edit button"
         )
 
+    def test_settings_method_edit_name_empty_error(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Get name-related widgets
+        name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
+        name_stack = name_wrapper.layout().itemAt(0).widget()
+
+        name_change_layout = (
+            methodList.ui["layout"].itemAtPosition(1, 1).widget().layout()
+        )
+        name_change_start = name_change_layout.currentWidget()
+
+        # Display edit fields
+        QtTest.QTest.mouseClick(name_change_start, Qt.LeftButton)
+        name_edit = name_stack.layout().currentWidget()
+        name_change_end = name_change_layout.currentWidget()
+
+        # Change the name in UI & (try to) save changes
+        name_edit.setText("")
+        QtTest.QTest.mouseClick(name_change_end, Qt.LeftButton)
+
+        # Error is displayed
+        name_error = name_wrapper.layout().itemAt(1).widget()
+        self.assertEqual(
+            name_error.text(), "Missing conversion method name", "Error is displayed"
+        )
+
+        # Changes are not saved in DB
+        method = self.database.conversionmethods_get()[1]
+        self.assertNotEqual(method.name, "", "Name is not modified to empty")
+
     def test_settings_method_edit_suffix(self):
         settingsController = self.mainwindow.controllers["Settings"]
         methodList = settingsController.conversion_methods_list
 
         # Get suffix-related widgets
-        suffix_layout = methodList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        suffix_label = suffix_layout.currentWidget()
+        suffix_wrapper = methodList.ui["layout"].itemAtPosition(1, 2).widget()
+        suffix_stack = suffix_wrapper.layout().itemAt(0).widget()
+        suffix_label = suffix_stack.layout().currentWidget()
 
         suffix_change_layout = (
             methodList.ui["layout"].itemAtPosition(1, 3).widget().layout()
@@ -1150,7 +1192,7 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Suffix is now editable & contains the suffix of the dive log
-        suffix_edit = suffix_layout.currentWidget()
+        suffix_edit = suffix_stack.layout().currentWidget()
         self.assertTrue(
             isinstance(suffix_edit, QtWidgets.QLineEdit),
             "Suffix edit field now displayed",
@@ -1197,7 +1239,7 @@ class TestUiSettings(unittest.TestCase):
         self.assertEqual(method.suffix, "DTU", "Suffix is updated in database")
 
         # Display is back to initial state
-        suffix_widget = suffix_layout.currentWidget()
+        suffix_widget = suffix_stack.layout().currentWidget()
         self.assertEqual(
             suffix_widget, suffix_label, "Saving displays the suffix as QLabel"
         )
@@ -1215,8 +1257,9 @@ class TestUiSettings(unittest.TestCase):
         methodList = settingsController.conversion_methods_list
 
         # Get command-related widgets
-        command_layout = methodList.ui["layout"].itemAtPosition(1, 4).widget().layout()
-        command_label = command_layout.currentWidget()
+        command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
+        command_stack = command_wrapper.layout().itemAt(0).widget()
+        command_label = command_stack.layout().currentWidget()
 
         command_change_layout = (
             methodList.ui["layout"].itemAtPosition(1, 5).widget().layout()
@@ -1244,7 +1287,7 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Command is now editable & contains the command of the dive log
-        command_edit = command_layout.currentWidget()
+        command_edit = command_stack.layout().currentWidget()
         self.assertTrue(
             isinstance(command_edit, QtWidgets.QLineEdit),
             "Command edit field now displayed",
@@ -1296,7 +1339,7 @@ class TestUiSettings(unittest.TestCase):
         )
 
         # Display is back to initial state
-        command_widget = command_layout.currentWidget()
+        command_widget = command_stack.layout().currentWidget()
         self.assertEqual(
             command_widget, command_label, "Saving displays the command as QLabel"
         )
@@ -1312,6 +1355,158 @@ class TestUiSettings(unittest.TestCase):
             command_change_start,
             "Save button replaced by Edit button",
         )
+
+    def test_settings_method_edit_command_empty_error(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Get command-related widgets
+        command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
+        command_stack = command_wrapper.layout().itemAt(0).widget()
+
+        command_change_layout = (
+            methodList.ui["layout"].itemAtPosition(1, 5).widget().layout()
+        )
+        command_change_start = command_change_layout.currentWidget()
+
+        # Display edit fields
+        QtTest.QTest.mouseClick(command_change_start, Qt.LeftButton)
+
+        # Empty command field and validate
+        command_edit = command_stack.layout().currentWidget()
+        command_edit.setText("")
+        command_change_end = command_change_layout.currentWidget()
+        QtTest.QTest.mouseClick(command_change_end, Qt.LeftButton)
+        # This checks part of the code where the same field has 2 errors in a row
+        QtTest.QTest.mouseClick(command_change_end, Qt.LeftButton)
+
+        # Error is displayed
+        command_error = command_wrapper.layout().itemAt(1).widget()
+        self.assertEqual(
+            command_error.text(),
+            "Missing conversion method command",
+            "Error is displayed",
+        )
+
+        # Changes are not saved in DB
+        method = self.database.conversionmethods_get()[1]
+        self.assertNotEqual(method.command, "", "Command is not modified to empty")
+
+    def test_settings_method_add_ok(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Click "Add new"
+        add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # New fields are displayed
+        name_wrapper = methodList.ui["layout"].itemAtPosition(3, 0).widget()
+        name_edit = name_wrapper.layout().itemAt(0).widget()
+        suffix_wrapper = methodList.ui["layout"].itemAtPosition(3, 2).widget()
+        suffix_edit = suffix_wrapper.layout().itemAt(0).widget()
+        command_wrapper = methodList.ui["layout"].itemAtPosition(3, 4).widget()
+        command_edit = command_wrapper.layout().itemAt(0).widget()
+
+        # Input some data and save
+        fields = {
+            "name": "New method",
+            "suffix": "NM",
+            "command": "./new_method.py %TARGET_FILE%",
+        }
+        name_edit.setText(fields["name"])
+        suffix_edit.setText(fields["suffix"])
+        command_edit.setText(fields["command"])
+        save_button = methodList.ui["layout"].itemAtPosition(3, 6).widget()
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        # Data is saved in DB
+        method = self.database.conversionmethods_get_by_name(fields["name"])
+        self.assertEqual(method.suffix, fields["suffix"], "Suffix is saved in DB")
+        self.assertEqual(method.command, fields["command"], "Command is saved in DB")
+
+        # Check display of the new command
+        self.assertEqual(methodList.ui["layout"].rowCount(), 5, "Row count is correct")
+        for column, field in enumerate(fields.keys()):
+            wrapper = methodList.ui["layout"].itemAtPosition(3, column * 2).widget()
+            stack = wrapper.layout().itemAt(0).widget()
+            label = stack.layout().currentWidget()
+            self.assertEqual(label.text(), fields[field], "Data is displayed properly")
+
+    def test_settings_method_add_with_errors(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Click "Add new"
+        add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # New fields are displayed
+        name_wrapper = methodList.ui["layout"].itemAtPosition(3, 0).widget()
+        name_edit = name_wrapper.layout().itemAt(0).widget()
+        command_wrapper = methodList.ui["layout"].itemAtPosition(3, 4).widget()
+        command_edit = command_wrapper.layout().itemAt(0).widget()
+
+        # Save with blank fields & check errors
+        save_button = methodList.ui["layout"].itemAtPosition(3, 6).widget()
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        self.assertIsNotNone(name_wrapper.layout().itemAt(1), "Name error is displayed")
+        name_error = name_wrapper.layout().itemAt(1).widget()
+        self.assertEqual(
+            name_error.text(),
+            "Missing conversion method name",
+            "Name error displays correct error",
+        )
+
+        self.assertIsNotNone(
+            command_wrapper.layout().itemAt(1), "Command error is displayed"
+        )
+        command_error = command_wrapper.layout().itemAt(1).widget()
+        self.assertEqual(
+            command_error.text(),
+            "Missing conversion method command",
+            "Command error displays correct error",
+        )
+
+        # Click "Add new", all errors should be hidden
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+        name_wrapper = methodList.ui["layout"].itemAtPosition(3, 0).widget()
+        name_layout = name_wrapper.layout()
+        name_edit = name_layout.itemAt(0).widget()
+        command_wrapper = methodList.ui["layout"].itemAtPosition(3, 4).widget()
+        command_layout = command_wrapper.layout()
+        command_edit = command_layout.itemAt(0).widget()
+
+        self.assertIsNone(name_layout.itemAt(1), "Name error is hidden")
+        self.assertIsNone(command_layout.itemAt(1), "Command error is hidden")
+
+        # Enter name, check error is hidden now
+        name_edit.setText("New method")
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        self.assertIsNone(name_layout.itemAt(1), "Name error is hidden")
+        self.assertIsNotNone(command_layout.itemAt(1), "Command error is displayed")
+
+        # Enter command, empty name, check error is hidden now
+        name_edit.setText("")
+        command_edit.setText("../command_to_convert")
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        self.assertIsNotNone(name_layout.itemAt(1), "Name error is displayed")
+        self.assertIsNone(command_layout.itemAt(1), "Command error is hidden")
+
+    def test_settings_method_add_new_twice(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Click "Add new" twice
+        add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # "New location" fields are visible only once
+        self.assertEqual(methodList.ui["layout"].rowCount(), 5, "Only 1 line is added")
 
 
 if __name__ == "__main__":
