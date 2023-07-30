@@ -647,10 +647,84 @@ class TestUiSettings(unittest.TestCase):
         QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
         QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
 
-        # Display is now similar as other locations
+        # "New location" fields are visible only once
         self.assertEqual(
             locationList.ui["layout"].rowCount(), 8, "Only 1 line is added"
         )
+
+    def test_settings_location_list_add_with_errors(self):
+        settingsController = self.mainwindow.controllers["Settings"]
+        locationList = settingsController.locations_list
+
+        # Click "Add new"
+        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+
+        # New fields are displayed
+        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        name_label = name_wrapper.itemAt(0).widget()
+        path_wrapper = locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
+        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        save_button = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+
+        # Save with blank fields & check errors
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        self.assertIsNotNone(name_wrapper.itemAt(1), "Name error is displayed")
+        name_error = name_wrapper.itemAt(1).widget()
+        self.assertEqual(
+            name_error.text(),
+            "Missing storage location name",
+            "Name error displays correct error",
+        )
+
+        self.assertIsNotNone(path_wrapper.itemAt(1), "Path error is displayed")
+        path_error = path_wrapper.itemAt(1).widget()
+        self.assertEqual(
+            path_error.text(),
+            "Missing storage location path",
+            "Path error displays correct error",
+        )
+
+        # Click "Add new", all errors should be hidden
+        QtTest.QTest.mouseClick(add_new, Qt.LeftButton)
+        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        path_wrapper = locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
+        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        save_button = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+
+        self.assertIsNone(name_wrapper.itemAt(1), "Name error is hidden")
+        self.assertIsNone(path_wrapper.itemAt(1), "Path error is hidden")
+
+        # Enter name, check error is hidden now
+        name_label = name_wrapper.itemAt(0).widget()
+        name_label.setText("New location")
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        self.assertIsNone(name_wrapper.itemAt(1), "Name error is hidden")
+
+        self.assertIsNotNone(path_wrapper.itemAt(1), "Path error is displayed")
+        path_error = path_wrapper.itemAt(1).widget()
+        self.assertEqual(
+            path_error.text(),
+            "Missing storage location path",
+            "Path error displays correct error",
+        )
+
+        # Enter path, empty name, check error is hidden now
+        path_change.pathSelected.emit("New path")
+        name_label.setText("")
+        QtTest.QTest.mouseClick(save_button, Qt.LeftButton)
+
+        self.assertIsNotNone(name_wrapper.itemAt(1), "Name error is displayed")
+        name_error = name_wrapper.itemAt(1).widget()
+        self.assertEqual(
+            name_error.text(),
+            "Missing storage location name",
+            "Name error displays correct error",
+        )
+
+        self.assertIsNone(path_wrapper.itemAt(1), "Path error is hidden")
 
     def test_settings_divelog_display(self):
         divelog = self.database.storagelocation_get_by_id(6)
