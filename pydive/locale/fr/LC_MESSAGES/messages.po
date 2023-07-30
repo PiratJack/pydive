@@ -9,13 +9,19 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.3.1\n"
+"X-Generator: Poedit 3.3.2\n"
 
 msgid "Change name to ..."
 msgstr "Renommer ..."
 
 msgid "Change trip to ..."
 msgstr "Changer le voyage en..."
+
+msgid "Choose Directory"
+msgstr "Choisir un dossier"
+
+msgid "Choose File"
+msgstr "Choisir un fichier"
 
 msgid "Command to execute"
 msgstr "Commande à exécuter"
