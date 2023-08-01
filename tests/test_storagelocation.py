@@ -1,11 +1,10 @@
 import os
 import sys
-import unittest
+import pytest
 import logging
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
-
 
 import models.database as databasemodel
 
@@ -24,8 +23,9 @@ except OSError:
     pass
 
 
-class TestStorageLocation(unittest.TestCase):
-    def setUp(self):
+class TestStorageLocation:
+    @pytest.fixture(scope="function", autouse=True)
+    def setup_and_teardown(self):
         self.database = databasemodel.Database(DATABASE_FILE)
         self.database.session.add_all(
             [
@@ -57,7 +57,8 @@ class TestStorageLocation(unittest.TestCase):
         )
         self.database.session.commit()
 
-    def tearDown(self):
+        yield
+
         self.database.session.close()
         self.database.engine.dispose()
         os.remove(DATABASE_FILE)
@@ -65,62 +66,36 @@ class TestStorageLocation(unittest.TestCase):
     def test_gets(self):
         # Get all
         storage_locations = self.database.storagelocations_get()
-        self.assertEqual(
-            len(storage_locations),
-            4,
-            "There are 4 storage locations",
-        )
+        assert len(storage_locations) == 4, "There are 4 storage locations"
 
         storage_locations = self.database.storagelocations_get_folders()
-        self.assertEqual(
-            len(storage_locations),
-            3,
-            "There are 3 folder storage locations",
-        )
+        assert len(storage_locations) == 3, "There are 3 folder storage locations"
 
         storage_locations = self.database.storagelocations_get_divelog()
-        self.assertEqual(
-            len(storage_locations),
-            1,
-            "There is 1 file storage locations",
-        )
+        assert len(storage_locations) == 1, "There is 1 file storage locations"
 
         storage_location = self.database.storagelocation_get_by_id(2)
-        self.assertEqual(
-            storage_location.id,
-            2,
-            "There is 1 storage locations with ID = 2",
-        )
-        self.assertEqual(
-            storage_location.type.name,
-            "folder",
-            "The storage location with ID = 2 has type folder",
-        )
+        assert storage_location.id == 2, "There is 1 storage locations with ID = 2"
+        assert (
+            storage_location.type.name == "folder"
+        ), "The storage location with ID = 2 has type folder"
         # String representation
-        self.assertEqual(
-            str(storage_location),
-            "Temporary @ " + os.path.join("tmp", "Pictures", ""),
-            "The Temporary folder is at /tmp/Pictures/",
-        )
+        assert str(storage_location) == "Temporary @ " + os.path.join(
+            "tmp", "Pictures", ""
+        ), "The Temporary folder is at /tmp/Pictures/"
 
         storage_location = self.database.storagelocation_get_by_name("Camera")
-        self.assertEqual(
-            storage_location.id,
-            1,
-            "There is 1 storage locations with name = Camera and it has ID = 1",
-        )
-        self.assertEqual(
-            storage_location.type.name,
-            "folder",
-            "The storage location with name = Camera has type folder",
-        )
+        assert (
+            storage_location.id == 1
+        ), "There is 1 storage locations with name = Camera and it has ID = 1"
+        assert (
+            storage_location.type.name == "folder"
+        ), "The storage location with name = Camera has type folder"
         self.database.delete(storage_location)
         storage_locations = self.database.storagelocations_get()
-        self.assertEqual(
-            len(storage_locations),
-            3,
-            "After deletion, there are 3 storage locations left",
-        )
+        assert (
+            len(storage_locations) == 3
+        ), "After deletion, there are 3 storage locations left"
 
     def test_validations(self):
         storage_location = StorageLocation(
@@ -141,25 +116,18 @@ class TestStorageLocation(unittest.TestCase):
             for value in forbidden_values[field]:
                 test_name = "Storage location must have a " + field + " that is not "
                 test_name += "None" if value is None else str(value)
-                with self.assertRaises(ValidationException) as cm:
+                with pytest.raises(ValidationException) as exc_info:
                     setattr(storage_location, field, value)
-                self.assertEqual(type(cm.exception), ValidationException, test_name)
-                self.assertEqual(
-                    cm.exception.item,
-                    storage_location,
-                    test_name + " - exception.item is wrong",
+                exception = exc_info.value
+                assert type(exception) == ValidationException, test_name
+                assert exception.item == storage_location, (
+                    test_name + " - exception.item is wrong"
                 )
-                self.assertEqual(
-                    cm.exception.key,
-                    field,
-                    test_name + " - exception.key is wrong",
-                )
-                self.assertEqual(
-                    cm.exception.invalid_value,
-                    value,
-                    test_name + " - exception.invalid_value is wrong",
+                assert exception.key == field, test_name + " - exception.key is wrong"
+                assert exception.invalid_value == value, (
+                    test_name + " - exception.invalid_value is wrong"
                 )
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.main(["-s", __file__])

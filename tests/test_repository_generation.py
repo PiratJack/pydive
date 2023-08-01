@@ -1,6 +1,6 @@
 import os
 import sys
-import unittest
+import pytest
 import datetime
 import logging
 from PyQt5 import QtCore
@@ -27,11 +27,15 @@ BASE_FOLDER = (
     + os.path.sep
 )
 PICTURE_ZIP_FILE = os.path.join(BASE_DIR, "test_photos.zip")
+GENERATION_SCRIPT = os.path.join(
+    os.path.dirname(BASE_DIR), "pydive_generate_picture.py"
+)
 
 # This requires actual image files, which are heavy & take time to process
 # Hence the separate test class
-class TestRepositoryGeneration(unittest.TestCase):
-    def setUp(self):
+class TestRepositoryGeneration:
+    @pytest.fixture(scope="function", autouse=True)
+    def setup_and_teardown(self):
         try:
             os.remove(BASE_FOLDER)
         except OSError:
@@ -131,13 +135,15 @@ class TestRepositoryGeneration(unittest.TestCase):
                     id=1,
                     name="DarkTherapee",
                     suffix="DT",
-                    command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c DT > /dev/null",
+                    command=GENERATION_SCRIPT
+                    + " %SOURCE_FILE% -t %TARGET_FOLDER% -c DT > /dev/null",
                 ),
                 ConversionMethod(
                     id=2,
                     name="RawTherapee",
                     suffix="RT",
-                    command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c RT > /dev/null",
+                    command=GENERATION_SCRIPT
+                    + " %SOURCE_FILE% -t %TARGET_FOLDER% -c RT > /dev/null",
                 ),
             ]
         )
@@ -148,7 +154,8 @@ class TestRepositoryGeneration(unittest.TestCase):
         self.repository = Repository(self.database)
         self.repository.load_pictures(self.locations)
 
-    def tearDown(self):
+        yield
+
         # Delete database
         self.database.session.close()
         self.database.engine.dispose()
@@ -173,9 +180,9 @@ class TestRepositoryGeneration(unittest.TestCase):
         should_exist = [f for f in self.all_files if f not in should_not_exist]
         for path in all_files_checked:
             if path in should_exist:
-                self.assertTrue(os.path.exists(path), f"{test} - File {path}")
+                assert os.path.exists(path), f"{test} - File {path}"
             else:
-                self.assertFalse(os.path.exists(path), f"{test} - File {path}")
+                assert not os.path.exists(path), f"{test} - File {path}"
 
     # List of Repository.generate_pictures tests - "KO" denotes when a ValueError is raised
     #  picture_group   source_location    trip
@@ -367,7 +374,7 @@ class TestRepositoryGeneration(unittest.TestCase):
         trip = None
         picture_group = None
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.generate_pictures(
                 test,
                 target_location,
@@ -376,11 +383,7 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert cm.value.args[0] == "Either trip or picture_group must be provided", test
 
         self.helper_check_paths(test)
 
@@ -423,7 +426,7 @@ class TestRepositoryGeneration(unittest.TestCase):
         trip = None
         picture_group = None
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.generate_pictures(
                 test,
                 target_location,
@@ -432,11 +435,7 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert cm.value.args[0] == "Either trip or picture_group must be provided", test
 
         self.helper_check_paths(test)
 
@@ -448,7 +447,7 @@ class TestRepositoryGeneration(unittest.TestCase):
         trip = "Sweden"
         picture_group = self.repository.trips[trip]["IMG040"]
 
-        with self.assertRaises(FileNotFoundError) as cm:
+        with pytest.raises(FileNotFoundError) as cm:
             self.repository.generate_pictures(
                 test,
                 target_location,
@@ -457,11 +456,7 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "No source image found in specified location",
-                test,
-            )
+        assert cm.value.args[0] == "No source image found in specified location", test
 
         self.helper_check_paths(test)
 
@@ -473,7 +468,7 @@ class TestRepositoryGeneration(unittest.TestCase):
         trip = "Sweden"
         picture_group = self.repository.trips[trip]["IMG040"]
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.generate_pictures(
                 test,
                 target_location,
@@ -482,11 +477,10 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "ConversionMethod This is a test could not be found in database",
-                test,
-            )
+        assert (
+            cm.value.args[0]
+            == "ConversionMethod This is a test could not be found in database"
+        ), test
 
         self.helper_check_paths(test)
 
@@ -498,7 +492,7 @@ class TestRepositoryGeneration(unittest.TestCase):
         trip = "Sweden"
         picture_group = self.repository.trips[trip]["IMG040"]
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.generate_pictures(
                 test,
                 target_location,
@@ -507,11 +501,10 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "ConversionMethod ['This is a test'] could not be found in database",
-                test,
-            )
+        assert (
+            cm.value.args[0]
+            == "ConversionMethods needs to be an iterable of ConversionMethod"
+        ), test
 
         self.helper_check_paths(test)
 
@@ -523,7 +516,7 @@ class TestRepositoryGeneration(unittest.TestCase):
         trip = "Sweden"
         picture_group = self.repository.trips[trip]["IMG040"]
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.generate_pictures(
                 test,
                 target_location,
@@ -532,14 +525,13 @@ class TestRepositoryGeneration(unittest.TestCase):
                 trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "ConversionMethods needs to be an iterable of ConversionMethod",
-                test,
-            )
+        assert (
+            cm.value.args[0]
+            == "ConversionMethods needs to be an iterable of ConversionMethod"
+        ), test
 
         self.helper_check_paths(test)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.main(["-s", __file__])

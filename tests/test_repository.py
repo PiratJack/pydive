@@ -1,9 +1,9 @@
 import os
 import sys
-import unittest
+import pytest
 import datetime
 import logging
-from PyQt5 import QtCore, QtTest, QtWidgets
+from PyQt5 import QtCore, QtTest
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
@@ -30,8 +30,9 @@ BASE_FOLDER = (
 )
 
 
-class TestRepository(unittest.TestCase):
-    def setUp(self):
+class TestRepository:
+    @pytest.fixture(scope="function", autouse=True)
+    def setup_and_teardown(self, qtbot):
         try:
             os.remove(BASE_FOLDER)
         except OSError:
@@ -152,19 +153,13 @@ class TestRepository(unittest.TestCase):
         self.repository = Repository(self.database)
         self.repository.load_pictures(self.locations)
 
-        if sys.platform == "linux":
-            os.environ["QT_QPA_PLATFORM"] = "xcb"
-        self.app = QtWidgets.QApplication(sys.argv)
         self.mainwindow = controllers.mainwindow.MainWindow(self.database)
 
-    def tearDown(self):
-        # Delete database
-        self.mainwindow.close()
+        yield
+
         self.mainwindow.database.session.close()
         self.mainwindow.database.engine.dispose()
-        self.app.quit()
-        self.app.deleteLater()
-
+        # Delete database
         os.remove(DATABASE_FILE)
 
         # Delete folders
@@ -177,18 +172,18 @@ class TestRepository(unittest.TestCase):
     def test_load_pictures_trip_recognition(self):
         # Check if recognition worked
         test = "Load pictures: Count trips"
-        self.assertEqual(len(self.repository.trips), 7, test)
+        assert len(self.repository.trips) == 7, test
 
         test = "Load pictures: Count pictures with no trips"
-        self.assertEqual(len(self.repository.trips[""]), 4, test)
+        assert len(self.repository.trips[""]) == 4, test
 
         test = "Load pictures: Count pictures in a given trip"
-        self.assertEqual(len(self.repository.trips["Malta"]), 2, test)
+        assert len(self.repository.trips["Malta"]) == 2, test
 
     def test_string_representation(self):
         test = "String representation: picture group"
         picture_group = self.repository.trips["Malta"]["IMG001"]
-        self.assertEqual(str(picture_group), "('IMG001', 'Malta', '3 pictures')", test)
+        assert str(picture_group) == "('IMG001', 'Malta', '3 pictures')", test
 
         picture = [
             p
@@ -198,20 +193,19 @@ class TestRepository(unittest.TestCase):
         picture = picture[0]
 
         test = "String representation: picture"
-        self.assertEqual(
-            str(picture),
-            "IMG001 in Temporary during Malta - path "
+        assert (
+            str(picture)
+            == "IMG001 in Temporary during Malta - path "
             + os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2")
-            + "",
-            test,
-        )
+            + ""
+        ), test
 
         test = "String representation: picture.filename"
-        self.assertEqual(picture.filename, "IMG001.CR2", test)
+        assert picture.filename == "IMG001.CR2", test
 
     def test_load_pictures_storage_location_collision(self):
         test = "Load pictures: storage location collision"
-        with self.assertRaises(StorageLocationCollision, msg=test):
+        with pytest.raises(StorageLocationCollision):
             new_location = StorageLocation(
                 id=999,
                 name="Used path",
@@ -222,6 +216,7 @@ class TestRepository(unittest.TestCase):
             logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
             logger.setLevel(logging.WARNING)
+            pytest.fail(test)
 
     def test_storage_location_add(self):
         test = "Add a storage location: Count trips"
@@ -233,7 +228,7 @@ class TestRepository(unittest.TestCase):
             path=os.path.join(BASE_FOLDER, "Archive_outside_DB"),
         )
         self.repository.load_pictures([new_location])
-        self.assertEqual(len(self.repository.trips), nb_trips_before + 1, test)
+        assert len(self.repository.trips) == nb_trips_before + 1, test
 
     def test_storage_location_add_with_collision(self):
         test = "Add a storage location: subfolder of existing folder"
@@ -243,16 +238,13 @@ class TestRepository(unittest.TestCase):
             type="folder",
             path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
-        with self.assertRaises(StorageLocationCollision, msg=test) as cm:
+        with pytest.raises(StorageLocationCollision) as cm:
             logger = logging.getLogger("models.picture")
             logger.setLevel(logging.CRITICAL)
             self.repository.load_pictures([new_location])
             logger.setLevel(logging.WARNING)
-            self.assertEqual(
-                cm.exception.args[0],
-                "recognition failed",
-                test,
-            )
+            pytest.fail(test)
+        assert cm.value.args[0] == "recognition failed", test
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
         QtCore.QThreadPool.globalInstance().waitForDone()
@@ -265,9 +257,9 @@ class TestRepository(unittest.TestCase):
         should_exist = [f for f in self.all_files if f not in should_not_exist]
         for path in all_files_checked:
             if path in should_exist:
-                self.assertTrue(os.path.exists(path), f"{test} - File {path}")
+                assert os.path.exists(path), f"{test} - File {path}"
             else:
-                self.assertFalse(os.path.exists(path), f"{test} - File {path}")
+                assert not os.path.exists(path), f"{test} - File {path}"
 
     # List of Repository.copy_pictures tests - "KO" denotes when a ValueError is raised
     # source_location   trip    picture_group   conversion_method
@@ -311,7 +303,7 @@ class TestRepository(unittest.TestCase):
         QtCore.QThreadPool.globalInstance().waitForDone()
 
         expected_signal = QtTest.QSignalSpy(process.finished)
-        self.assertTrue(expected_signal.isValid())
+        assert expected_signal.isValid()
 
         new_files = [
             os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
@@ -470,7 +462,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = ""
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.copy_pictures(
                 test,
                 target_location,
@@ -479,11 +471,7 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert cm.value.args[0] == "Either trip or picture_group must be provided", test
 
         self.helper_check_paths(test)
 
@@ -598,7 +586,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = ""
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.copy_pictures(
                 test,
                 target_location,
@@ -607,11 +595,7 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert cm.value.args[0] == "Either trip or picture_group must be provided", test
 
         self.helper_check_paths(test)
 
@@ -649,7 +633,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = None
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.copy_pictures(
                 test,
                 target_location,
@@ -658,11 +642,7 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert cm.value.args[0] == "Either trip or picture_group must be provided", test
 
         self.helper_check_paths(test)
 
@@ -701,7 +681,7 @@ class TestRepository(unittest.TestCase):
         picture_group = None
         conversion_method = None
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.copy_pictures(
                 test,
                 target_location,
@@ -710,11 +690,7 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert cm.value.args[0] == "Either trip or picture_group must be provided", test
 
         self.helper_check_paths(test)
 
@@ -726,7 +702,7 @@ class TestRepository(unittest.TestCase):
         picture_group = self.repository.trips[trip]["IMG040"]
         conversion_method = "ZZZ"
 
-        with self.assertRaises(FileNotFoundError) as cm:
+        with pytest.raises(FileNotFoundError) as cm:
             self.repository.copy_pictures(
                 test,
                 target_location,
@@ -735,11 +711,7 @@ class TestRepository(unittest.TestCase):
                 picture_group,
                 conversion_method,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "No source image found",
-                test,
-            )
+        assert cm.value.args[0] == "No source image found", test
 
         self.helper_check_paths(test)
 
@@ -781,7 +753,7 @@ class TestRepository(unittest.TestCase):
 
         self.helper_check_paths(test, new_files, should_not_exist)
 
-    def _test_repository_change_trip_picture_group(self):
+    def test_repository_change_trip_picture_group(self):
         test = "Picture change trip: only picture group provided"
         target_trip = "Korea"
         source_trip = None
@@ -852,18 +824,16 @@ class TestRepository(unittest.TestCase):
         source_trip = None
         picture_group = None
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.change_trip_pictures(
                 test,
                 target_trip,
                 source_trip,
                 picture_group,
             )
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip or picture_group must be provided",
-                test,
-            )
+        assert (
+            cm.value.args[0] == "Either source_trip or picture_group must be provided"
+        ), test
 
         self.helper_check_paths(test)
 
@@ -912,16 +882,16 @@ class TestRepository(unittest.TestCase):
                 self.repository.change_trip_pictures_finished(
                     picture_group, picture, new_path, target_picture_group
                 )
-                self.assertEqual(picture.path, new_path, test)
-                self.assertEqual(picture.trip, target_trip, test)
+                assert picture.path == new_path, test
+                assert picture.trip == target_trip, test
                 if conversion_type in target_picture_group.pictures:
                     paths = [
                         p.path for p in target_picture_group.pictures[conversion_type]
                     ]
                 else:
                     paths = [p.path for p in target_picture_group.pictures[""]]
-                self.assertIn(picture.path, paths, test)
-            self.assertNotIn(conversion_type, picture_group.pictures, test)
+                assert picture.path in paths, test
+            assert conversion_type not in picture_group.pictures, test
 
     def test_repository_remove_pictures_1_picture(self):
         test = "Picture remove: actual deletion of 1 picture"
@@ -931,7 +901,7 @@ class TestRepository(unittest.TestCase):
 
         process = self.repository.remove_pictures(test, None, picture_group, picture)
 
-        self.assertEqual(str(process), test + " (1 tasks)", test)
+        assert str(process) == test + " (1 tasks)", test
         self.helper_check_paths(test, [], [path])
 
     def test_repository_remove_pictures_trip(self):
@@ -947,24 +917,20 @@ class TestRepository(unittest.TestCase):
     def test_repository_remove_pictures_validations(self):
         # Delete image without changing structure of .pictures and .locations
         test = "Remove picture: At least 1 trip/picture reference is required"
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.remove_pictures(test)
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip, picture_group or picture must be provided",
-                test,
-            )
+        assert (
+            cm.value.args[0] == "Either trip, picture_group or picture must be provided"
+        ), test
 
         test = "Remove picture: picture_group required if picture provided"
         picture_group = self.repository.trips["Malta"]["IMG002"]
         picture = picture_group.locations["Temporary"][0]
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             self.repository.remove_pictures(test, picture=picture)
-            self.assertEqual(
-                cm.exception.args[0],
-                "Either trip, picture_group or picture must be provided",
-                test,
-            )
+        assert (
+            cm.value.args[0] == "picture_group is required if picture is provided"
+        ), test
 
     def test_repository_remove_picture_no_structure_change(self):
         # Remove image without deleting the actual files
@@ -976,19 +942,12 @@ class TestRepository(unittest.TestCase):
         conversion_type_initial_count = len(picture_group.pictures[""])
         path = picture.path
         self.repository.remove_picture(picture_group, picture.location, picture.path)
-        self.assertTrue(
-            os.path.exists(path),
-            test + ": file not deleted (on purpose)",
-        )
-        self.assertEqual(
-            len(picture_group.locations["Temporary"]),
-            location_initial_count - 1,
-            test + ": deletion from picture_group.locations",
-        )
-        self.assertEqual(
-            len(picture_group.pictures[""]),
-            conversion_type_initial_count - 1,
-            test + ": deletion from picture_group.pictures",
+        assert os.path.exists(path), test + ": file not deleted (on purpose)"
+        assert (
+            len(picture_group.locations["Temporary"]) == location_initial_count - 1
+        ), (test + ": deletion from picture_group.locations")
+        assert len(picture_group.pictures[""]) == conversion_type_initial_count - 1, (
+            test + ": deletion from picture_group.pictures"
         )
 
     def test_repository_remove_picture_structure_change(self):
@@ -999,19 +958,12 @@ class TestRepository(unittest.TestCase):
         picture = picture_group.pictures["RT"][0]
         path = picture.path
         self.repository.remove_picture(picture_group, picture.location, picture.path)
-        self.assertTrue(
-            os.path.exists(path),
-            test + ": file not deleted (on purpose)",
+        assert os.path.exists(path), test + ": file not deleted (on purpose)"
+        assert "RT" not in picture_group.pictures, (
+            test + ": .pictures no longer has RT as key"
         )
-        self.assertNotIn(
-            "RT",
-            picture_group.pictures,
-            test + ": .pictures no longer has RT as key",
-        )
-        self.assertNotIn(
-            "Archive",
-            picture_group.locations,
-            test + ": .locations no longer has Archive as key",
+        assert "Archive" not in picture_group.locations, (
+            test + ": .locations no longer has Archive as key"
         )
 
     def test_picture_group_add_pictures_wrong_name(self):
@@ -1024,13 +976,11 @@ class TestRepository(unittest.TestCase):
         ]
 
         picture = picture[0]
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             picture_group.add_picture(picture)
-        self.assertEqual(
-            cm.exception.args[0],
-            "Picture IMG002 does not belong to group IMG001",
-            test,
-        )
+        assert (
+            cm.value.args[0] == "Picture IMG002 does not belong to group IMG001"
+        ), test
 
     def test_picture_group_add_pictures_wrong_trip(self):
         test = "Add picture: wrong trip"
@@ -1041,13 +991,11 @@ class TestRepository(unittest.TestCase):
             if p.path.endswith(os.path.join("Georgia", "IMG010.CR2"))
         ]
         picture = picture[0]
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             picture_group.add_picture(picture)
-        self.assertEqual(
-            cm.exception.args[0],
-            "Picture IMG010 has the wrong trip for group IMG001",
-            test,
-        )
+        assert (
+            cm.value.args[0] == "Picture IMG010 has the wrong trip for group IMG001"
+        ), test
 
     def test_picture_group_add_pictures_ok(self):
         test = "Add picture: OK in existing group"
@@ -1061,22 +1009,20 @@ class TestRepository(unittest.TestCase):
         location = [loc for loc in self.locations if loc.name == "Temporary"][0]
         self.repository.add_picture(picture_group, location, new_image_path)
 
-        self.assertIn("DT", picture_group.pictures, test)
+        assert "DT" in picture_group.pictures, test
         new_picture = picture_group.pictures["DT"][0]
-        self.assertEqual(new_picture.path, new_image_path, test)
+        assert new_picture.path == new_image_path, test
 
     def test_picture_group_remove_picture_validations(self):
         # Negative deletion test
         test = "Remove picture : wrong trip for group"
         picture_group = self.repository.trips["Malta"]["IMG002"]
         picture = self.repository.trips["Georgia"]["IMG010"].pictures[""][0]
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             picture_group.remove_picture(picture)
-            self.assertEqual(
-                cm.exception.args[0],
-                "Picture IMG010 has the wrong trip for group IMG002",
-                test,
-            )
+        assert (
+            cm.value.args[0] == "Picture IMG010 has the wrong trip for group IMG002"
+        ), test
 
     def test_picture_group_deletion(self):
         # Remove image without deleting the actual files
@@ -1089,11 +1035,9 @@ class TestRepository(unittest.TestCase):
                 pictures.append(picture)
         for picture in pictures:
             picture_group.remove_picture(picture)
-        self.assertEqual(
-            len(self.repository.picture_groups),
-            nb_groups_before_deletion - 1,
-            "picture_group deletion when pictures are removed",
-        )
+        assert (
+            len(self.repository.picture_groups) == nb_groups_before_deletion - 1
+        ), "picture_group deletion when pictures are removed"
 
     def test_picture_group_name_change(self):
         # Adding a picture that is more "basic" than an existing group
@@ -1106,27 +1050,17 @@ class TestRepository(unittest.TestCase):
         )
         picture_group.add_picture(new_picture)
 
-        self.assertEqual(
-            picture_group.name,
-            "IMG011",
-            "Group name change: name has changed",
-        )
-        self.assertEqual(
-            picture_group.trip,
-            "Georgia",
-            "Group name change: trip has not changed",
-        )
-        self.assertIn(
-            "",
-            picture_group.pictures,
-            "Group name change: empty conversion type exists",
-        )
-        self.assertIn(
-            "convert",
-            picture_group.pictures,
-            "Group name change: '_convert' conversion type exists",
-        )
+        assert picture_group.name == "IMG011", "Group name change: name has changed"
+        assert (
+            picture_group.trip == "Georgia"
+        ), "Group name change: trip has not changed"
+        assert (
+            "" in picture_group.pictures
+        ), "Group name change: empty conversion type exists"
+        assert (
+            "convert" in picture_group.pictures
+        ), "Group name change: '_convert' conversion type exists"
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.main(["-s", __file__])
