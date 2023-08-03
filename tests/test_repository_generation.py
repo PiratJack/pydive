@@ -135,8 +135,7 @@ class TestRepositoryGeneration:
                     id=1,
                     name="DarkTherapee",
                     suffix="DT",
-                    command=GENERATION_SCRIPT
-                    + " %SOURCE_FILE% -t %TARGET_FOLDER% -c DT > /dev/null",
+                    command="cp %SOURCE_FILE% %TARGET_FILE% > /dev/null",
                 ),
                 ConversionMethod(
                     id=2,
