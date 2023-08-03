@@ -3,7 +3,7 @@ import sys
 import pytest
 import datetime
 import logging
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -17,6 +17,8 @@ from controllers.widgets.iconbutton import IconButton
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
 from models.conversionmethod import ConversionMethod
+
+import sqlalchemy.orm.exc
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -350,63 +352,39 @@ class TestUiSettings:
             error_widget.text() == "Missing storage location path"
         ), "Error gets displayed"
 
-    @pytest.mark.skip(
-        "TODO Does not work, either does not trigger or qMessageBox not displayed"
-    )
-    def test_settings_location_list_delete_cancel(self, qtbot):
+    def test_settings_location_list_delete_cancel(self, qtbot, monkeypatch):
         settingsController = self.mainwindow.controllers["Settings"]
         locationList = settingsController.locations_list
 
         # Get delete button
         delete_widget = locationList.ui["layout"].itemAtPosition(1, 4).widget()
 
-        # Check there is no change in DB
-        def check_location_exists():
-            messagebox = self.app.activeModalWidget()
-            qtbot.mouseClick(messagebox.button(QtWidgets.QMessageBox.No), Qt.LeftButton)
-
-            location = self.database.storagelocation_get_by_id(1)
-            assert location.name == "Camera", "Location still exists"
-
         # Click delete, then "No" in the dialog
-        timer = QtCore.QTimer(self.mainwindow)
-        timer.timeout.connect(check_location_exists)
-        timer.start(100)
+        monkeypatch.setattr(
+            QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.No
+        )
         qtbot.mouseClick(delete_widget, Qt.LeftButton)
+        location = self.database.storagelocation_get_by_id(1)
+        assert location.name == "Camera", "Location still exists"
 
-    @pytest.mark.skip(
-        "TODO Does not work, triggers with same callback twice + the Yes button is not really triggered"
-    )
-    def test_settings_location_list_delete_confirm(self, qtbot):
+    def test_settings_location_list_delete_confirm(self, qtbot, monkeypatch):
         settingsController = self.mainwindow.controllers["Settings"]
         locationList = settingsController.locations_list
 
         # Get delete button
         delete_widget = locationList.ui["layout"].itemAtPosition(2, 4).widget()
 
-        def check_location_deleted():
-            messagebox = self.app.activeModalWidget()
-            qtbot.mouseClick(
-                messagebox.button(QtWidgets.QMessageBox.Yes), Qt.LeftButton
-            )
-
-            # Check the DB has been updated
-            location = self.database.storagelocation_get_by_id(2)
-            assert location == None, "Location has been deleted"
-
-            # Location no longer visible in UI
-            assert (
-                locationList.ui["layout"].rowCount() == 5
-            ), "Locations have the right number of rows"
-            assert (
-                locationList.ui["layout"].rowCount() == 5
-            ), "Locations have the right number of rows"
-
-        # Click delete, then "Yes" in the dialog
-        timer2 = QtCore.QTimer(settingsController.ui["main"])
-        timer2.timeout.connect(check_location_deleted)
-        timer2.start(300)
+        # Click delete, then "No" in the dialog
+        monkeypatch.setattr(
+            QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.Yes
+        )
         qtbot.mouseClick(delete_widget, Qt.LeftButton)
+        with pytest.raises(sqlalchemy.orm.exc.NoResultFound):
+            self.database.storagelocation_get_by_id(2)
+
+        # Location no longer visible in UI
+        name = locationList.ui["layout"].itemAtPosition(2, 0)
+        assert name is None, "Location is deleted from UI"
 
     def test_settings_location_list_add_location_display(self, qtbot):
         settingsController = self.mainwindow.controllers["Settings"]
@@ -1032,6 +1010,40 @@ class TestUiSettings:
         # Changes are not saved in DB
         method = self.database.conversionmethods_get()[1]
         assert method.command != "", "Command is not modified to empty"
+
+    def test_settings_method_delete_cancel(self, qtbot, monkeypatch):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Get delete button
+        delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
+
+        # Click delete, then "No" in the dialog
+        monkeypatch.setattr(
+            QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.No
+        )
+        qtbot.mouseClick(delete_widget, Qt.LeftButton)
+        method = self.database.conversionmethods_get_by_name("DarkTherapee")
+        assert method.name == "DarkTherapee", "Conversion method still exists"
+
+    def test_settings_method_delete_confirm(self, qtbot, monkeypatch):
+        settingsController = self.mainwindow.controllers["Settings"]
+        methodList = settingsController.conversion_methods_list
+
+        # Get delete button
+        delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
+
+        # Click delete, then "No" in the dialog
+        monkeypatch.setattr(
+            QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.Yes
+        )
+        qtbot.mouseClick(delete_widget, Qt.LeftButton)
+        with pytest.raises(sqlalchemy.orm.exc.NoResultFound):
+            self.database.conversionmethods_get_by_name("DarkTherapee")
+
+        # Location no longer visible in UI
+        name = methodList.ui["layout"].itemAtPosition(1, 0)
+        assert name is None, "Method is deleted from UI"
 
     def test_settings_method_add_ok(self, qtbot):
         settingsController = self.mainwindow.controllers["Settings"]
