@@ -109,8 +109,13 @@ class Repository:
                 if len(matching_groups) == 0:
                     group = PictureGroup(picture.name)
                     self.picture_groups.append(group)
+
+                    def remove(picture_groups, g):
+                        if g in picture_groups:
+                            picture_groups.remove(g)
+
                     group.pictureGroupDeleted.connect(
-                        lambda _a, _b, g=group: self.picture_groups.remove(g)
+                        lambda _a, _b, g=group: remove(self.picture_groups, g)
                     )
                 else:
                     # There should not be multiple matching groups
