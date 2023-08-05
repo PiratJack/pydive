@@ -38,6 +38,18 @@ class PicturesTree(BaseTreeWidget):
     -------
     __init__ (parent_controller, repository)
         Stores reference to parent controller & repository + sets up event handlers
+    contextMenuEvent (event)
+        Displays the right-click menu for trips & picture groups
+    generate_context_menu (tree_item)
+        Generates the right-click menu for trips & picture groups
+    add_trip_action (menu, label, type, source, target, trip, methods)
+        Right-click menu: adds copy/generate/change trip name to trips
+    change_trip_name (source_trip, target_trip)
+        Changes the trip name of a given trip
+    add_picture_group_action (menu, label, type, source, target, picture_group, methods)
+        Right-click menu: adds copy/generate/change trip to picture groups
+    change_picture_group_trip (picture_group_name, source_trip, target_trip)
+        Changes the trip of a given picture group
     set_folders (folders)
         Defines which folders to display
     fill_tree
@@ -83,7 +95,7 @@ class PicturesTree(BaseTreeWidget):
         event : QContextMenuEvent
             A reference to the right-click event
         """
-        self.menu = QtWidgets.QMenu()
+
         index = self.indexAt(event.pos())
 
         if not index.isValid():
@@ -91,9 +103,15 @@ class PicturesTree(BaseTreeWidget):
 
         tree_item = self.itemFromIndex(index)
 
-        # This only stores references, otherwise the menu disappears immediately
-        self.actions = []
+        self.generate_context_menu(tree_item)
+
+        self.menu.exec_(event.globalPos())
+
+    def generate_context_menu(self, tree_item):
+        self.menu = QtWidgets.QMenu()
+        self.menu_actions = []
         self.submenus = []
+        # This only stores references, otherwise the menu disappears immediately
         locations = self.database.storagelocations_get_folders()
         methods = self.database.conversionmethods_get()
         # No parent = trip
@@ -114,7 +132,7 @@ class PicturesTree(BaseTreeWidget):
             # Convert / Generate images
             for location in locations:
                 label = _("Convert images in {location}").format(location=location.name)
-                submenu = QtWidgets.QMenu(label)
+                submenu = QtWidgets.QMenu(label, self.menu)
                 self.menu.addMenu(submenu)
 
                 label = _("Using all methods")
@@ -166,7 +184,7 @@ class PicturesTree(BaseTreeWidget):
             # Conversion / generation actions
             for location in locations:
                 label = _("Convert images in {location}").format(location=location.name)
-                submenu = QtWidgets.QMenu(label)
+                submenu = QtWidgets.QMenu(label, self.menu)
                 self.menu.addMenu(submenu)
 
                 label = _("Using all methods")
@@ -207,8 +225,6 @@ class PicturesTree(BaseTreeWidget):
                 picture_group,
                 methods,
             )
-
-        self.menu.exec_(event.globalPos())
 
     def add_trip_action(self, menu, label, type, source, target, trip, methods=None):
         """Right-click menu: adds copy/generate/change trip name to trips
@@ -255,7 +271,7 @@ class PicturesTree(BaseTreeWidget):
                 )
                 if confirmed:
                     process_group = self.repository.change_trip_pictures(
-                        label,
+                        label + target_trip,
                         target_trip,
                         trip,
                     )
@@ -268,7 +284,7 @@ class PicturesTree(BaseTreeWidget):
             raise ValueError("Action must be copy, generate or change_trip")
 
         menu.addAction(action)
-        self.actions.append(action)
+        self.menu_actions.append(action)
 
     def change_trip_name(self, source_trip, target_trip):
         """Changes the trip name of a given trip
@@ -374,7 +390,7 @@ class PicturesTree(BaseTreeWidget):
             raise ValueError("Action must be copy, generate or change_trip")
 
         menu.addAction(action)
-        self.actions.append(action)
+        self.menu_actions.append(action)
 
     def change_picture_group_trip(self, picture_group_name, source_trip, target_trip):
         """Changes the trip of a given picture group
@@ -1105,6 +1121,7 @@ class PicturesController:
         self.parent_window = parent_window
         self.database = parent_window.database
         self.repository = models.repository.Repository(parent_window.database)
+        self.folders = []
 
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
