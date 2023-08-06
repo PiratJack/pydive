@@ -115,9 +115,6 @@ msgstr "Pas de méthode de conversion trouvée"
 msgid "No image"
 msgstr "Pas d'image"
 
-msgid "No image to delete"
-msgstr "Pas d'image à supprimer"
-
 msgid "No source image found"
 msgstr "Pas d'image source disponible"
 
@@ -176,6 +173,9 @@ msgstr "Avec la méthode {method}"
 
 #~ msgid "Archives"
 #~ msgstr "Archives"
+
+#~ msgid "No image to delete"
+#~ msgstr "Pas d'image à supprimer"
 
 #~ msgid "No source image available for generation"
 #~ msgstr "Pas d'image source disponible pour la génération"

@@ -98,9 +98,6 @@ msgstr ""
 msgid "No image"
 msgstr ""
 
-msgid "No image to delete"
-msgstr ""
-
 msgid "No source image found"
 msgstr ""
 
