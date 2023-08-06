@@ -27,7 +27,7 @@ BASE_FOLDER = "./test_images" + str(int(datetime.datetime.now().timestamp())) + 
 PICTURE_ZIP_FILE = os.path.join(BASE_DIR, "test_photos.zip")
 
 
-class TestUiSettings:
+class TestUiPictures:
     @pytest.fixture(scope="function", autouse=True)
     def setup_and_teardown(self, qtbot):
         try:
@@ -53,22 +53,22 @@ class TestUiSettings:
         ]
 
         self.all_files = [
+            os.path.join(BASE_FOLDER, "DCIM", "IMG050.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG001.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG002.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG010.CR2"),
             os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG020.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG050.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG011_convert.jpg"),
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
             os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2"),
             os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG011_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
@@ -325,7 +325,24 @@ class TestUiSettings:
         container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
         self.helper_check_picture_display(test, container, "JPG", "IMG001_RT.jpg")
 
-    def test_pictures_copy_raw_individual_picture(self, qtbot):
+    def test_pictures_tree_remove_already_removed_picture_group(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        # Should not trigger an error
+        picturesTree.remove_picture_group(picture_item)
+        picturesTree.remove_picture_group(picture_item)
+        picturesTree.remove_picture_group(None)
+
+    def test_pictures_grid_copy_raw_picture(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -383,7 +400,7 @@ class TestUiSettings:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def test_pictures_tree_copy_jpg_individual_picture(self, qtbot):
+    def test_pictures_grid_copy_jpg_picture(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -441,7 +458,163 @@ class TestUiSettings:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def test_pictures_tree_copy_trip(self, qtbot):
+    def test_pictures_grid_copy_error(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Get Copy button
+        container = picturesGrid.ui["layout"].itemAtPosition(2, 2).widget()
+        copy = container.layout().itemAt(2).widget()
+
+        # Trigger action - Should raise (caught) exception
+        qtbot.mouseClick(copy, Qt.LeftButton)
+
+        # Check display - Error is displayed
+        error = container.layout().itemAt(3).widget()
+        assert error.text() == "No source image found", "Error is displayed"
+
+    def test_pictures_grid_delete_picture(self, qtbot, monkeypatch):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Monkeypatch the dialog to return what we want
+        monkeypatch.setattr(
+            QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.Yes
+        )
+
+        # Trigger action - 1 image deleted
+        container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        delete = container.layout().itemAt(2).widget()
+        with qtbot.waitSignal(picture_group.pictureRemoved, timeout=1000) as signal:
+            qtbot.mouseClick(delete, Qt.LeftButton)
+
+        # Check signal is emitted, file have been deleted & models updated
+        deleted_path = os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg")
+        deleted_files = [deleted_path]
+        assert signal.args[0] == "RT", "Deletion signal has correct conversion type"
+        assert (
+            signal.args[1].name == "Temporary"
+        ), "Deletion signal has correct location"
+        self.helper_check_paths("Delete image", [], deleted_files)
+        assert "RT" not in picture_group.pictures, "Picture deleted from group"
+
+        # Check display - New image is displayed
+        test = "After picture deletion"
+        container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        self.helper_check_picture_display(test, container, "No image")
+
+        # Check display - Tree has been updated
+        children = [trip_item.child(i) for i in range(trip_item.childCount())]
+        tree_group = [p for p in children if p.data(0, Qt.DisplayRole) == "IMG001"][0]
+        assert tree_group.data(1, Qt.DisplayRole) == str(0), "0 image in Camera"
+        assert tree_group.data(2, Qt.DisplayRole) == str(1), "1 images in Temporary"
+        assert tree_group.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
+
+    def test_pictures_grid_convert_picture(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Trigger action - 1 image deleted
+        container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        generate = container.layout().itemAt(1).widget()
+        with qtbot.waitSignal(picture_group.pictureAdded) as signal:
+            qtbot.mouseClick(generate, Qt.LeftButton)
+
+        # Check signal is emitted, file have been deleted & models updated
+        new_path = os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_DT.jpg")
+        new_files = [new_path]
+        assert signal.args[0].path == new_path, "New picture has correct path"
+        assert signal.args[1] == "DT", "New picture has correct conversion method"
+        self.helper_check_paths("Generated image", new_files)
+        assert len(picture_group.pictures["DT"]) == 1, "Picture has 1 DT image"
+
+        # Check display - New image is displayed
+        test = "After picture generation"
+        container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        # This is called with "RAW" because the "conversion" is only a copy in this test
+        self.helper_check_picture_display(test, container, "RAW", "IMG001_DT.jpg")
+
+        # Check display - Tree has been updated
+        children = [trip_item.child(i) for i in range(trip_item.childCount())]
+        tree_group = [p for p in children if p.data(0, Qt.DisplayRole) == "IMG001"][0]
+        assert tree_group.data(1, Qt.DisplayRole) == str(0), "0 image in Camera"
+        assert tree_group.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
+        assert tree_group.data(3, Qt.DisplayRole) == str(2), "2 image in Archive"
+
+    def test_pictures_grid_convert_picture_no_method_found(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(6)  # Sweden
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Sweden's IMG040
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Get Copy button
+        container = picturesGrid.ui["layout"].itemAtPosition(2, 4).widget()
+        generate = container.layout().itemAt(1).widget()
+
+        # Trigger action - Should raise (caught) exception
+        qtbot.mouseClick(generate, Qt.LeftButton)
+
+        # Check display - Error is displayed
+        error = container.layout().itemAt(3).widget()
+        assert error.text() == "No conversion method found", "Error is displayed"
+
+    def test_pictures_tree_trip_copy(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -497,7 +670,7 @@ class TestUiSettings:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def test_pictures_tree_convert_trip(self, qtbot):
+    def test_pictures_tree_trip_convert(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -510,7 +683,7 @@ class TestUiSettings:
         picture_group1 = picturesController.repository.trips["Malta"]["IMG001"]
         picture_group2 = picturesController.repository.trips["Malta"]["IMG002"]
 
-        # Look for copy action
+        # Look for generate action
         picturesTree.generate_context_menu(trip_item)
         menu_name = "Convert images in Archive"
         action_name = "Using DarkTherapee"
@@ -547,7 +720,7 @@ class TestUiSettings:
         assert tree_group2.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
-    def test_pictures_tree_change_trip_name(self, qtbot, monkeypatch):
+    def test_pictures_tree_trip_change_name(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -596,6 +769,292 @@ class TestUiSettings:
         ]
         assert "Italy" in top_level_items, "Italy added to the tree"
         assert "Korea" not in top_level_items, "Korea removed from the tree"
+
+    def test_pictures_tree_trip_change_name_exists(self, qtbot, monkeypatch):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item & picture groups
+        trip_item = picturesTree.topLevelItem(4)  # Korea
+        picture_group = picturesController.repository.trips["Korea"]["IMG030"]
+
+        # Look for "Change trip" action
+        picturesTree.generate_context_menu(trip_item)
+        action_name = "Change name to ..."
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+
+        # Monkeypatch the dialog to return what we want
+        monkeypatch.setattr(
+            QtWidgets.QInputDialog, "getText", lambda *args: ("Georgia", True)
+        )
+
+        # Trigger action - 2 images moved
+        signals = [picture_group.pictureRemoved, picture_group.pictureRemoved]
+        with qtbot.waitSignals(signals, timeout=2000):
+            action.trigger()
+
+        # Check files have been created & models updated
+        self.all_folders += [
+            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
+        ]
+        new_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG030.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG030_RT.jpg"),
+        ]
+        removed_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
+            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
+        ]
+        self.helper_check_paths(action_name, new_files, removed_files)
+
+        # Check display - Tree has been updated
+        top_level_items = [
+            picturesTree.topLevelItem(i).text(0)
+            for i in range(picturesTree.topLevelItemCount())
+        ]
+        assert "Georgia" in top_level_items, "Georgia still in the tree"
+        assert "Korea" not in top_level_items, "Korea removed from the tree"
+
+    def test_pictures_tree_trip_wrong_action_name(self, qtbot, monkeypatch):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Trigger the addition of an impossible action
+        trip_item = picturesTree.topLevelItem(4)  # Korea
+        picturesTree.generate_context_menu(trip_item)
+        action_name = "Action does not exist"
+        with pytest.raises(ValueError):
+            picturesTree.add_trip_action("", "", action_name, "", "", "")
+
+    def test_pictures_tree_picture_group_copy(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+
+        # Look for "Change trip" action
+        picturesTree.generate_context_menu(picture_item)
+        action_name = "Copy all images from Temporary to Archive"
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+
+        # Trigger action - 1 image copied
+        with qtbot.waitSignal(picture_group.pictureAdded, timeout=2000):
+            action.trigger()
+
+        # Check files have been created & models updated
+        new_files = [
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_RT.jpg"),
+        ]
+        self.helper_check_paths(action_name, new_files)
+        assert (
+            len(picture_group.locations["Archive"]) == 2
+        ), "Archive has 2 IMG001 pictures"
+
+        # Check display - Tree has been updated
+        assert picture_item.data(1, Qt.DisplayRole) == str(0), "0 image in Camera"
+        assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
+        assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 image in Archive"
+
+    def test_pictures_tree_picture_group_convert(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(1)  # Malta's IMG002
+        picture_group = picturesController.repository.trips["Malta"]["IMG002"]
+
+        # Look for convert action
+        picturesTree.generate_context_menu(picture_item)
+        menu_name = "Convert images in Archive"
+        action_name = "Using DarkTherapee"
+        menu = [
+            m
+            for m in picturesTree.menu.children()
+            if isinstance(m, QtWidgets.QMenu) and m.title() == menu_name
+        ][0]
+        action = [a for a in menu.actions() if a.text() == action_name][0]
+
+        # Trigger action - 1 image added
+        with qtbot.waitSignal(picture_group.pictureAdded, timeout=2000):
+            action.trigger()
+
+        # Check files have been created & models updated
+        new_files = [
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002_DT.jpg"),
+        ]
+        self.helper_check_paths(action_name, new_files)
+        assert (
+            len(picture_group.locations["Archive"]) == 2
+        ), "Archive has 2 IMG002 pictures"
+
+        # Check display - Tree has been updated
+        assert picture_item.data(1, Qt.DisplayRole) == str(0), "0 image in Camera"
+        assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
+        assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 image in Archive"
+
+    def test_pictures_tree_picture_group_change_trip(self, qtbot, monkeypatch):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(1)  # Malta's IMG002
+        picture_group = picturesController.repository.trips["Malta"]["IMG002"]
+
+        # Look for "Change trip" action
+        picturesTree.generate_context_menu(picture_item)
+        action_name = "Change trip to ..."
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+
+        # Monkeypatch the dialog to return what we want
+        monkeypatch.setattr(
+            QtWidgets.QInputDialog, "getText", lambda *args: ("Italy", True)
+        )
+
+        # Trigger action - 1 image added
+        with qtbot.waitSignal(picture_group.pictureRemoved, timeout=2000):
+            action.trigger()
+
+        # Check files have been created & models updated
+        self.all_folders += [
+            os.path.join(BASE_FOLDER, "Temporary", "Italy"),
+            os.path.join(BASE_FOLDER, "Archive", "Italy"),
+        ]
+        new_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Italy", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Italy", "IMG002_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Italy", "IMG002.CR2"),
+        ]
+        removed_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
+        ]
+        self.helper_check_paths(action_name, new_files, removed_files)
+        picture_group = picturesController.repository.trips["Italy"]["IMG002"]
+        assert (
+            len(picture_group.locations["Archive"]) == 1
+        ), "Archive has 1 IMG002 picture"
+
+        # Check display - Tree has been updated
+        italy_item = [
+            picturesTree.topLevelItem(i)
+            for i in range(picturesTree.topLevelItemCount())
+            if picturesTree.topLevelItem(i).text(0) == "Italy"
+        ][0]
+        picture_item = italy_item.child(0)
+        assert italy_item.data(0, Qt.DisplayRole) == "Italy", "New trip displayed"
+        assert picture_item.data(0, Qt.DisplayRole) == "IMG002", "New picture displayed"
+        assert picture_item.data(1, Qt.DisplayRole) == str(0), "0 image in Camera"
+        assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
+        assert picture_item.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
+
+    def test_pictures_tree_picture_group_change_trip_target_exists(
+        self, qtbot, monkeypatch
+    ):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(1)  # Malta's IMG002
+        picture_group = picturesController.repository.trips["Malta"]["IMG002"]
+
+        # Look for "Change trip" action
+        picturesTree.generate_context_menu(picture_item)
+        action_name = "Change trip to ..."
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+
+        # Monkeypatch the dialog to return what we want
+        monkeypatch.setattr(
+            QtWidgets.QInputDialog, "getText", lambda *args: ("Georgia", True)
+        )
+
+        # Trigger action - 1 image added
+        with qtbot.waitSignal(picture_group.pictureRemoved, timeout=2000):
+            action.trigger()
+
+        # Check files have been created & models updated
+        self.all_folders += [
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia"),
+            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
+        ]
+        new_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG002_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG002.CR2"),
+        ]
+        removed_files = [
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
+        ]
+        self.helper_check_paths(action_name, new_files, removed_files)
+        picture_group = picturesController.repository.trips["Georgia"]["IMG002"]
+        assert (
+            len(picture_group.locations["Archive"]) == 1
+        ), "Archive has 1 IMG002 picture"
+
+        # Check display - Tree has been updated
+        italy_item = [
+            picturesTree.topLevelItem(i)
+            for i in range(picturesTree.topLevelItemCount())
+            if picturesTree.topLevelItem(i).text(0) == "Georgia"
+        ][0]
+        picture_item = [
+            italy_item.child(i)
+            for i in range(italy_item.childCount())
+            if italy_item.child(i).data(0, Qt.DisplayRole) == "IMG002"
+        ][0]
+        assert italy_item.data(0, Qt.DisplayRole) == "Georgia", "New trip displayed"
+        assert picture_item.data(0, Qt.DisplayRole) == "IMG002", "New picture displayed"
+        assert picture_item.data(1, Qt.DisplayRole) == str(0), "0 image in Camera"
+        assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
+        assert picture_item.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
+
+    def test_pictures_tree_picture_group_wrong_action_name(self, qtbot, monkeypatch):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Trigger the addition of an impossible action
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(1)  # Malta's IMG002
+        picturesTree.generate_context_menu(picture_item)
+        action_name = "Action does not exist"
+        with pytest.raises(ValueError):
+            picturesTree.add_picture_group_action("", "", action_name, "", "", "")
 
 
 if __name__ == "__main__":
