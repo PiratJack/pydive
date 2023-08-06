@@ -533,13 +533,15 @@ class PicturesTree(BaseTreeWidget):
         picture_group_widget : QtWidgets.QTreeWidgetItem
             The picture group to remove
         """
+        if picture_group_widget is None:
+            return
+        # This means it has been deleted from the tree before
+        if picture_group_widget.parent() is None:
+            return
         logger.debug(
             f"PicturesTree.remove_picture_group: {picture_group_widget.data(0, Qt.DisplayRole)} from {picture_group_widget.parent().data(0, Qt.DisplayRole)}"
         )
         trip_widget = picture_group_widget.parent()
-        # This means it has been deleted from the tree before
-        if not trip_widget:
-            return
         trip_widget.removeChild(picture_group_widget)
         if trip_widget.childCount() == 0:
             logger.info(
@@ -744,15 +746,9 @@ class PictureGrid:
         logger.info("PictureGrid.clear_display")
         for row in self.grid:
             for element in row:
-                if type(element) == PictureContainer:
-                    self.ui["layout"].removeWidget(element.display_widget)
-                    element.display_widget.deleteLater()
-                    element.display_widget = None
-                    del element
-                else:
-                    self.ui["layout"].removeWidget(element)
-                    element.deleteLater()
-                    element = None
+                self.ui["layout"].removeWidget(element)
+                element.deleteLater()
+                element = None
         self.grid = []
 
         if self.picture_group:
@@ -782,19 +778,14 @@ class PictureGrid:
             )
             return
 
-        try:
-            label = _("Convert 1 image in {location}").format(
-                location=target_location.name
-            )
-            logger.info(
-                f"PictureGrid.generate_image {self.picture_group.trip}/{self.picture_group.name} using {method} to {target_location.name}"
-            )
-            self.repository.generate_pictures(
-                label, target_location, [method], picture_group=self.picture_group
-            )
-            # Updated data will be displayed through the signals directly
-        except FileNotFoundError as e:
-            self.picture_containers[row][column].display_error("".join(e.args))
+        label = _("Convert 1 image in {location}").format(location=target_location.name)
+        logger.info(
+            f"PictureGrid.generate_image {self.picture_group.trip}/{self.picture_group.name} using {method} to {target_location.name}"
+        )
+        self.repository.generate_pictures(
+            label, target_location, [method], picture_group=self.picture_group
+        )
+        # Updated data will be displayed through the signals directly
 
     def copy_image(self, row, column):
         """Copies an image to the provided row & column
@@ -841,11 +832,7 @@ class PictureGrid:
             The column in which to copy the image"""
         logger.debug(f"PictureGrid.delete_image row {row}, column {column}")
 
-        try:
-            picture = self.picture_containers[row][column].picture
-        except:
-            self.picture_containers[row][column].display_error(_("No image to delete"))
-            return
+        picture = self.picture_containers[row][column].picture
 
         label = _("Remove 1 image in {target}").format(target=picture.location.name)
         logger.info(
@@ -962,13 +949,6 @@ class PictureContainer:
         self.clear_display()
         self.picture = picture
 
-        # Clean existing elements
-        for i in ["filename", "label", "generate", "image", "delete"]:
-            if i in self.ui["elements"]:
-                self.ui["elements"][i].deleteLater()
-                self.ui["layout"].removeWidget(self.ui["elements"][i])
-                del self.ui["elements"][i]
-
         self.ui["elements"]["filename"] = QtWidgets.QLabel(self.picture.filename)
         self.ui["layout"].addWidget(self.ui["elements"]["filename"])
 
@@ -997,14 +977,23 @@ class PictureContainer:
 
     def on_click_generate(self):
         """Handler for generate button: triggers parent's handler"""
+        logger.debug(
+            f"PictureContainer.on_click_generate in row {self.row}, column {self.column}"
+        )
         self.parent_controller.generate_image(self.row, self.column)
 
     def on_click_copy(self):
         """Handler for copy button: triggers parent's handler"""
+        logger.debug(
+            f"PictureContainer.on_click_copy in row {self.row}, column {self.column}"
+        )
         self.parent_controller.copy_image(self.row, self.column)
 
     def on_click_delete(self):
         """Handler for delete button: deletes the image & refreshes the screen"""
+        logger.debug(
+            f"PictureContainer.on_click_delete in row {self.row}, column {self.column}"
+        )
         dialog = QtWidgets.QMessageBox(self.ui["main"])
         dialog.setWindowTitle("Please confirm")
         dialog.setText("Do you really want to delete this image?")
