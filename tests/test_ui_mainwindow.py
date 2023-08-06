@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.WARNING)
 DATABASE_FILE = "test.sqlite"
 
 
-class TestUiSettings:
+class TestUiMainWindow:
     @pytest.fixture(scope="function", autouse=True)
     def setup_and_teardown(self, qtbot):
         self.database = databasemodel.Database(DATABASE_FILE)
