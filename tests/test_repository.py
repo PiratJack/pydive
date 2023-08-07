@@ -753,18 +753,19 @@ class TestRepository:
 
         self.helper_check_paths(test, new_files, should_not_exist)
 
-    def test_repository_change_trip_picture_group(self):
+    def test_repository_change_trip_picture_group(self, qtbot):
         test = "Picture change trip: only picture group provided"
         target_trip = "Korea"
         source_trip = None
         picture_group = self.repository.trips["Sweden"]["IMG040"]
 
-        self.repository.change_trip_pictures(
-            test,
-            target_trip,
-            source_trip,
-            picture_group,
-        )
+        with qtbot.waitSignal(picture_group.pictureRemoved):
+            self.repository.change_trip_pictures(
+                test,
+                target_trip,
+                source_trip,
+                picture_group,
+            )
 
         new_files = [
             os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
@@ -782,10 +783,13 @@ class TestRepository:
 
         self.helper_check_paths(test, new_files, should_not_exist)
 
-        # TODO: Those 2 tests fail, because change_trip_pictures_finished doesn't seem to be triggered
-        # See test_repository_change_trip_pictures_finished for actual test of that function
-        # #self.assertNotIn("IMG040", self.repository.trips["Sweden"], test)
-        # #self.assertIn("IMG040", self.repository.trips["Korea"], test)
+        # Check pictures are updates (only IMG040.CR2 is actually checked)
+        picture = self.repository.trips["Korea"]["IMG040"].pictures[""][0]
+        new_path = os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2")
+        assert "IMG040" not in self.repository.trips["Sweden"], test
+        assert "IMG040" in self.repository.trips["Korea"], test
+        assert picture.path == new_path, test
+        assert picture.trip == target_trip, test
 
     def test_repository_change_trip_source_trip(self):
         test = "Picture change trip: only trip provided"
@@ -865,33 +869,6 @@ class TestRepository:
 
         self.helper_check_paths(test, new_files, should_not_exist)
         logger.setLevel(logging.WARNING)
-
-    def test_repository_change_trip_pictures_finished(self):
-        test = "Picture change trip: test _finished function"
-        target_trip = "Korea"
-        source_trip = "Sweden"
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
-        target_picture_group = PictureGroup(picture_group.name)
-        target_picture_group.trip = target_trip
-
-        # This avoids "dict has changed shape during iteration" errors
-        pictures = picture_group.pictures.copy()
-        for conversion_type in pictures:
-            for picture in pictures[conversion_type]:
-                new_path = picture.path.replace(source_trip, target_trip)
-                self.repository.change_trip_pictures_finished(
-                    picture_group, picture, new_path, target_picture_group
-                )
-                assert picture.path == new_path, test
-                assert picture.trip == target_trip, test
-                if conversion_type in target_picture_group.pictures:
-                    paths = [
-                        p.path for p in target_picture_group.pictures[conversion_type]
-                    ]
-                else:
-                    paths = [p.path for p in target_picture_group.pictures[""]]
-                assert picture.path in paths, test
-            assert conversion_type not in picture_group.pictures, test
 
     def test_repository_remove_pictures_1_picture(self):
         test = "Picture remove: actual deletion of 1 picture"
