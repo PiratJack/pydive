@@ -628,6 +628,7 @@ class ProcessGroup(QtCore.QObject):
     """
 
     finished = QtCore.pyqtSignal()
+    progressUpdate = QtCore.pyqtSignal()
 
     def __init__(self, label):
         """Stores basic information about the task group
@@ -651,8 +652,8 @@ class ProcessGroup(QtCore.QObject):
         process : *Process
             The process to add
         """
-        logger.debug("ProcessGroup.add_task")
-        task = {"status": "Queued"}
+        logger.debug(f"ProcessGroup.add_task {self.label} - {process}")
+        task = {"status": "Queued", "name": str(process)}
         self.tasks.append(task)
         process.signals.taskFinished.connect(
             lambda _a, _b, path: self.task_done(task, path)
@@ -671,7 +672,7 @@ class ProcessGroup(QtCore.QObject):
         path : str
             The path of the newly created image
         """
-        logger.debug("ProcessGroup.task_done")
+        logger.debug(f"ProcessGroup.task_done {self.label} - {task['name']}")
         task["status"] = "Stopped"
         task["file_path"] = path
         self.update_progress()
@@ -686,18 +687,33 @@ class ProcessGroup(QtCore.QObject):
         error : str
             The error message
         """
-        logger.debug("ProcessGroup.task_error")
+        logger.debug(f"ProcessGroup.task_error {self.label} - {task['name']}")
         task["status"] = "Stopped"
         task["error"] = error
         self.update_progress()
 
     def update_progress(self):
         """Updates the progress. Emits finished signal once complete."""
-        done = len([t for t in self.tasks if t["status"] == "Stopped"])
-        self.progress = done / len(self.tasks)
-        if done == len(self.tasks):
+        logger.debug(f"ProcessGroup.update_progress {self.label}")
+        progress = self.count_completed / len(self.tasks)
+        if progress != self.progress:
+            self.progress = progress
+            self.progressUpdate.emit()
+        if self.count_completed == len(self.tasks):
             logger.info(f"ProcessGroup finished {self.label}")
             self.finished.emit()
+
+    @property
+    def count_completed(self):
+        return len([t for t in self.tasks if t["status"] == "Stopped"])
+
+    @property
+    def count_total(self):
+        return len(self.tasks)
+
+    @property
+    def count_errors(self):
+        return len([t for t in self.tasks if "error" in t])
 
     def __repr__(self):
         return f"{self.label} ({len(self.tasks)} tasks)"
@@ -749,6 +765,7 @@ class CopyProcess(QtCore.QRunnable):
         Will emit finished signal once copy is complete
         """
         # Check target doesn't exist already
+        logger.debug(f"CopyProcess.run {self.source_file} to {self.target_file}")
         if os.path.exists(self.target_file):
             logger.warning(
                 f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Target file exists"
@@ -842,6 +859,9 @@ class GenerateProcess(QtCore.QRunnable):
         Will emit finished signal once process is complete
         """
         # Check target doesn't exist already
+        logger.debug(
+            f"GenerateProcess.run {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name}..{os.path.basename(self.target_file)}"
+        )
         if os.path.exists(self.target_file):
             logger.warning(
                 f"GenerateProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name} - Target file exists"
@@ -909,6 +929,7 @@ class RemoveProcess(QtCore.QRunnable):
         Will emit finished signal once process is complete
         """
         # Check target doesn't exist already
+        logger.debug(f"RemoveProcess.run {self.file}")
         if not os.path.exists(self.file):
             logger.warning(
                 f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: File does not exist"
@@ -1000,6 +1021,9 @@ class ChangeTripProcess(QtCore.QRunnable):
         Will emit error signal if target file already exists
         Will emit finished signal once process is complete
         """
+        logger.debug(
+            f"ChangeTripProcess.run {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}"
+        )
         # Check target doesn't exist already
         if os.path.exists(self.target_file):
             logger.warning(
