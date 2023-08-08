@@ -7,7 +7,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 
-import models.database as databasemodel
+import models.database
 
 from models.base import ValidationException
 from models.conversionmethod import ConversionMethod
@@ -15,7 +15,6 @@ from models.conversionmethod import ConversionMethod
 logging.basicConfig(level=logging.WARNING)
 
 DATABASE_FILE = "test.sqlite"
-database = databasemodel.Database(DATABASE_FILE)
 
 try:
     os.remove(DATABASE_FILE)
@@ -26,7 +25,7 @@ except OSError:
 class TestStorageLocation:
     @pytest.fixture(scope="function", autouse=True)
     def setup_and_teardown(self):
-        self.database = databasemodel.Database(DATABASE_FILE)
+        self.database = models.database.Database(DATABASE_FILE)
         self.database.session.add_all(
             [
                 ConversionMethod(

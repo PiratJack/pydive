@@ -10,11 +10,10 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 
 import controllers.mainwindow
-import models.database as databasemodel
+import models.database
 import models.repository
 
 from models.conversionmethod import ConversionMethod
-from models.picturegroup import PictureGroup
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
 from models.picture import Picture, StorageLocationCollision
@@ -22,7 +21,6 @@ from models.picture import Picture, StorageLocationCollision
 logging.basicConfig(level=logging.WARNING)
 
 DATABASE_FILE = "test.sqlite"
-database = databasemodel.Database(DATABASE_FILE)
 
 BASE_FOLDER = (
     os.path.join("test_images" + str(int(datetime.datetime.now().timestamp())))
@@ -91,7 +89,7 @@ class TestRepository:
             os.remove(DATABASE_FILE)
         except OSError:
             pass
-        self.database = databasemodel.Database(DATABASE_FILE)
+        self.database = models.database.Database(DATABASE_FILE)
         self.database.session.add_all(
             [
                 # Test with final "/" in path

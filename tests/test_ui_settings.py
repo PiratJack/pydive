@@ -9,7 +9,7 @@ from PyQt5.QtCore import Qt
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import models.database as databasemodel
+import models.database
 import models.repository
 import controllers.mainwindow
 from controllers.widgets.pathselectbutton import PathSelectButton
@@ -83,7 +83,7 @@ class TestUiSettings:
             os.remove(DATABASE_FILE)
         except OSError:
             pass
-        self.database = databasemodel.Database(DATABASE_FILE)
+        self.database = models.database.Database(DATABASE_FILE)
         self.database.session.add_all(
             [
                 # Test with final "/" in path
