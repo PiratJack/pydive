@@ -4,7 +4,12 @@ Classes
 ----------
 PicturesTree
     The tree displaying the pictures
-
+PictureGrid
+    Displays all pictures of a given group in a grid format
+PictureContainer
+    Displays a single image as well as the related action buttons
+PictureDisplay
+    Displays a single image while preserving aspect ratio when resizing
 PicturesController
     Picture organization, selection & link to trips
 """
@@ -56,8 +61,10 @@ class PicturesTree(BaseTreeWidget):
         Adds all trips & pictures to the tree
     add_trip (trip)
         Adds a single trip to the tree
-    add_picture_group (trip_widget, picture_group)
+    add_picture_group (trip_widget, picture_group, picture_group_widget)
         Adds a single picture group to the tree
+    remove_picture_group (picture_group_widget)
+        Removes a picture group from display
     on_item_clicked (item)
         Item clicked ==> display corresponding images
     """
@@ -600,12 +607,18 @@ class PictureGrid:
         Stores reference to parent controller + initializes the display
     display_picture_group (picture_group)
         Displays the provided picture group in the grid
+    picture_added (picture, conversion_type)
+        Adds a picture on display (used for signal processing)
+    picture_removed (conversion_type, location)
+        Removes a picture from display (used for signal processing)
     clear_display
         Removes all widgets from the display & deletes them properly
     generate_image (row, column)
         Generates an image for the provided row & column
     copy_image (row, column)
         Copies an image to the provided row & column
+    delete_image (row, column)
+        Deletes the image in the provided row & column
     """
 
     def __init__(self, parent_controller):

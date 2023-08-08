@@ -4,6 +4,10 @@ Classes
 ----------
 SettingsController
     Settings screen: Define locations for picture storage, Subsurface file, ...
+LocationsList
+    Displays locations & allows to modify them
+ConversionMethodsList
+    Displays conversion methods & allows to modify them
 """
 import gettext
 import logging
@@ -44,16 +48,24 @@ class LocationsList:
         Stores reference to parent controller & defines UI elements.
     add_location_ui (location_model)
         Adds the fields for the provided location
-    on_click_name_change
+    on_click_name_change (location_id)
         Displays fields to modify the location name
-    on_validate_name_change
+    on_validate_name_change (location_id)
         Saves the storage location name
-    on_validate_path_change
+    on_validate_path_change (location_id, path)
         Saves the storage location path
     on_click_new_location
         Displays all the fields to create a new location
     on_validate_new_location
         Saves a new location
+    on_click_delete_location (location_id)
+        Deletes a location
+    display_error (location_id, field, message)
+        Displays an error for a given location & field
+    clear_error (location_id, field)
+        Hides all errors of a given location & field
+    delete_fields_for_location (location_id)
+        Removes a location from display
     refresh_display
         Updates the locations names & paths displayed on screen
     """
@@ -547,12 +559,20 @@ class ConversionMethodsList:
         Adds the fields for the provided conversion method
     on_click_field_change
         Displays fields to modify the conversion method name
-    on_validate_field_change
+    on_validate_field_change (field, method_id)
         Saves the storage conversion method name
-    on_click_new_method
+    on_click_new_method (field, method_id)
         Displays all the fields to create a new conversion method
     on_validate_new_method
         Saves a new conversion method
+    on_click_delete_method (method_id)
+        Deletes a given conversion method
+    display_error (method_id, field, message)
+        Displays an error for a given method & field
+    clear_error (method_id, field)
+        Hides all errors of a given method & field
+    delete_fields_for_method (method_id)
+        Removes a method from display
     refresh_display
         Updates the conversion methods names & commands displayed on screen
     """
@@ -982,20 +1002,8 @@ class SettingsController:
     -------
     __init__ (parent_window)
         Stores reference to parent window & defines UI elements.
-    add_location_ui (location_model)
-        Adds the fields for the provided location
-    on_click_name_change
-        Displays fields to modify the location name
-    on_validate_name_change
-        Saves the storage location name
-    on_validate_path_change
-        Saves the storage location path
-    on_click_new_location
-        Displays all the fields to create a new location
-    on_validate_new_location
-        Saves a new location
     refresh_display
-        Updates the locations names & paths displayed on screen
+        Updates the display of all on-screen elements
     """
 
     name = _("Settings")
