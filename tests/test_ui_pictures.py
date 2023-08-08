@@ -12,6 +12,8 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 
 import models.database as databasemodel
+import models.repository
+
 import controllers.mainwindow
 from controllers.pictures import PictureDisplay
 from controllers.widgets.iconbutton import IconButton
@@ -143,7 +145,10 @@ class TestUiPictures:
         self.database.session.close()
         self.database.engine.dispose()
 
-        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
+        self.repository = models.repository.Repository(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(
+            self.database, self.repository
+        )
 
         yield
 
@@ -1013,6 +1018,14 @@ class TestUiPictures:
         ), "Archive has 1 IMG002 picture"
 
         # Check display - Tree has been updated
+        qtbot.waitUntil(
+            lambda: any(
+                [
+                    picturesTree.topLevelItem(i).text(0) == "Italy"
+                    for i in range(picturesTree.topLevelItemCount())
+                ]
+            )
+        )
         italy_item = [
             picturesTree.topLevelItem(i)
             for i in range(picturesTree.topLevelItemCount())

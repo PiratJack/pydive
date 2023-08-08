@@ -75,10 +75,11 @@ class Repository:
         self.picture_groups = []
         self.process_groups = []
         self.database = database
+        self.load_pictures()
         # TODO: Darktherapee prevents multithreading, hence this (ugly) workaround
         QtCore.QThreadPool.globalInstance().setMaxThreadCount(1)
 
-    def load_pictures(self, storage_locations):
+    def load_pictures(self):
         """Loads all pictures from the provided storage locations (folders)
 
         Pictures are added in the corresponding picture_group
@@ -89,9 +90,8 @@ class Repository:
             The storage locations
         """
         # Find all pictures
-        logger.info(f"Repository.load_pictures in {storage_locations}")
-        self.storage_locations += storage_locations.copy()
-        self.storage_locations = list(set(self.storage_locations))
+        logger.info("Repository.load_pictures")
+        self.storage_locations = self.database.storagelocations_get_folders()
         self.picture_groups = []
         for location in self.storage_locations:
             pictures = self.read_folder([], location.path)

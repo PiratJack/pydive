@@ -39,8 +39,9 @@ class PyDive:
             "messages", localedir=self.LOCALE_FOLDER, languages=["fr"]
         ).install()
 
-        # Connect to database
+        # Connect to database & repository
         self.database = models.database.Database(self.DATABASE_FILE)
+        self.repository = models.repository.Repository(self.database)
 
         # Change platform to avoid Wayland-related warning messages
         if sys.platform == "linux":
@@ -51,7 +52,7 @@ class PyDive:
         with open(self.STYLESHEET_FILE, "r", encoding="UTF-8") as stylesheet:
             app.setStyleSheet(stylesheet.read())
 
-        window = controllers.mainwindow.MainWindow(self.database)
+        window = controllers.mainwindow.MainWindow(self.database, self.repository)
         window.showMaximized()
         app.exec_()
 

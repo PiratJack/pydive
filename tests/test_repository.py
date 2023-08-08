@@ -11,12 +11,12 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 import controllers.mainwindow
 import models.database as databasemodel
+import models.repository
 
 from models.conversionmethod import ConversionMethod
 from models.picturegroup import PictureGroup
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
-from models.repository import Repository
 from models.picture import Picture, StorageLocationCollision
 
 logging.basicConfig(level=logging.WARNING)
@@ -150,10 +150,11 @@ class TestRepository:
 
         # Load the pictures
         self.locations = self.database.storagelocations_get_folders()
-        self.repository = Repository(self.database)
-        self.repository.load_pictures(self.locations)
 
-        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
+        self.repository = models.repository.Repository(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(
+            self.database, self.repository
+        )
 
         yield
 
@@ -212,9 +213,11 @@ class TestRepository:
                 type="folder",
                 path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
             )
+            self.database.session.add(new_location)
+            self.database.session.commit()
             logger = logging.getLogger("models.picture")
             logger.setLevel(logging.CRITICAL)
-            self.repository.load_pictures([new_location])
+            self.repository.load_pictures()
             logger.setLevel(logging.WARNING)
             pytest.fail(test)
 
@@ -227,7 +230,9 @@ class TestRepository:
             type="folder",
             path=os.path.join(BASE_FOLDER, "Archive_outside_DB"),
         )
-        self.repository.load_pictures([new_location])
+        self.database.session.add(new_location)
+        self.database.session.commit()
+        self.repository.load_pictures()
         assert len(self.repository.trips) == nb_trips_before + 1, test
 
     def test_storage_location_add_with_collision(self):
@@ -238,10 +243,12 @@ class TestRepository:
             type="folder",
             path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
+        self.database.session.add(new_location)
+        self.database.session.commit()
         with pytest.raises(StorageLocationCollision) as cm:
             logger = logging.getLogger("models.picture")
             logger.setLevel(logging.CRITICAL)
-            self.repository.load_pictures([new_location])
+            self.repository.load_pictures()
             logger.setLevel(logging.WARNING)
             pytest.fail(test)
         assert cm.value.args[0] == "recognition failed", test
@@ -766,6 +773,8 @@ class TestRepository:
                 source_trip,
                 picture_group,
             )
+        # Make sure models have time to update
+        qtbot.waitUntil(lambda: "IMG040" not in self.repository.trips["Sweden"])
 
         new_files = [
             os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),

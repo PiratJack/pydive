@@ -10,6 +10,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 import models.database as databasemodel
+import models.repository
 import controllers.mainwindow
 from controllers.widgets.pathselectbutton import PathSelectButton
 from controllers.widgets.iconbutton import IconButton
@@ -141,7 +142,10 @@ class TestUiSettings:
         self.database.session.close()
         self.database.engine.dispose()
 
-        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
+        self.repository = models.repository.Repository(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(
+            self.database, self.repository
+        )
 
         yield
 

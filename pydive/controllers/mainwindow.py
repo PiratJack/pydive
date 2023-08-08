@@ -30,7 +30,7 @@ class MainWindow(QtWidgets.QMainWindow):
         The toolbar displayed on the left
     """
 
-    def __init__(self, database):
+    def __init__(self, database, repository):
         """Stores subwindows, displays toolbar and creates the layout
 
         Parameters
@@ -41,6 +41,7 @@ class MainWindow(QtWidgets.QMainWindow):
         logger.debug("MainWindow.init")
         super(MainWindow, self).__init__()
         self.database = database
+        self.repository = repository
 
         self.controllers = {
             "Settings": controllers.settings.SettingsController(self),

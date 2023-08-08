@@ -6,6 +6,7 @@ import logging
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
+import models.repository
 
 import controllers.mainwindow
 import models.database as databasemodel
@@ -19,7 +20,10 @@ class TestUiMainWindow:
     @pytest.fixture(scope="function", autouse=True)
     def setup_and_teardown(self, qtbot):
         self.database = databasemodel.Database(DATABASE_FILE)
-        self.mainwindow = controllers.mainwindow.MainWindow(self.database)
+        self.repository = models.repository.Repository(self.database)
+        self.mainwindow = controllers.mainwindow.MainWindow(
+            self.database, self.repository
+        )
 
         yield
 

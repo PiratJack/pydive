@@ -11,11 +11,11 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 
 import models.database as databasemodel
+import models.repository
 
 from models.conversionmethod import ConversionMethod
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
-from models.repository import Repository
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -150,8 +150,7 @@ class TestRepositoryGeneration:
 
         # Load the pictures
         self.locations = self.database.storagelocations_get_folders()
-        self.repository = Repository(self.database)
-        self.repository.load_pictures(self.locations)
+        self.repository = models.repository.Repository(self.database)
 
         yield
 

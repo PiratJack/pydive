@@ -19,7 +19,6 @@ import logging
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
-import models.repository
 from controllers.widgets.basetreewidget import BaseTreeWidget
 from controllers.widgets.iconbutton import IconButton
 
@@ -319,7 +318,7 @@ class PicturesTree(BaseTreeWidget):
             target_trip_widget = widgets[0]
 
         # Need to refresh the repository, otherwise it'll be missing pictures
-        self.repository.load_pictures(self.parent_controller.folders)
+        self.repository.load_pictures()
         picture_groups = self.repository.trips[target_trip].values()
         logger.debug(
             f"PicturesTree.change_trip_name: processing {len(picture_groups)} groups"
@@ -1119,7 +1118,7 @@ class PicturesController:
         logger.debug("PicturesController.init")
         self.parent_window = parent_window
         self.database = parent_window.database
-        self.repository = models.repository.Repository(parent_window.database)
+        self.repository = parent_window.repository
         self.folders = []
 
         self.ui = {}
@@ -1184,7 +1183,7 @@ class PicturesController:
         logger.debug(
             f"PicturesController.on_load_pictures on {len(self.folders)} folders"
         )
-        self.repository.load_pictures(self.folders)
+        self.repository.load_pictures()
 
         self.ui["picture_tree"].fill_tree()
 
