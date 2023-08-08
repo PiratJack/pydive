@@ -26,6 +26,9 @@ msgstr "Choisir un fichier"
 msgid "Command to execute"
 msgstr "Commande à exécuter"
 
+msgid "Completed"
+msgstr ""
+
 msgid "Conversion methods"
 msgstr "Méthode de conversion"
 
@@ -48,6 +51,9 @@ msgstr "Copier les images de {source} vers {target}"
 msgid "Copy image here"
 msgstr "Copier l'image ici"
 
+msgid "Details"
+msgstr ""
+
 msgid "Dive log file"
 msgstr "Historique des plongées"
 
@@ -68,6 +74,9 @@ msgstr ""
 "%TARGET_FILE% sera remplacé par le chemin complet du fichier cible\n"
 "%TARGET_FOLDER% sera remplacé par le chemin complet du dossier cible"
 
+msgid "Errors"
+msgstr ""
+
 msgid "File name suffix"
 msgstr "Suffixe de nom de fichier"
 
@@ -82,6 +91,9 @@ msgstr "Lieu de stockage d'images"
 
 msgid "Image unreadable"
 msgstr "Image non lisible"
+
+msgid "In-progress tasks"
+msgstr ""
 
 msgid "Load pictures"
 msgstr "Charger les photos"
@@ -133,6 +145,9 @@ msgstr "Photos"
 msgid "Please confirm"
 msgstr "Veuillez confirmer"
 
+msgid "Progress"
+msgstr ""
+
 msgid "RAW"
 msgstr "BRUT"
 
@@ -155,11 +170,20 @@ msgstr "Le type de lieu de stockage est invalide"
 msgid "Target file already exists"
 msgstr "Le fichier cible existe déjà"
 
+msgid "Task"
+msgstr ""
+
+msgid "Tasks"
+msgstr ""
+
 msgid "The element to delete is not a file"
 msgstr "L'élément à supprimer n'est pas un fichier"
 
 msgid "The file to delete does not exist"
 msgstr "Le fichier à supprimer n'existe pas"
+
+msgid "Total"
+msgstr ""
 
 msgid "Trip name:"
 msgstr "Nom du voyage:"

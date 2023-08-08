@@ -12,6 +12,7 @@ from PyQt5.QtCore import Qt, QSize
 
 import controllers.settings
 import controllers.pictures
+import controllers.tasks
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.controllers = {
             "Settings": controllers.settings.SettingsController(self),
             "Pictures": controllers.pictures.PicturesController(self),
+            "Tasks": controllers.tasks.TasksController(self),
         }
 
         # Define UI elements
