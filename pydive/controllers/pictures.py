@@ -141,15 +141,17 @@ class PicturesTree(BaseTreeWidget):
                 submenu = QtWidgets.QMenu(label, self.menu)
                 self.menu.addMenu(submenu)
 
-                label = _("Using all methods")
+                sublabel = _("Using all methods")
+                full_label = _("Convert images in {location} using all methods").format(location=location.name)
                 self.add_trip_action(
-                    submenu, label, "generate", location, location, trip, methods
+                    submenu, sublabel, "generate", location, location, trip, methods, full_label
                 )
 
                 for method in methods:
-                    label = _("Using {method}").format(method=method.name)
+                    sublabel = _("Using {method}").format(method=method.name)
+                    full_label = _("Convert images in {location} using method {method}").format(location=location.name, method=method.name)
                     self.add_trip_action(
-                        submenu, label, "generate", location, location, trip, [method]
+                        submenu, sublabel, "generate", location, location, trip, [method], full_label
                     )
 
                 self.submenus.append(submenu)
@@ -193,28 +195,19 @@ class PicturesTree(BaseTreeWidget):
                 submenu = QtWidgets.QMenu(label, self.menu)
                 self.menu.addMenu(submenu)
 
-                label = _("Using all methods")
+                sublabel = _("Using all methods")
+                full_label = _("Convert images in {location} using all methods").format(location=location.name)
                 self.add_picture_group_action(
-                    submenu,
-                    label,
-                    "generate",
-                    location,
-                    location,
-                    picture_group,
-                    methods,
+                    submenu, sublabel, "generate", location, location, picture_group, methods, full_label
                 )
 
                 for method in methods:
-                    label = _("Using {method}").format(method=method.name)
+                    sublabel = _("Using {method}").format(method=method.name)
+                    full_label = _("Convert images in {location} using method {method}").format(location=location.name, method=method.name)
                     self.add_picture_group_action(
-                        submenu,
-                        label,
-                        "generate",
-                        location,
-                        location,
-                        picture_group,
-                        [method],
+                        submenu, sublabel, "generate", location, location, picture_group, [method], full_label
                     )
+
 
                 self.submenus.append(submenu)
 
@@ -232,7 +225,7 @@ class PicturesTree(BaseTreeWidget):
                 methods,
             )
 
-    def add_trip_action(self, menu, label, type, source, target, trip, methods=None):
+    def add_trip_action(self, menu, label, type, source, target, trip, methods=None, full_label=None):
         """Right-click menu: adds copy/generate/change trip name to trips
 
         Parameters
@@ -252,17 +245,19 @@ class PicturesTree(BaseTreeWidget):
         methods : list of ConversionMethods
             Which conversion method to use when the user clicks (None uses all methods)
         """
+        if not full_label:
+            full_label = label
         action = QtWidgets.QAction(label)
         if type == "copy":
             action.triggered.connect(
                 lambda: self.repository.copy_pictures(
-                    label, target, trip=trip, source_location=source
+                    full_label, target, trip=trip, source_location=source
                 )
             )
         elif type == "generate":
             action.triggered.connect(
                 lambda: self.repository.generate_pictures(
-                    label, target, methods, trip=trip, source_location=source
+                    full_label, target, methods, trip=trip, source_location=source
                 )
             )
         elif type == "change_trip":
@@ -277,7 +272,7 @@ class PicturesTree(BaseTreeWidget):
                 )
                 if confirmed:
                     process_group = self.repository.change_trip_pictures(
-                        label + target_trip,
+                        full_label + target_trip,
                         target_trip,
                         trip,
                     )
@@ -329,7 +324,7 @@ class PicturesTree(BaseTreeWidget):
             self.add_picture_group(target_trip_widget, picture_group)
 
     def add_picture_group_action(
-        self, menu, label, type, source, target, picture_group, methods=None
+        self, menu, label, type, source, target, picture_group, methods=None, full_label=None
     ):
         """Right-click menu: adds copy/generate/change trip to picture groups
 
@@ -350,17 +345,19 @@ class PicturesTree(BaseTreeWidget):
         methods : list of ConversionMethods
             Which conversion method to use when the user clicks (None uses all methods)
         """
+        if not full_label:
+            full_label = label
         action = QtWidgets.QAction(label)
         if type == "copy":
             action.triggered.connect(
                 lambda: self.repository.copy_pictures(
-                    label, target, picture_group=picture_group, source_location=source
+                    full_label, target, picture_group=picture_group, source_location=source
                 )
             )
         elif type == "generate":
             action.triggered.connect(
                 lambda: self.repository.generate_pictures(
-                    label,
+                    full_label,
                     target,
                     methods,
                     picture_group=picture_group,
@@ -380,7 +377,7 @@ class PicturesTree(BaseTreeWidget):
                 if confirmed:
                     source_trip = picture_group.trip
                     process_group = self.repository.change_trip_pictures(
-                        label,
+                        full_label,
                         target_trip,
                         picture_group.trip,
                         picture_group,
@@ -495,6 +492,10 @@ class PicturesTree(BaseTreeWidget):
         picture_group_widget : QtWidgets.QTreeWidgetItem
             If provided, will update the item. Otherwise, creates a new one
         """
+        try:
+            trip_widget.data(0, Qt.DisplayRole)
+        except RuntimeError: # Widget has been deleted since then (race condition)
+            return
         logger.debug(
             f"PicturesTree.add_picture_group: {picture_group.name} in {trip_widget.data(0, Qt.DisplayRole)}"
         )
