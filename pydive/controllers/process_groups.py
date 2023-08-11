@@ -1,9 +1,15 @@
-"""Tasks screen: Displays in-progress background tasks
+"""ProcessGroups screen: Displays in-progress background process groups
 
 Classes
 ----------
-TasksController
-    Tasks screen: Displays in-progress background tasks
+ProcessGroupsTableModel
+    QAbstractModel for mapping of data
+ProgressBarItemDelegate
+    Delegate to display a progress bar rather than simple number
+ProcessGroupsTableView
+    QTableView for display of process groups
+ProcessGroupsController
+    ProcessGroups screen: Displays in-progress background process groups / tasks
 """
 import gettext
 import logging
@@ -17,7 +23,7 @@ _ = gettext.gettext
 logger = logging.getLogger(__name__)
 
 
-class TasksTableModel(QtCore.QAbstractTableModel):
+class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
     """Model for display of transactions, based on user selection
 
     Attributes
@@ -28,8 +34,8 @@ class TasksTableModel(QtCore.QAbstractTableModel):
         A reference to the application database
     accounts : list of models.account.Account
         The accounts for filtering
-    tasks : list of models.repository.ProcessGroup
-        The list of tasks (process groups) to display
+    process_groups : list of models.repository.ProcessGroup
+        The list of process groups to display
 
     Methods
     -------
@@ -65,7 +71,7 @@ class TasksTableModel(QtCore.QAbstractTableModel):
         super().__init__()
         self.columns = columns
         self.repository = repository
-        self.tasks = []
+        self.process_groups = []
 
     def columnCount(self, index):
         """Returns the number of columns
@@ -85,7 +91,7 @@ class TasksTableModel(QtCore.QAbstractTableModel):
         index : QtCore.QModelIndex
             A reference to the cell to display (not used in this method)
         """
-        return len(self.tasks)
+        return len(self.process_groups)
 
     def data(self, index, role):
         """Returns the data or formatting to display in table contents
@@ -108,13 +114,13 @@ class TasksTableModel(QtCore.QAbstractTableModel):
 
         col = index.column()
         if role == Qt.DisplayRole:
-            task = self.tasks[index.row()]
+            process_group = self.process_groups[index.row()]
             return [
-                task.label,
-                task.progress,
-                task.count_completed,
-                task.count_total,
-                task.count_errors,
+                process_group.label,
+                process_group.progress,
+                process_group.count_completed,
+                process_group.count_total,
+                process_group.count_errors,
                 "",
             ][col]
 
@@ -149,9 +155,9 @@ class TasksTableModel(QtCore.QAbstractTableModel):
         return QtCore.QVariant()
 
     def refresh_display(self):
-        """Refreshes the list of tasks displayed"""
-        self.tasks = self.repository.process_groups
-        for row, t in enumerate(self.tasks):
+        """Refreshes the list of process groups displayed"""
+        self.process_groups = self.repository.process_groups
+        for row, t in enumerate(self.process_groups):
             index1 = self.createIndex(row, 0, QtCore.QModelIndex())
             index2 = self.createIndex(row, len(self.columns), QtCore.QModelIndex())
             t.progressUpdate.connect(
@@ -174,8 +180,8 @@ class ProgressBarItemDelegate(QtWidgets.QAbstractItemDelegate):
         )
 
 
-class TasksTableView(QtWidgets.QTableView, autoresize.AutoResize):
-    """Table for display of tasks
+class ProcessGroupsTableView(QtWidgets.QTableView, autoresize.AutoResize):
+    """Table for display of process groups
 
     Attributes
     ----------
@@ -185,7 +191,7 @@ class TasksTableView(QtWidgets.QTableView, autoresize.AutoResize):
         The controller in which this class is displayed
     repository : models.repository.Repository
         A reference to the application repository
-    model : TasksTableModel
+    model : ProcessGroupsTableModel
         The model for interaction with the repository
 
     Methods
@@ -196,7 +202,7 @@ class TasksTableView(QtWidgets.QTableView, autoresize.AutoResize):
 
     columns = [
         {
-            "name": _("Task"),
+            "name": _("Tasks"),
             "size": 0.3,
             "alignment": Qt.AlignLeft,
         },
@@ -233,27 +239,27 @@ class TasksTableView(QtWidgets.QTableView, autoresize.AutoResize):
 
         Parameters
         ----------
-        parent_controller : TasksController
+        parent_controller : ProcessGroupsController
             The controller in which this table is displayed
         """
         super().__init__()
         self.parent_controller = parent_controller
         self.repository = parent_controller.repository
 
-        self.model = TasksTableModel(self.repository, self.columns)
+        self.model = ProcessGroupsTableModel(self.repository, self.columns)
         self.setModel(self.model)
         self.progress_bar = ProgressBarItemDelegate(self)
         self.setItemDelegateForColumn(1, self.progress_bar)
 
     def refresh_display(self):
-        """Refreshes the list of tasks displayed"""
+        """Refreshes the list of process groups displayed"""
         self.model.refresh_display()
         self.model.layoutChanged.emit()
         self.viewport().update()
 
 
-class TasksController:
-    """Tasks screen: Displays in-progress background tasks
+class ProcessGroupsController:
+    """ProcessGroups screen: Displays in-progress background process groups
 
     Attributes
     ----------
@@ -276,10 +282,10 @@ class TasksController:
     __init__ (parent_window)
         Stores reference to parent window & defines UI elements.
     refresh_display
-        Updates the list of in-progress tasks
+        Updates the list of in-progress process groups
     """
 
-    name = _("Tasks")
+    name = _("ProcessGroups")
 
     def __init__(self, parent_window):
         """Stores reference to parent window & defines UI elements
@@ -298,13 +304,13 @@ class TasksController:
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.ui["main"].setLayout(self.ui["layout"])
 
-        self.ui["tasks_list_label"] = QtWidgets.QLabel(_("In-progress tasks"))
-        self.ui["tasks_list_label"].setProperty("class", "title")
-        self.ui["layout"].addWidget(self.ui["tasks_list_label"])
+        self.ui["process_groups_list_label"] = QtWidgets.QLabel(_("In-progress tasks"))
+        self.ui["process_groups_list_label"].setProperty("class", "title")
+        self.ui["layout"].addWidget(self.ui["process_groups_list_label"])
 
-        self.tasks_list = TasksTableView(self)
-        self.ui["tasks_list"] = self.tasks_list
-        self.ui["layout"].addWidget(self.ui["tasks_list"])
+        self.process_groups_list = ProcessGroupsTableView(self)
+        self.ui["process_groups_list"] = self.process_groups_list
+        self.ui["layout"].addWidget(self.ui["process_groups_list"])
 
     @property
     def display_widget(self):
@@ -323,6 +329,6 @@ class TasksController:
         return button
 
     def refresh_display(self):
-        """Updates the tasks displayed on screen"""
-        logger.debug("TasksController.refresh_display")
-        self.tasks_list.refresh_display()
+        """Updates the process groups displayed on screen"""
+        logger.debug("ProcessGroupsController.refresh_display")
+        self.process_groups_list.refresh_display()
