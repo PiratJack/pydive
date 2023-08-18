@@ -113,16 +113,26 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
             return False
 
         col = index.column()
+        process_group = self.process_groups[index.row()]
+        errors = [t['error'] for t in process_group.tasks if 'error' in t]
         if role == Qt.DisplayRole:
-            process_group = self.process_groups[index.row()]
+            if len(errors) ==0:
+                error_text = ''
+            if len(errors) <= 1:
+                error_text = ''.join(errors)
+            else:
+                error_text = _('Hover for error details')
             return [
                 process_group.label,
                 process_group.progress,
                 process_group.count_completed,
                 process_group.count_total,
                 process_group.count_errors,
-                "",
+                error_text,
             ][col]
+
+        if role == Qt.ToolTipRole and col == 5:
+            return "\n".join(errors)
 
         if role == Qt.TextAlignmentRole:
             return self.columns[index.column()]["alignment"]
