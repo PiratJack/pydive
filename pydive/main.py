@@ -9,6 +9,7 @@ import PyQt5
 import models
 import controllers.mainwindow
 import models.database
+import models.repository
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
