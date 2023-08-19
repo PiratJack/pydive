@@ -170,8 +170,7 @@ class PictureGroup(QtCore.QObject):
         self.pictureRemoved.emit(conversion_type, picture.location)
         del picture
 
-        if not self.pictures:
-            # TODO: Picture group: emit deletion only if no pending task?
+        if not self.pictures and not self.tasks:
             logger.debug(
                 f"PictureGroup.remove_picture: emit pictureGroupDeleted for {self.name} during {self.trip}"
             )
