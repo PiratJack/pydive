@@ -24,7 +24,6 @@ from controllers.widgets.iconbutton import IconButton
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class PicturesTree(BaseTreeWidget):
@@ -1175,6 +1174,20 @@ class TasksProgressBar(QtWidgets.QProgressBar):
         if total != 0:
             self.setValue(int(completed / total * 100))
 
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.parent_controller.display_tasks_dialog()
+
+
+class TasksProgressTitle(QtWidgets.QLabel):
+    def __init__(self, label, parent_controller):
+        super().__init__(label, parent_controller.ui["main"])
+        self.parent_controller = parent_controller
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.parent_controller.display_tasks_dialog()
+
 
 # TODO: Allow to zoom on pictures (with sync between images)
 
@@ -1264,7 +1277,7 @@ class PicturesController:
         self.ui["left_layout"].addWidget(self.ui["picture_tree"], 1)
 
         # Tasks in progress
-        self.ui["tasks_label"] = QtWidgets.QLabel(_("In-progress tasks"))
+        self.ui["tasks_label"] = TasksProgressTitle(_("In-progress tasks"), self)
         self.ui["left_layout"].addWidget(self.ui["tasks_label"], 0)
 
         # Progress bar
@@ -1280,7 +1293,11 @@ class PicturesController:
         self.ui["picture_grid"] = PictureGrid(self)
         self.ui["right_layout"].addWidget(self.ui["picture_grid"].display_widget)
 
-        # TODO: Pictures screen > display loading status for background tasks (progress bar)
+        # Dialog for in-progress tasks
+        self.ui["tasks_dialog"] = QtWidgets.QDialog()
+        self.ui["tasks_dialog"].setWindowTitle(_("In-progress tasks"))
+        self.ui["tasks_dialog_layout"] = QtWidgets.QVBoxLayout()
+        self.ui["tasks_dialog"].setLayout(self.ui["tasks_dialog_layout"])
 
     @property
     def display_widget(self):
@@ -1367,6 +1384,20 @@ class PicturesController:
 
         self.ui["tasks_label"].setText(_(f"In-progress tasks: {tasks_in_progress}"))
         self.ui["progress_bar"].update_progress()
+
+    def display_tasks_dialog(self):
+        """Displays the 'in-progress tasks' dialog"""
+
+        if not "tasks_dialog_widget" in self.ui:
+            self.ui["tasks_dialog_widget"] = self.parent_window.controllers[
+                "ProcessGroups"
+            ].display_widget
+            self.ui["tasks_dialog_layout"].addWidget(self.ui["tasks_dialog_widget"])
+
+        self.ui["tasks_dialog"].setMinimumSize(900, 700)
+        self.ui["tasks_dialog"].resize(self.ui["tasks_dialog_layout"].sizeHint())
+        self.ui["tasks_dialog_widget"].show()
+        self.ui["tasks_dialog"].exec()
 
     def display_picture_group(self, picture_group):
         """Displays pictures from a given group"""
