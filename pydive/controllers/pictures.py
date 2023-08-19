@@ -24,6 +24,7 @@ from controllers.widgets.iconbutton import IconButton
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class PicturesTree(BaseTreeWidget):
@@ -321,6 +322,8 @@ class PicturesTree(BaseTreeWidget):
         else:
             raise ValueError("Action must be copy, generate or change_trip")
 
+        action.triggered.connect(self.parent_controller.refresh_progress_bar)
+
         menu.addAction(action)
         self.menu_actions.append(action)
 
@@ -439,6 +442,8 @@ class PicturesTree(BaseTreeWidget):
             action.triggered.connect(lambda: open_dialog(self.parent_controller))
         else:
             raise ValueError("Action must be copy, generate or change_trip")
+
+        action.triggered.connect(self.parent_controller.refresh_progress_bar)
 
         menu.addAction(action)
         self.menu_actions.append(action)
@@ -592,7 +597,6 @@ class PicturesTree(BaseTreeWidget):
 
         # Add "task in progress" icon
         if picture_group.tasks:
-            logger.critical("Displaying tasks in progress")
             picture_group_widget.setData(
                 0, Qt.DecorationRole, QtGui.QIcon("assets/images/hourglass.png")
             )
@@ -1138,6 +1142,40 @@ class PictureDisplay(QtWidgets.QLabel):
             )
 
 
+class TasksProgressBar(QtWidgets.QProgressBar):
+    def __init__(self, parent_controller, repository):
+        logger.debug("TasksProgressBar.__init__")
+        super().__init__(parent_controller.ui["main"])
+        self.repository = repository
+        self.process_groups = self.repository.process_groups
+        self.parent_controller = parent_controller
+        self.connections = []
+        for p in self.process_groups:
+            self.connections.append(
+                p.progressUpdate.connect(self.parent_controller.refresh_progress_bar)
+            )
+
+        self.setMinimum(0)
+        self.setMaximum(100)
+
+    def update_progress(self):
+        logger.debug("TasksProgressBar.update_progress")
+        # Disconnect & reconnect, in case new process groups are added
+        for c in self.connections:
+            self.disconnect(c)
+        for p in self.process_groups:
+            self.connections.append(
+                p.progressUpdate.connect(self.parent_controller.refresh_progress_bar)
+            )
+
+        # Update progress bar display
+        completed = sum([p.count_completed for p in self.process_groups])
+        total = sum([p.count_total for p in self.process_groups])
+
+        if total != 0:
+            self.setValue(int(completed / total * 100))
+
+
 # TODO: Allow to zoom on pictures (with sync between images)
 
 
@@ -1225,6 +1263,14 @@ class PicturesController:
         self.ui["picture_tree"] = PicturesTree(self, self.repository)
         self.ui["left_layout"].addWidget(self.ui["picture_tree"], 1)
 
+        # Tasks in progress
+        self.ui["tasks_label"] = QtWidgets.QLabel(_("In-progress tasks"))
+        self.ui["left_layout"].addWidget(self.ui["tasks_label"], 0)
+
+        # Progress bar
+        self.ui["progress_bar"] = TasksProgressBar(self, self.repository)
+        self.ui["left_layout"].addWidget(self.ui["progress_bar"], 0)
+
         # Right part: choose picture to keep + tasks in progress
         self.ui["right"] = QtWidgets.QWidget()
         self.ui["right_layout"] = QtWidgets.QVBoxLayout()
@@ -1308,6 +1354,19 @@ class PicturesController:
         # Refresh image tree
         self.ui["picture_tree"].set_folders(self.folders)
         self.ui["picture_tree"].fill_tree()
+
+        self.refresh_progress_bar()
+
+    def refresh_progress_bar(self):
+        """Refreshes the progress bar"""
+        logger.debug("PicturesController.refresh_progress_bar")
+        # Refresh progress bar
+        tasks_in_progress = sum(
+            [p.count_total - p.count_completed for p in self.repository.process_groups]
+        )
+
+        self.ui["tasks_label"].setText(_(f"In-progress tasks: {tasks_in_progress}"))
+        self.ui["progress_bar"].update_progress()
 
     def display_picture_group(self, picture_group):
         """Displays pictures from a given group"""
