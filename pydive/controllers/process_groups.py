@@ -22,7 +22,7 @@ from controllers.widgets import autoresize
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
 
-
+# TODO: Allow to cancel background processes
 class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
     """Model for display of transactions, based on user selection
 
@@ -114,14 +114,16 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
 
         col = index.column()
         process_group = self.process_groups[index.row()]
-        errors = [t['error'] for t in process_group.tasks if 'error' in t]
+        errors = [t["error"] for t in process_group.tasks if "error" in t]
         if role == Qt.DisplayRole:
-            if len(errors) ==0:
-                error_text = ''
+            # TODO: Think about how to display the errors
+            # Right now they're not very useful (lack details)
+            if len(errors) == 0:
+                error_text = ""
             if len(errors) <= 1:
-                error_text = ''.join(errors)
+                error_text = "".join(errors)
             else:
-                error_text = _('Hover for error details')
+                error_text = _("Hover for error details")
             return [
                 process_group.label,
                 process_group.progress,
@@ -275,6 +277,8 @@ class ProcessGroupsController:
     ----------
     name : str
         The name of this controller - displayed on top
+    code : str
+        The internal name of this controller - used for references
     parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
         The window displaying this controller
     ui : dict of QtWidgets.QWidget
@@ -295,7 +299,8 @@ class ProcessGroupsController:
         Updates the list of in-progress process groups
     """
 
-    name = _("ProcessGroups")
+    name = _("Tasks in progress")
+    code = "ProcessGroups"
 
     def __init__(self, parent_window):
         """Stores reference to parent window & defines UI elements
@@ -332,10 +337,10 @@ class ProcessGroupsController:
     def toolbar_button(self):
         """Returns a QtWidgets.QAction for display in the main window toolbar"""
         button = QtWidgets.QAction(
-            QtGui.QIcon("assets/images/settings.png"), self.name, self.parent_window
+            QtGui.QIcon("assets/images/cone.png"), self.name, self.parent_window
         )
         button.setStatusTip(self.name)
-        button.triggered.connect(lambda: self.parent_window.display_tab(self.name))
+        button.triggered.connect(lambda: self.parent_window.display_tab(self.code))
         return button
 
     def refresh_display(self):

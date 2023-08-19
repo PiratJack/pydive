@@ -142,16 +142,34 @@ class PicturesTree(BaseTreeWidget):
                 self.menu.addMenu(submenu)
 
                 sublabel = _("Using all methods")
-                full_label = _("Convert images in {location} using all methods").format(location=location.name)
+                full_label = _("Convert images in {location} using all methods").format(
+                    location=location.name
+                )
                 self.add_trip_action(
-                    submenu, sublabel, "generate", location, location, trip, methods, full_label
+                    submenu,
+                    sublabel,
+                    "generate",
+                    location,
+                    location,
+                    trip,
+                    methods,
+                    full_label,
                 )
 
                 for method in methods:
                     sublabel = _("Using {method}").format(method=method.name)
-                    full_label = _("Convert images in {location} using method {method}").format(location=location.name, method=method.name)
+                    full_label = _(
+                        "Convert images in {location} using method {method}"
+                    ).format(location=location.name, method=method.name)
                     self.add_trip_action(
-                        submenu, sublabel, "generate", location, location, trip, [method], full_label
+                        submenu,
+                        sublabel,
+                        "generate",
+                        location,
+                        location,
+                        trip,
+                        [method],
+                        full_label,
                     )
 
                 self.submenus.append(submenu)
@@ -196,18 +214,35 @@ class PicturesTree(BaseTreeWidget):
                 self.menu.addMenu(submenu)
 
                 sublabel = _("Using all methods")
-                full_label = _("Convert images in {location} using all methods").format(location=location.name)
+                full_label = _("Convert images in {location} using all methods").format(
+                    location=location.name
+                )
                 self.add_picture_group_action(
-                    submenu, sublabel, "generate", location, location, picture_group, methods, full_label
+                    submenu,
+                    sublabel,
+                    "generate",
+                    location,
+                    location,
+                    picture_group,
+                    methods,
+                    full_label,
                 )
 
                 for method in methods:
                     sublabel = _("Using {method}").format(method=method.name)
-                    full_label = _("Convert images in {location} using method {method}").format(location=location.name, method=method.name)
+                    full_label = _(
+                        "Convert images in {location} using method {method}"
+                    ).format(location=location.name, method=method.name)
                     self.add_picture_group_action(
-                        submenu, sublabel, "generate", location, location, picture_group, [method], full_label
+                        submenu,
+                        sublabel,
+                        "generate",
+                        location,
+                        location,
+                        picture_group,
+                        [method],
+                        full_label,
                     )
-
 
                 self.submenus.append(submenu)
 
@@ -225,7 +260,9 @@ class PicturesTree(BaseTreeWidget):
                 methods,
             )
 
-    def add_trip_action(self, menu, label, type, source, target, trip, methods=None, full_label=None):
+    def add_trip_action(
+        self, menu, label, type, source, target, trip, methods=None, full_label=None
+    ):
         """Right-click menu: adds copy/generate/change trip name to trips
 
         Parameters
@@ -324,7 +361,15 @@ class PicturesTree(BaseTreeWidget):
             self.add_picture_group(target_trip_widget, picture_group)
 
     def add_picture_group_action(
-        self, menu, label, type, source, target, picture_group, methods=None, full_label=None
+        self,
+        menu,
+        label,
+        type,
+        source,
+        target,
+        picture_group,
+        methods=None,
+        full_label=None,
     ):
         """Right-click menu: adds copy/generate/change trip to picture groups
 
@@ -351,7 +396,10 @@ class PicturesTree(BaseTreeWidget):
         if type == "copy":
             action.triggered.connect(
                 lambda: self.repository.copy_pictures(
-                    full_label, target, picture_group=picture_group, source_location=source
+                    full_label,
+                    target,
+                    picture_group=picture_group,
+                    source_location=source,
                 )
             )
         elif type == "generate":
@@ -494,7 +542,7 @@ class PicturesTree(BaseTreeWidget):
         """
         try:
             trip_widget.data(0, Qt.DisplayRole)
-        except RuntimeError: # Widget has been deleted since then (race condition)
+        except RuntimeError:  # Widget has been deleted since then (race condition)
             return
         logger.debug(
             f"PicturesTree.add_picture_group: {picture_group.name} in {trip_widget.data(0, Qt.DisplayRole)}"
@@ -1069,6 +1117,9 @@ class PictureDisplay(QtWidgets.QLabel):
             )
 
 
+# TODO: Allow to zoom on pictures (with sync between images)
+
+
 class PicturesController:
     """Picture organization, selection & link to trips
 
@@ -1076,6 +1127,8 @@ class PicturesController:
     ----------
     name : str
         The name of this controller - displayed on top
+    code : str
+        The internal name of this controller - used for references
     parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
         The window displaying this controller
     database : models.database.Database
@@ -1107,6 +1160,7 @@ class PicturesController:
     """
 
     name = _("Pictures")
+    code = "Pictures"
 
     def __init__(self, parent_window):
         """Stores reference to parent window & defines UI elements.
@@ -1159,7 +1213,7 @@ class PicturesController:
         self.ui["picture_grid"] = PictureGrid(self)
         self.ui["right_layout"].addWidget(self.ui["picture_grid"].display_widget)
 
-        # TODO: Pictures screen > display loading status for background tasks
+        # TODO: Pictures screen > display loading status for background tasks (progress bar)
 
     @property
     def display_widget(self):
@@ -1176,7 +1230,7 @@ class PicturesController:
             QtGui.QIcon("assets/images/pictures.png"), _("Pictures"), self.parent_window
         )
         button.setStatusTip(_("Organize pictures"))
-        button.triggered.connect(lambda: self.parent_window.display_tab(self.name))
+        button.triggered.connect(lambda: self.parent_window.display_tab(self.code))
         return button
 
     def on_load_pictures(self):

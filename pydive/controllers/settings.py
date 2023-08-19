@@ -986,6 +986,8 @@ class SettingsController:
     ----------
     name : str
         The name of this controller - displayed on top
+    code : str
+        The internal name of this controller - used for references
     parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
         The window displaying this controller
     ui : dict of QtWidgets.QWidget
@@ -1007,6 +1009,7 @@ class SettingsController:
     """
 
     name = _("Settings")
+    code = "Settings"
 
     def __init__(self, parent_window):
         """Stores reference to parent window & defines UI elements
@@ -1058,7 +1061,7 @@ class SettingsController:
             QtGui.QIcon("assets/images/settings.png"), self.name, self.parent_window
         )
         button.setStatusTip(self.name)
-        button.triggered.connect(lambda: self.parent_window.display_tab(self.name))
+        button.triggered.connect(lambda: self.parent_window.display_tab(self.code))
         return button
 
     def refresh_display(self):
