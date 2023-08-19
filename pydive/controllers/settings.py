@@ -221,7 +221,7 @@ class LocationsList:
 
         # Location name - Validate button
         location["name_change_end"] = IconButton(
-            QtGui.QIcon("assets/images/done.png"), "", location["name_change"]
+            QtGui.QIcon("assets/images/save.png"), "", location["name_change"]
         )
         location["name_change_end"].clicked.connect(
             lambda: self.on_validate_name_change(location["model"].id)
@@ -376,7 +376,7 @@ class LocationsList:
 
         # Location name - Validate button
         location["validate_new"] = IconButton(
-            QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
+            QtGui.QIcon("assets/images/save.png"), "", self.ui["main"]
         )
         location["validate_new"].clicked.connect(self.on_validate_new_location)
         self.ui["layout"].addWidget(location["validate_new"], row, 4)
@@ -729,7 +729,7 @@ class ConversionMethodsList:
 
             # Conversion method field - Validate button
             method[field + "_change_end"] = IconButton(
-                QtGui.QIcon("assets/images/done.png"), "", method[field + "_change"]
+                QtGui.QIcon("assets/images/save.png"), "", method[field + "_change"]
             )
             method[field + "_change_end"].clicked.connect(
                 lambda a, field=field: self.on_validate_field_change(
@@ -832,7 +832,7 @@ class ConversionMethodsList:
 
         # Validate button
         method["validate_new"] = IconButton(
-            QtGui.QIcon("assets/images/done.png"), "", self.ui["main"]
+            QtGui.QIcon("assets/images/save.png"), "", self.ui["main"]
         )
         method["validate_new"].clicked.connect(self.on_validate_new_method)
         self.ui["layout"].addWidget(method["validate_new"], len(self.ui["methods"]), 6)
