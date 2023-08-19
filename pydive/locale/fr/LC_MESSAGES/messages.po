@@ -27,7 +27,7 @@ msgid "Command to execute"
 msgstr "Commande à exécuter"
 
 msgid "Completed"
-msgstr ""
+msgstr "Terminé"
 
 msgid "Conversion methods"
 msgstr "Méthode de conversion"
@@ -41,6 +41,14 @@ msgid "Convert images in {location}"
 msgstr "Convertir les images dans {location}"
 
 #, python-brace-format
+msgid "Convert images in {location} using all methods"
+msgstr "Convertir les images dans {location} avec toutes les méthodes"
+
+#, python-brace-format
+msgid "Convert images in {location} using method {method}"
+msgstr "Convertir les images dans {location} avec la méthode {method}"
+
+#, python-brace-format
 msgid "Copy 1 image to {target}"
 msgstr "Copier 1 image vers {target}"
 
@@ -52,7 +60,7 @@ msgid "Copy image here"
 msgstr "Copier l'image ici"
 
 msgid "Details"
-msgstr ""
+msgstr "Détails"
 
 msgid "Dive log file"
 msgstr "Historique des plongées"
@@ -75,13 +83,16 @@ msgstr ""
 "%TARGET_FOLDER% sera remplacé par le chemin complet du dossier cible"
 
 msgid "Errors"
-msgstr ""
+msgstr "Erreurs"
 
 msgid "File name suffix"
 msgstr "Suffixe de nom de fichier"
 
 msgid "Generate"
 msgstr "Générer"
+
+msgid "Hover for error details"
+msgstr "Survoler pour le détail des erreurs"
 
 msgid "ID"
 msgstr "ID"
@@ -93,7 +104,7 @@ msgid "Image unreadable"
 msgstr "Image non lisible"
 
 msgid "In-progress tasks"
-msgstr ""
+msgstr "Tâches en cours"
 
 msgid "Load pictures"
 msgstr "Charger les photos"
@@ -146,7 +157,7 @@ msgid "Please confirm"
 msgstr "Veuillez confirmer"
 
 msgid "Progress"
-msgstr ""
+msgstr "Avancement"
 
 msgid "RAW"
 msgstr "BRUT"
@@ -170,11 +181,8 @@ msgstr "Le type de lieu de stockage est invalide"
 msgid "Target file already exists"
 msgstr "Le fichier cible existe déjà"
 
-msgid "Task"
-msgstr ""
-
 msgid "Tasks"
-msgstr ""
+msgstr "Tâches"
 
 msgid "The element to delete is not a file"
 msgstr "L'élément à supprimer n'est pas un fichier"
@@ -183,7 +191,7 @@ msgid "The file to delete does not exist"
 msgstr "Le fichier à supprimer n'existe pas"
 
 msgid "Total"
-msgstr ""
+msgstr "Total"
 
 msgid "Trip name:"
 msgstr "Nom du voyage:"

@@ -16,7 +16,7 @@ PicturesController
 import gettext
 import logging
 
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 from controllers.widgets.basetreewidget import BaseTreeWidget
@@ -551,6 +551,7 @@ class PicturesTree(BaseTreeWidget):
         for column in self.columns[1:]:
             data.append(str(len(picture_group.locations.get(column["name"], []))))
 
+        # Display data and connect to the signals in case of change
         if picture_group_widget:
             for col, column in enumerate(data):
                 picture_group_widget.setText(col, data[col])
@@ -566,17 +567,37 @@ class PicturesTree(BaseTreeWidget):
                     trip_widget, picture_group, picture_group_widget
                 )
             )
+            picture_group.pictureTasksDone.connect(
+                lambda: self.add_picture_group(
+                    trip_widget, picture_group, picture_group_widget
+                )
+            )
+            picture_group.pictureTasksStart.connect(
+                lambda: self.add_picture_group(
+                    trip_widget, picture_group, picture_group_widget
+                )
+            )
             picture_group.pictureGroupDeleted.connect(
                 lambda: self.remove_picture_group(picture_group_widget)
             )
             trip_widget.addChild(picture_group_widget)
 
+        # Add tooltips
         for col, column in enumerate(self.columns[1:]):
             pictures = picture_group.locations.get(column["name"], [])
             if pictures:
                 picture_group_widget.setToolTip(
                     col + 1, "\n".join([p.filename for p in pictures])
                 )
+
+        # Add "task in progress" icon
+        if picture_group.tasks:
+            logger.critical("Displaying tasks in progress")
+            picture_group_widget.setData(
+                0, Qt.DecorationRole, QtGui.QIcon("assets/images/hourglass.png")
+            )
+        else:
+            picture_group_widget.setData(0, Qt.DecorationRole, QtCore.QVariant())
 
     def remove_picture_group(self, picture_group_widget):
         """Removes a picture group from the tree

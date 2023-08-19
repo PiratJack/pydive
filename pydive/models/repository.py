@@ -33,7 +33,6 @@ from .conversionmethod import ConversionMethod
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
-# TODO: Background processes > handle errors & display log somehow (depending on gravity / type of error)
 
 
 class Repository:
@@ -258,11 +257,11 @@ class Repository:
                 if suffix not in picture_group.pictures:
                     raise FileNotFoundError(_("No source image found"))
 
-                source_pictures.append(picture_group.pictures[suffix][0])
+                source_pictures += picture_group.pictures[suffix]
             else:
-                # Otherwise, just pick 1 picture for each available method
+                # Otherwise, just take all pictures
                 for method in picture_group.pictures:
-                    source_pictures.append(picture_group.pictures[method][0])
+                    source_pictures += picture_group.pictures[method]
 
             # Generate tasks for each copy
             for source_picture in source_pictures:
@@ -274,6 +273,7 @@ class Repository:
                 process = CopyProcess(picture_group, source_picture, target_location)
                 process.signals.taskFinished.connect(self.add_picture)
                 process_group.add_task(process)
+                picture_group.add_task(process)
                 QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
@@ -407,6 +407,7 @@ class Repository:
                 )
                 process.signals.taskFinished.connect(self.add_picture)
                 process_group.add_task(process)
+                picture_group.add_task(process)
                 QtCore.QThreadPool.globalInstance().start(process, 100)
 
         self.process_groups.append(process_group)
@@ -550,6 +551,8 @@ class Repository:
                         source_picture_group, source_picture, target_trip
                     )
                     process_group.add_task(process)
+                    source_picture_group.add_task(process)
+                    target_picture_group.add_task(process)
 
                     process.signals.taskFinished.connect(
                         lambda source_picture_group, _b, path, picture=source_picture, target_picture_group=target_picture_group: self.change_trip_pictures_finished(

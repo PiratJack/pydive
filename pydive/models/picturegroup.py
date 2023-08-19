@@ -50,6 +50,8 @@ class PictureGroup(QtCore.QObject):
     pictureAdded = QtCore.pyqtSignal(PictureModel, str)
     pictureRemoved = QtCore.pyqtSignal(str, StorageLocation)
     pictureGroupDeleted = QtCore.pyqtSignal(str, str)
+    pictureTasksDone = QtCore.pyqtSignal()
+    pictureTasksStart = QtCore.pyqtSignal()
 
     def __init__(self, group_name):
         """Initializes values to defaults
@@ -65,6 +67,7 @@ class PictureGroup(QtCore.QObject):
         self.trip = None
         self.pictures = {}  # Structure is conversion_type: picture model
         self.locations = {}
+        self.tasks = []
 
     def add_picture(self, picture):
         """Adds a new picture to the group, after checking that it matches the group
@@ -173,6 +176,25 @@ class PictureGroup(QtCore.QObject):
                 f"PictureGroup.remove_picture: emit pictureGroupDeleted for {self.name} during {self.trip}"
             )
             self.pictureGroupDeleted.emit(self.trip, self.name)
+
+    def add_task(self, process):
+        logger.debug(
+            f"PictureGroup.add_task {process} for {self.name} during {self.trip}"
+        )
+        self.tasks.append(process)
+        self.pictureTasksStart.emit()
+        process.signals.taskFinished.connect(lambda: self.task_done(process))
+
+    def task_done(self, process):
+        logger.debug(
+            f"PictureGroup.task_done {process} for {self.name} during {self.trip}"
+        )
+        self.tasks.remove(process)
+        if not self.tasks:
+            logger.debug(
+                f"PictureGroup.task_done: emit pictureTasksDone for {self.name} during {self.trip}"
+            )
+            self.pictureTasksDone.emit()
 
     def __repr__(self):
         nb_pictures = sum([len(p) for p in self.pictures.values()])

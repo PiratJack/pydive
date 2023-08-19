@@ -28,6 +28,14 @@ msgid "Convert images in {location}"
 msgstr ""
 
 #, python-brace-format
+msgid "Convert images in {location} using all methods"
+msgstr ""
+
+#, python-brace-format
+msgid "Convert images in {location} using method {method}"
+msgstr ""
+
+#, python-brace-format
 msgid "Copy 1 image to {target}"
 msgstr ""
 
@@ -64,6 +72,9 @@ msgid "File name suffix"
 msgstr ""
 
 msgid "Generate"
+msgstr ""
+
+msgid "Hover for error details"
 msgstr ""
 
 msgid "ID"
@@ -151,9 +162,6 @@ msgid "Storage location type is invalid"
 msgstr ""
 
 msgid "Target file already exists"
-msgstr ""
-
-msgid "Task"
 msgstr ""
 
 msgid "Tasks"
