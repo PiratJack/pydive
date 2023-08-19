@@ -299,7 +299,7 @@ class ProcessGroupsController:
         Updates the list of in-progress process groups
     """
 
-    name = _("Tasks in progress")
+    name = _("In-progress tasks")
     code = "ProcessGroups"
 
     def __init__(self, parent_window):
