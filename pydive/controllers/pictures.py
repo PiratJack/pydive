@@ -843,7 +843,6 @@ class PictureGrid:
             self.picture_group = None
 
     def generate_image(self, row, column):
-        # TODO: Generate & copy image > merge actions? (& prioritize copy over generate)
         """Generates an image for the provided row & column
 
         Parameters
