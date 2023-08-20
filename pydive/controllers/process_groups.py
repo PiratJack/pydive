@@ -50,11 +50,8 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
         Returns which data to display (or how to display it) for the corresponding cell
     headerData (index)
         Returns the table headers
-
-    set_filters (index)
-        Applies the filters on the list of transactions
-    get_transaction (index)
-        Returns a models.transaction.Transaction object for the corresponding index
+    refresh_display
+        Refreshes the list of process groups displayed
     """
 
     def __init__(self, repository, columns):
@@ -182,6 +179,14 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
 
 
 class ProgressBarItemDelegate(QtWidgets.QAbstractItemDelegate):
+    """Delegate to display a progress bar rather than simple number
+
+    Methods
+    -------
+    paint (painter, option, index)
+        Constructs the progress bar's display
+    """
+
     def paint(self, painter, option, index):
         progress_bar = QtWidgets.QStyleOptionProgressBar()
         progress_bar.rect = option.rect
@@ -212,6 +217,8 @@ class ProcessGroupsTableView(QtWidgets.QTableView, autoresize.AutoResize):
     -------
     __init__ (parent_controller)
         Stores parameters & connects with the model & user interactions
+    refresh_display
+        Refreshes all changes
     """
 
     columns = [
@@ -290,8 +297,6 @@ class ProcessGroupsController:
     -------
     display_widget
         Returns the QtWidgets.QWidget for display of this screen
-    toolbar_button
-        Returns a QtWidgets.QAction for display in the main window toolbar
 
     Methods
     -------
