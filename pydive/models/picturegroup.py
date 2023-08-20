@@ -176,7 +176,7 @@ class PictureGroup(QtCore.QObject):
             )
             self.pictureGroupDeleted.emit(self.trip, self.name)
 
-    def add_task(self, process):
+    def add_process(self, process):
         logger.debug(
             f"PictureGroup.add_task {process} for {self.name} during {self.trip}"
         )

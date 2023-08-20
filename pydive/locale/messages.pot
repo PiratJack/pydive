@@ -89,6 +89,10 @@ msgstr ""
 msgid "In-progress tasks"
 msgstr ""
 
+#, python-brace-format
+msgid "In-progress tasks: {tasks_in_progress}"
+msgstr ""
+
 msgid "Load pictures"
 msgstr ""
 

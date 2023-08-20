@@ -270,12 +270,12 @@ class Repository:
                     and source_picture.location.name != source_location.name
                 ):
                     continue
-                process = CopyProcess(picture_group, source_picture, target_location)
+                process = process_group.add_process(
+                    "copy", picture_group, source_picture, target_location
+                )
                 process.signals.taskFinished.connect(self.add_picture)
-                process_group.add_task(process)
-                picture_group.add_task(process)
-                QtCore.QThreadPool.globalInstance().start(process, 100)
 
+        process_group.run()
         self.process_groups.append(process_group)
         return process_group
 
@@ -402,14 +402,16 @@ class Repository:
 
             # Generate tasks for each generation
             for conversion_method in actual_methods:
-                process = GenerateProcess(
-                    target_location, picture_group, source_picture, conversion_method
+                process = process_group.add_process(
+                    "generate",
+                    picture_group,
+                    source_picture,
+                    target_location,
+                    conversion_method,
                 )
                 process.signals.taskFinished.connect(self.add_picture)
-                process_group.add_task(process)
-                picture_group.add_task(process)
-                QtCore.QThreadPool.globalInstance().start(process, 100)
 
+        process_group.run()
         self.process_groups.append(process_group)
         return process_group
 
@@ -475,11 +477,10 @@ class Repository:
                     pictures += picture_group.pictures[conversion_type]
             for picture in pictures:
                 # Generate tasks for each deletion
-                process = RemoveProcess(picture_group, picture)
-                process_group.add_task(process)
+                process = process_group.add_process("remove", picture_group, picture)
                 process.signals.taskFinished.connect(self.remove_picture)
-                QtCore.QThreadPool.globalInstance().start(process, 100)
 
+        process_group.run()
         self.process_groups.append(process_group)
         return process_group
 
@@ -547,20 +548,20 @@ class Repository:
             # Generate tasks for each move
             for conversion_type in source_picture_group.pictures:
                 for source_picture in source_picture_group.pictures[conversion_type]:
-                    process = ChangeTripProcess(
-                        source_picture_group, source_picture, target_trip
+                    process = process_group.add_process(
+                        "change_trip",
+                        source_picture_group,
+                        source_picture,
+                        target_trip=target_trip,
                     )
-                    process_group.add_task(process)
-                    source_picture_group.add_task(process)
-                    target_picture_group.add_task(process)
-
+                    target_picture_group.add_process(process)
                     process.signals.taskFinished.connect(
                         lambda source_picture_group, _b, path, picture=source_picture, target_picture_group=target_picture_group: self.change_trip_pictures_finished(
                             source_picture_group, picture, path, target_picture_group
                         )
                     )
-                    QtCore.QThreadPool.globalInstance().start(process, 100)
 
+        process_group.run()
         self.process_groups.append(process_group)
         return process_group
 
@@ -620,12 +621,14 @@ class ProcessGroup(QtCore.QObject):
     -------
     __init__ (label)
         Stores basic information about the task group
-    add_task (process)
+    add_process (process, picture_group, picture, target_location, conversion_method, target_trip)
         Adds a new task to the group
     task_done (task, path)
         Marks a single task as in done & stopped. Triggers self.update_progress
-    task_error (task, error)
+    task_error (task, picture_group, location, error)
         Marks a single task as in error & stopped. Triggers self.update_progress
+    run
+        Starts all processes
     update_progress
         Updates the progress. Emits finishes signal once complete.
     """
@@ -647,7 +650,15 @@ class ProcessGroup(QtCore.QObject):
         self.tasks = []
         self.label = label
 
-    def add_task(self, process):
+    def add_process(
+        self,
+        task_type,
+        picture_group,
+        picture=None,
+        target_location=None,
+        conversion_method=None,
+        target_trip=None,
+    ):
         """Adds a new task to the group
 
         Parameters
@@ -655,15 +666,43 @@ class ProcessGroup(QtCore.QObject):
         process : *Process
             The process to add
         """
-        logger.debug(f"ProcessGroup.add_task {self.label} - {process}")
-        task = {"status": "Queued", "name": str(process)}
+        logger.debug(
+            f"ProcessGroup.add_task {self.label} - {task_type} for {picture_group}"
+        )
+
+        # Create the background processes
+        if task_type == "copy":
+            process = CopyProcess(picture_group, picture, target_location)
+        elif task_type == "generate":
+            process = GenerateProcess(
+                target_location, picture_group, picture, conversion_method
+            )
+        elif task_type == "remove":
+            process = RemoveProcess(picture_group, picture)
+        elif task_type == "change_trip":
+            process = ChangeTripProcess(picture_group, picture, target_trip)
+
+        # Create the task scaffold
+        task = {
+            "status": "Queued",
+            "name": str(process),
+            "picture_group": picture_group,
+            "picture": picture,
+            "target_location": target_location,
+            "conversion_method": conversion_method,
+            "target_trip": target_trip,
+            "process": process,
+        }
         self.tasks.append(task)
+        picture_group.add_process(process)
         process.signals.taskFinished.connect(
             lambda _a, _b, path: self.task_done(task, path)
         )
         process.signals.taskError.connect(
             lambda _a, _b, error: self.task_error(task, error)
         )
+
+        return process
 
     def task_done(self, task, path):
         """Marks a single task as in done & stopped. Triggers self.update_progress
@@ -694,6 +733,12 @@ class ProcessGroup(QtCore.QObject):
         task["status"] = "Stopped"
         task["error"] = error
         self.update_progress()
+
+    def run(self):
+        """Starts all processes"""
+        for task in self.tasks:
+            if task["status"] == "Queued":
+                QtCore.QThreadPool.globalInstance().start(task["process"], 100)
 
     def update_progress(self):
         """Updates the progress. Emits finished signal once complete."""

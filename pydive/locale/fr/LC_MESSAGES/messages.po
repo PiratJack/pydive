@@ -106,6 +106,10 @@ msgstr "Image non lisible"
 msgid "In-progress tasks"
 msgstr "Tâches en cours"
 
+#, python-brace-format
+msgid "In-progress tasks: {tasks_in_progress}"
+msgstr "Tâches en cours: {tasks_in_progress}"
+
 msgid "Load pictures"
 msgstr "Charger les photos"
 
