@@ -1013,6 +1013,9 @@ class TestUiPictures:
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
         picture_group = picturesController.repository.trips["Italy"]["IMG002"]
+        # Wait until the new picture group has everything
+        # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
+        qtbot.waitUntil(lambda: "Archive" in picture_group.locations)
         assert (
             len(picture_group.locations["Archive"]) == 1
         ), "Archive has 1 IMG002 picture"
@@ -1084,6 +1087,9 @@ class TestUiPictures:
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
         picture_group = picturesController.repository.trips["Georgia"]["IMG002"]
+        # Wait until the new picture group has everything
+        # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
+        qtbot.waitUntil(lambda: "Archive" in picture_group.locations)
         assert (
             len(picture_group.locations["Archive"]) == 1
         ), "Archive has 1 IMG002 picture"
