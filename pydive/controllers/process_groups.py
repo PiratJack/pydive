@@ -114,7 +114,9 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
 
         col = index.column()
         process_group = self.process_groups[index.row()]
-        errors = [t["error"] for t in process_group.tasks if "error" in t]
+        errors = [
+            t["error_details"] for t in process_group.tasks if "error_details" in t
+        ]
         if role == Qt.DisplayRole:
             # TODO: Think about how to display the errors
             # Right now they're not very useful (lack details)

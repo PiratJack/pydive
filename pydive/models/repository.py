@@ -685,6 +685,7 @@ class ProcessGroup(QtCore.QObject):
         # Create the task scaffold
         task = {
             "status": "Queued",
+            "type": task_type,
             "name": str(process),
             "picture_group": picture_group,
             "picture": picture,
@@ -699,7 +700,7 @@ class ProcessGroup(QtCore.QObject):
             lambda _a, _b, path: self.task_done(task, path)
         )
         process.signals.taskError.connect(
-            lambda _a, _b, error: self.task_error(task, error)
+            lambda error, details: self.task_error(task, error, details)
         )
 
         return process
@@ -719,7 +720,7 @@ class ProcessGroup(QtCore.QObject):
         task["file_path"] = path
         self.update_progress()
 
-    def task_error(self, task, error):
+    def task_error(self, task, error, error_details):
         """Marks a single task as in error & stopped. Triggers self.update_progress
 
         Parameters
@@ -732,6 +733,7 @@ class ProcessGroup(QtCore.QObject):
         logger.debug(f"ProcessGroup.task_error {self.label} - {task['name']}")
         task["status"] = "Stopped"
         task["error"] = error
+        task["error_details"] = error_details
         self.update_progress()
 
     def run(self):
@@ -796,6 +798,7 @@ class CopyProcess(QtCore.QRunnable):
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
+        self.source_picture = source_picture
         self.target_location = target_location
 
         self.source_file = source_picture.path
@@ -818,10 +821,13 @@ class CopyProcess(QtCore.QRunnable):
             logger.warning(
                 f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Target file exists"
             )
+            location = self.target_location
+            short_path = self.target_file.replace(
+                location.path, "[" + location.name + "]" + os.path.sep
+            )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.target_location,
                 _("Target file already exists"),
+                _(f"Target file already exists: {short_path} - {self.target_file}"),
             )
             return
 
@@ -830,10 +836,14 @@ class CopyProcess(QtCore.QRunnable):
             logger.warning(
                 f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Source file missing"
             )
+            picture = self.source_picture
+            location = picture.location
+            short_path = picture.path.replace(
+                location.path, "[" + location.name + "]" + os.path.sep
+            )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.target_location,
                 _("Source file does not exists"),
+                _(f"Source file does not exists: {short_path} - {self.source_file}"),
             )
             return
 
@@ -914,11 +924,15 @@ class GenerateProcess(QtCore.QRunnable):
             logger.warning(
                 f"GenerateProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name} - Target file exists"
             )
-            self.signals.taskError.emit(
-                self.picture_group,
-                self.location,
-                _("Target file already exists"),
+            location = self.location
+            short_path = self.target_file.replace(
+                location.path, "[" + location.name + "]" + os.path.sep
             )
+            self.signals.taskError.emit(
+                _("Target file already exists"),
+                _(f"Target file already exists: {short_path} - {self.target_file}"),
+            )
+
             return
         # Check target folder exists
         if not os.path.exists(self.target_folder):
@@ -965,6 +979,7 @@ class RemoveProcess(QtCore.QRunnable):
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
+        self.source_picture = picture
 
         # Determine the command to run
         self.file = picture.path
@@ -978,24 +993,27 @@ class RemoveProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         logger.debug(f"RemoveProcess.run {self.file}")
+        location = self.location
+        short_path = self.file.replace(
+            location.path, "[" + location.name + "]" + os.path.sep
+        )
         if not os.path.exists(self.file):
             logger.warning(
                 f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: File does not exist"
             )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.location,
                 _("The file to delete does not exist"),
+                _(f"The file to delete does not exist: {short_path} - {self.file}"),
             )
+
             return
         if os.path.isdir(self.file):
             logger.warning(
                 f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: Element to delete is not a file"
             )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.location,
                 _("The element to delete is not a file"),
+                _(f"The element to delete is not a file: {short_path} - {self.file}"),
             )
             return
 
@@ -1014,9 +1032,8 @@ class RemoveProcess(QtCore.QRunnable):
                 f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: {e.args}"
             )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.location,
                 e.args.__repr__(),
+                _(f"{e.args.__repr__()}: {short_path} - {self.source_file}"),
             )
 
     def __repr__(self):
@@ -1052,6 +1069,7 @@ class ChangeTripProcess(QtCore.QRunnable):
         super().__init__()
         self.signals = ProcessSignals()
         self.picture_group = picture_group
+        self.source_picture = picture
         self.target_location = picture.location
         self.target_trip = target_trip
 
@@ -1077,10 +1095,13 @@ class ChangeTripProcess(QtCore.QRunnable):
             logger.warning(
                 f"ChangeTripProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}: Target file exists"
             )
+            location = self.target_location
+            short_path = self.target_file.replace(
+                location.path, "[" + location.name + "]" + os.path.sep
+            )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.target_location,
                 _("Target file already exists"),
+                _(f"Target file already exists: {short_path} - {self.target_file}"),
             )
             return
         # Check target folder exists
@@ -1101,10 +1122,15 @@ class ChangeTripProcess(QtCore.QRunnable):
             logger.warning(
                 f"ChangeTripProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}: {e.args}"
             )
+            location = self.source_picture.location
+            short_path = self.source_file.replace(
+                location.path, "[" + location.name + "]" + os.path.sep
+            )
             self.signals.taskError.emit(
-                self.picture_group,
-                self.target_location,
                 e.args.__repr__(),
+                _(
+                    f"{e.args.__repr__()}: {short_path} to {self.target_trip} - {self.source_file}"
+                ),
             )
 
     def __repr__(self):
@@ -1123,4 +1149,4 @@ class ProcessSignals(QtCore.QObject):
     """
 
     taskFinished = QtCore.pyqtSignal(PictureGroup, StorageLocation, str)
-    taskError = QtCore.pyqtSignal(PictureGroup, StorageLocation, str)
+    taskError = QtCore.pyqtSignal(str, str)
