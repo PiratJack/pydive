@@ -335,16 +335,6 @@ class ProcessGroupsController:
         self.refresh_display()
         return self.ui["main"]
 
-    @property
-    def toolbar_button(self):
-        """Returns a QtWidgets.QAction for display in the main window toolbar"""
-        button = QtWidgets.QAction(
-            QtGui.QIcon("assets/images/cone.png"), self.name, self.parent_window
-        )
-        button.setStatusTip(self.name)
-        button.triggered.connect(lambda: self.parent_window.display_tab(self.code))
-        return button
-
     def refresh_display(self):
         """Updates the process groups displayed on screen"""
         logger.debug("ProcessGroupsController.refresh_display")

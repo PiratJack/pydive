@@ -21,6 +21,7 @@ from PyQt5.QtCore import Qt
 
 from controllers.widgets.basetreewidget import BaseTreeWidget
 from controllers.widgets.iconbutton import IconButton
+from controllers.process_groups import ProcessGroupsController
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
@@ -1148,10 +1149,6 @@ class TasksProgressBar(QtWidgets.QProgressBar):
         self.process_groups = self.repository.process_groups
         self.parent_controller = parent_controller
         self.connections = []
-        for p in self.process_groups:
-            self.connections.append(
-                p.progressUpdate.connect(self.parent_controller.refresh_progress_bar)
-            )
 
         self.setMinimum(0)
         self.setMaximum(100)
@@ -1246,6 +1243,7 @@ class PicturesController:
         self.database = parent_window.database
         self.repository = parent_window.repository
         self.folders = []
+        self.process_group_controller = ProcessGroupsController(self.parent_window)
 
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
@@ -1388,14 +1386,15 @@ class PicturesController:
         """Displays the 'in-progress tasks' dialog"""
 
         if not "tasks_dialog_widget" in self.ui:
-            self.ui["tasks_dialog_widget"] = self.parent_window.controllers[
-                "ProcessGroups"
-            ].display_widget
+            self.ui[
+                "tasks_dialog_widget"
+            ] = self.process_group_controller.display_widget
             self.ui["tasks_dialog_layout"].addWidget(self.ui["tasks_dialog_widget"])
 
         self.ui["tasks_dialog"].setMinimumSize(900, 700)
         self.ui["tasks_dialog"].resize(self.ui["tasks_dialog_layout"].sizeHint())
-        self.ui["tasks_dialog_widget"].show()
+        self.process_group_controller.refresh_display()
+        self.ui["tasks_dialog"].showMaximized()
         self.ui["tasks_dialog"].exec()
 
     def display_picture_group(self, picture_group):

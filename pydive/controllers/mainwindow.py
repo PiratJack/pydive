@@ -47,7 +47,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.controllers = {
             "Settings": controllers.settings.SettingsController(self),
             "Pictures": controllers.pictures.PicturesController(self),
-            "ProcessGroups": controllers.process_groups.ProcessGroupsController(self),
+            # Uncommenting the below leads to the same widget displayed twice
+            # This creates all sorts of issues, so this controller is displayed only as a dialog from the Pictures screen
+            # #"ProcessGroups": controllers.process_groups.ProcessGroupsController(self),
         }
 
         # Define UI elements
