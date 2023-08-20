@@ -180,8 +180,8 @@ msgid "Source file does not exists"
 msgstr "Le fichier source n'existe pas"
 
 #, python-brace-format
-msgid "Source file does not exists: {short_path} - {self.source_file}"
-msgstr "Le fichier source n'existe pas: {short_path} - {self.source_file}"
+msgid "Source file does not exists: {short_path} - {source_file}"
+msgstr "Le fichier source n'existe pas: {short_path} - {source_file}"
 
 msgid "Storage location type is invalid"
 msgstr "Le type de lieu de stockage est invalide"
@@ -190,8 +190,8 @@ msgid "Target file already exists"
 msgstr "Le fichier cible existe déjà"
 
 #, python-brace-format
-msgid "Target file already exists: {short_path} - {self.target_file}"
-msgstr "Le fichier cible existe déjà: {short_path} - {self.target_file}"
+msgid "Target file already exists: {short_path} - {target_file}"
+msgstr "Le fichier cible existe déjà: {short_path} - {target_file}"
 
 msgid "Tasks"
 msgstr "Tâches"
@@ -200,15 +200,15 @@ msgid "The element to delete is not a file"
 msgstr "L'élément à supprimer n'est pas un fichier"
 
 #, python-brace-format
-msgid "The element to delete is not a file: {short_path} - {self.file}"
-msgstr "L'élément à supprimer n'est pas un fichier: {short_path} - {self.file}"
+msgid "The element to delete is not a file: {short_path} - {path}"
+msgstr "L'élément à supprimer n'est pas un fichier: {short_path} - {path}"
 
 msgid "The file to delete does not exist"
 msgstr "Le fichier à supprimer n'existe pas"
 
 #, python-brace-format
-msgid "The file to delete does not exist: {short_path} - {self.file}"
-msgstr "Le fichier à supprimer n'existe pas: {short_path} - {self.file}"
+msgid "The file to delete does not exist: {short_path} - {path}"
+msgstr "Le fichier à supprimer n'existe pas: {short_path} - {path}"
 
 msgid "Total"
 msgstr "Total"
@@ -223,11 +223,13 @@ msgstr "Avec toutes les méthodes de conversion"
 msgid "Using {method}"
 msgstr "Avec la méthode {method}"
 
-msgid "{e.args.__repr__()}: {short_path} - {self.source_file}"
-msgstr "{e.args.__repr__()}: {short_path} - {self.source_file}"
+#, python-brace-format
+msgid "{error}: {short_path} - {path}"
+msgstr "{error}: {short_path} - {path}"
 
-msgid "{e.args.__repr__()}: {short_path} to {self.target_trip} - {self.source_file}"
-msgstr "{e.args.__repr__()}: {short_path} vers {self.target_trip} - {self.source_file}"
+#, python-brace-format
+msgid "{error}: {short_path} to {target_trip} - {source_file}"
+msgstr "{error}: {short_path} vers {target_trip} - {source_file}"
 
 #~ msgid "Archives"
 #~ msgstr "Archives"
@@ -243,3 +245,6 @@ msgstr "{e.args.__repr__()}: {short_path} vers {self.target_trip} - {self.source
 
 #~ msgid "Temporary storage"
 #~ msgstr "Stockage temporaire"
+
+#~ msgid "{e.args.__repr__()}: {short_path} - {self.source_file}"
+#~ msgstr "{e.args.__repr__()}: {short_path} - {self.source_file}"

@@ -163,7 +163,7 @@ msgid "Source file does not exists"
 msgstr ""
 
 #, python-brace-format
-msgid "Source file does not exists: {short_path} - {self.source_file}"
+msgid "Source file does not exists: {short_path} - {source_file}"
 msgstr ""
 
 msgid "Storage location type is invalid"
@@ -173,7 +173,7 @@ msgid "Target file already exists"
 msgstr ""
 
 #, python-brace-format
-msgid "Target file already exists: {short_path} - {self.target_file}"
+msgid "Target file already exists: {short_path} - {target_file}"
 msgstr ""
 
 msgid "Tasks"
@@ -183,14 +183,14 @@ msgid "The element to delete is not a file"
 msgstr ""
 
 #, python-brace-format
-msgid "The element to delete is not a file: {short_path} - {self.file}"
+msgid "The element to delete is not a file: {short_path} - {path}"
 msgstr ""
 
 msgid "The file to delete does not exist"
 msgstr ""
 
 #, python-brace-format
-msgid "The file to delete does not exist: {short_path} - {self.file}"
+msgid "The file to delete does not exist: {short_path} - {path}"
 msgstr ""
 
 msgid "Total"
@@ -206,8 +206,10 @@ msgstr ""
 msgid "Using {method}"
 msgstr ""
 
-msgid "{e.args.__repr__()}: {short_path} - {self.source_file}"
+#, python-brace-format
+msgid "{error}: {short_path} - {path}"
 msgstr ""
 
-msgid "{e.args.__repr__()}: {short_path} to {self.target_trip} - {self.source_file}"
+#, python-brace-format
+msgid "{error}: {short_path} to {target_trip} - {source_file}"
 msgstr ""

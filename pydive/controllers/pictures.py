@@ -1379,7 +1379,11 @@ class PicturesController:
             [p.count_total - p.count_completed for p in self.repository.process_groups]
         )
 
-        self.ui["tasks_label"].setText(_(f"In-progress tasks: {tasks_in_progress}"))
+        self.ui["tasks_label"].setText(
+            _("In-progress tasks: {tasks_in_progress}").format(
+                tasks_in_progress=tasks_in_progress
+            )
+        )
         self.ui["progress_bar"].update_progress()
 
     def display_tasks_dialog(self):

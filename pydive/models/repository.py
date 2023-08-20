@@ -827,7 +827,9 @@ class CopyProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 _("Target file already exists"),
-                _(f"Target file already exists: {short_path} - {self.target_file}"),
+                _("Target file already exists: {short_path} - {target_file}").format(
+                    short_path=short_path, target_file=self.target_file
+                ),
             )
             return
 
@@ -843,7 +845,9 @@ class CopyProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 _("Source file does not exists"),
-                _(f"Source file does not exists: {short_path} - {self.source_file}"),
+                _("Source file does not exists: {short_path} - {source_file}").format(
+                    short_path=short_path, source_file=self.source_file
+                ),
             )
             return
 
@@ -930,7 +934,9 @@ class GenerateProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 _("Target file already exists"),
-                _(f"Target file already exists: {short_path} - {self.target_file}"),
+                _("Target file already exists: {short_path} - {target_file}").format(
+                    short_path=short_path, target_file=self.target_file
+                ),
             )
 
             return
@@ -1003,7 +1009,9 @@ class RemoveProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 _("The file to delete does not exist"),
-                _(f"The file to delete does not exist: {short_path} - {self.file}"),
+                _("The file to delete does not exist: {short_path} - {path}").format(
+                    short_path=short_path, path=self.file
+                ),
             )
 
             return
@@ -1013,7 +1021,9 @@ class RemoveProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 _("The element to delete is not a file"),
-                _(f"The element to delete is not a file: {short_path} - {self.file}"),
+                _("The element to delete is not a file: {short_path} - {path}").format(
+                    short_path=short_path, path=self.file
+                ),
             )
             return
 
@@ -1033,7 +1043,11 @@ class RemoveProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 e.args.__repr__(),
-                _(f"{e.args.__repr__()}: {short_path} - {self.source_file}"),
+                _("{error}: {short_path} - {path}").format(
+                    error=e.args.__repr__(),
+                    short_path=short_path,
+                    path=self.source_file,
+                ),
             )
 
     def __repr__(self):
@@ -1101,7 +1115,9 @@ class ChangeTripProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 _("Target file already exists"),
-                _(f"Target file already exists: {short_path} - {self.target_file}"),
+                _("Target file already exists: {short_path} - {target_file}").format(
+                    short_path=short_path, target_file=self.target_file
+                ),
             )
             return
         # Check target folder exists
@@ -1128,8 +1144,11 @@ class ChangeTripProcess(QtCore.QRunnable):
             )
             self.signals.taskError.emit(
                 e.args.__repr__(),
-                _(
-                    f"{e.args.__repr__()}: {short_path} to {self.target_trip} - {self.source_file}"
+                _("{error}: {short_path} to {target_trip} - {source_file}").format(
+                    error=e.args.__repr__(),
+                    short_path=short_path,
+                    target_trip=self.target_trip,
+                    source_file=self.source_file,
                 ),
             )
 
