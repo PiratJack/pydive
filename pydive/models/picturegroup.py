@@ -183,6 +183,7 @@ class PictureGroup(QtCore.QObject):
         self.tasks.append(process)
         self.pictureTasksStart.emit()
         process.signals.taskFinished.connect(lambda: self.task_done(process))
+        process.signals.taskError.connect(lambda: self.task_done(process))
 
     def task_done(self, process):
         logger.debug(
