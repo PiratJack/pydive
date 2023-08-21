@@ -362,11 +362,10 @@ class TestUiPictures:
             tasks_progress_bar.text() == "100%"
         ), "Pictures: In-progress task progress bar value is correct"
 
-    def test_pictures_click_in_progress_tasks(self, qtbot, qapp):
+    def test_pictures_process_groups_display(self, qtbot, qapp):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
         main_widget = picturesController.ui["main"]
 
         # Get display elements
@@ -375,17 +374,6 @@ class TestUiPictures:
         tasks_progress_bar = left_column.layout().itemAt(4).widget()
 
         # Trigger a copy (to get proper display)
-        # Get tree item, trip & picture groups
-        trip_item = picturesTree.topLevelItem(5)  # Malta
-        picture_item = trip_item.child(0)  # Malta's IMG001
-
-        # Look for "Change trip" action
-        picturesTree.generate_context_menu(picture_item)
-        action_name = "Copy all images from Temporary to Archive"
-        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
-
-        # Trigger action - 1 image copied
-        action.trigger()
 
         def handle_dialog():
             dialog = qapp.activeWindow()
@@ -401,11 +389,239 @@ class TestUiPictures:
         QtCore.QTimer.singleShot(700, handle_dialog)
         qtbot.mouseClick(tasks_progress_bar, Qt.LeftButton)
 
+    def test_pictures_process_groups_multiple_errors(self, qtbot, qapp):
+        # Setup: get display
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        main_widget = picturesController.ui["main"]
+
+        # Get display elements
+        left_column = main_widget.layout().itemAt(0).widget()
+        tasks_label = left_column.layout().itemAt(3).widget()
+
+        # Trigger a copy (to get proper display)
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picturesTree.generate_context_menu(trip_item)
+        action_name = "Copy all images from Temporary to Archive"
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+        action.trigger()
+
+        def handle_dialog():
+            dialog = qapp.activeWindow()
+            assert dialog is not None, "Dialog gets displayed"
+
+            # Check overall structure
+            assert isinstance(
+                dialog.layout(), QtWidgets.QVBoxLayout
+            ), "ProcessGroup dialog layout is QVBoxLayout"
+            dialog_ui = dialog.layout().itemAt(0).widget()
+            assert isinstance(
+                dialog_ui.layout(), QtWidgets.QVBoxLayout
+            ), "ProcessGroup layout is QVBoxLayout"
+            assert (
+                dialog_ui.layout().count() == 2
+            ), "ProcessGroup has correct number of items"
+            dialog_label = dialog_ui.layout().itemAt(0).widget()
+            dialog_table = dialog_ui.layout().itemAt(1).widget()
+            assert isinstance(
+                dialog_label, QtWidgets.QLabel
+            ), "ProcessGroup title is a QLabel"
+            assert isinstance(
+                dialog_table, QtWidgets.QTableView
+            ), "ProcessGroup table is a QTableView"
+
+            # Check table structure & contents
+            dialog_model = dialog_table.model
+            index = dialog_model.createIndex(0, 4, QtCore.QModelIndex())
+            assert (
+                dialog_model.rowCount(index) == 1
+            ), "ProcessGroup table has correct number of rows"
+            assert (
+                dialog_model.columnCount(index) == 6
+            ), "ProcessGroup table has correct number of columns"
+            cell_error_count = dialog_model.data(index, Qt.DisplayRole)
+            assert cell_error_count == 2, "ProcessGroup table displays errors"
+            index = dialog_model.createIndex(0, 5, QtCore.QModelIndex())
+            cell_error_details = dialog_model.data(index, Qt.DisplayRole)
+            assert (
+                cell_error_details == "Hover for error details"
+            ), "ProcessGroup table displays error details"
+            cell_error_tooltip = dialog_model.data(index, Qt.ToolTipRole)
+            assert cell_error_tooltip != "", "ProcessGroup table has tooltip for errors"
+
+            dialog.close()
+
+        # Trigger the display of the dialog (click on label)
+        QtCore.QTimer.singleShot(700, handle_dialog)
+        qtbot.mouseClick(tasks_label, Qt.LeftButton)
+
+        # Check files have been created & models updated
+        new_files = [
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_RT.jpg"),
+            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002_RT.jpg"),
+        ]
+        self.helper_check_paths(action_name, new_files)
+
+    def test_pictures_process_groups_one_error(self, qtbot, qapp):
+        # Setup: get display
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        main_widget = picturesController.ui["main"]
+
+        # Get display elements
+        left_column = main_widget.layout().itemAt(0).widget()
+        tasks_label = left_column.layout().itemAt(3).widget()
+
+        # Trigger a copy (to get proper display)
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        picturesTree.generate_context_menu(picture_item)
+        action_name = "Copy all images from Temporary to Archive"
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+        action.trigger()
+
+        def handle_dialog():
+            dialog = qapp.activeWindow()
+            assert dialog is not None, "Dialog gets displayed"
+
+            # Check overall structure
+            assert isinstance(
+                dialog.layout(), QtWidgets.QVBoxLayout
+            ), "ProcessGroup dialog layout is QVBoxLayout"
+            dialog_ui = dialog.layout().itemAt(0).widget()
+            assert isinstance(
+                dialog_ui.layout(), QtWidgets.QVBoxLayout
+            ), "ProcessGroup layout is QVBoxLayout"
+            assert (
+                dialog_ui.layout().count() == 2
+            ), "ProcessGroup has correct number of items"
+            dialog_label = dialog_ui.layout().itemAt(0).widget()
+            dialog_table = dialog_ui.layout().itemAt(1).widget()
+            assert isinstance(
+                dialog_label, QtWidgets.QLabel
+            ), "ProcessGroup title is a QLabel"
+            assert isinstance(
+                dialog_table, QtWidgets.QTableView
+            ), "ProcessGroup table is a QTableView"
+
+            # Check table structure & contents
+            dialog_model = dialog_table.model
+            index = dialog_model.createIndex(0, 4, QtCore.QModelIndex())
+            assert (
+                dialog_model.rowCount(index) == 1
+            ), "ProcessGroup table has correct number of rows"
+            assert (
+                dialog_model.columnCount(index) == 6
+            ), "ProcessGroup table has correct number of columns"
+            cell_error_count = dialog_model.data(index, Qt.DisplayRole)
+            assert cell_error_count == 1, "ProcessGroup table displays errors"
+            index = dialog_model.createIndex(0, 5, QtCore.QModelIndex())
+            cell_error_details = dialog_model.data(index, Qt.DisplayRole)
+            assert cell_error_details != "", "ProcessGroup table displays error details"
+            assert (
+                cell_error_details != "Hover for error details"
+            ), "ProcessGroup table displays error details"
+            cell_error_tooltip = dialog_model.data(index, Qt.ToolTipRole)
+            assert (
+                cell_error_tooltip == cell_error_details
+            ), "ProcessGroup table has tooltip for errors"
+
+            dialog.close()
+
+        # Trigger the display of the dialog (click on label)
+        QtCore.QTimer.singleShot(700, handle_dialog)
+        qtbot.mouseClick(tasks_label, Qt.LeftButton)
+
         # Check files have been created & models updated
         new_files = [
             os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
+
+    def test_pictures_process_groups_no_error(self, qtbot, qapp):
+        # Setup: get display
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        main_widget = picturesController.ui["main"]
+
+        # Get display elements
+        left_column = main_widget.layout().itemAt(0).widget()
+        tasks_label = left_column.layout().itemAt(3).widget()
+
+        # Trigger a copy (to get proper display)
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        picturesTree.generate_context_menu(picture_item)
+        action_name = "Copy all images from Temporary to Camera"
+        action = [a for a in picturesTree.menu.actions() if a.text() == action_name][0]
+        action.trigger()
+
+        def handle_dialog():
+            dialog = qapp.activeWindow()
+            assert dialog is not None, "Dialog gets displayed"
+
+            # Check overall structure
+            assert isinstance(
+                dialog.layout(), QtWidgets.QVBoxLayout
+            ), "ProcessGroup dialog layout is QVBoxLayout"
+            dialog_ui = dialog.layout().itemAt(0).widget()
+            assert isinstance(
+                dialog_ui.layout(), QtWidgets.QVBoxLayout
+            ), "ProcessGroup layout is QVBoxLayout"
+            assert (
+                dialog_ui.layout().count() == 2
+            ), "ProcessGroup has correct number of items"
+            dialog_label = dialog_ui.layout().itemAt(0).widget()
+            dialog_table = dialog_ui.layout().itemAt(1).widget()
+            assert isinstance(
+                dialog_label, QtWidgets.QLabel
+            ), "ProcessGroup title is a QLabel"
+            assert isinstance(
+                dialog_table, QtWidgets.QTableView
+            ), "ProcessGroup table is a QTableView"
+
+            # Check table structure & contents
+            dialog_model = dialog_table.model
+            index = dialog_model.createIndex(0, 4, QtCore.QModelIndex())
+            assert (
+                dialog_model.rowCount(index) == 1
+            ), "ProcessGroup table has correct number of rows"
+            assert (
+                dialog_model.columnCount(index) == 6
+            ), "ProcessGroup table has correct number of columns"
+            cell_error_count = dialog_model.data(index, Qt.DisplayRole)
+            assert cell_error_count == 0, "ProcessGroup table displays no error"
+            index = dialog_model.createIndex(0, 5, QtCore.QModelIndex())
+            cell_error_details = dialog_model.data(index, Qt.DisplayRole)
+            assert (
+                cell_error_details == ""
+            ), "ProcessGroup table displays no error details"
+            cell_error_tooltip = dialog_model.data(index, Qt.ToolTipRole)
+            assert (
+                cell_error_tooltip == ""
+            ), "ProcessGroup table has no tooltip for error"
+
+            # Testing invalid index
+            index = dialog_model.createIndex(-1, -1, QtCore.QModelIndex())
+            invalid_index = dialog_model.data(index, Qt.DisplayRole)
+            assert invalid_index == False, "Invalid index yields False"
+
+            dialog.close()
+
+        # Trigger the display of the dialog (click on label)
+        QtCore.QTimer.singleShot(700, handle_dialog)
+        qtbot.mouseClick(tasks_label, Qt.LeftButton)
+
+        # Check files have been created & models updated
+        new_files = [
+            os.path.join(BASE_FOLDER, "DCIM", "Malta", "IMG001.CR2"),
+            os.path.join(BASE_FOLDER, "DCIM", "Malta", "IMG001_RT.jpg"),
+        ]
+        self.helper_check_paths(action_name, new_files)
+        self.all_folders.append(os.path.join(BASE_FOLDER, "DCIM", "Malta"))
 
     def test_pictures_tree_click_trip(self, qtbot):
         # Setup: get display, load pictures
