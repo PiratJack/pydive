@@ -13,6 +13,7 @@ from PyQt5.QtCore import Qt, QSize
 import controllers.settings
 import controllers.pictures
 import controllers.process_groups
+import controllers.divelog_scans
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # Uncommenting the below leads to the same widget displayed twice
             # This creates all sorts of issues, so this controller is displayed only as a dialog from the Pictures screen
             # #"ProcessGroups": controllers.process_groups.ProcessGroupsController(self),
+            "DivelogScan": controllers.divelog_scans.DivelogScanController(self),
         }
 
         # Define UI elements
