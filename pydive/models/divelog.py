@@ -36,17 +36,19 @@ class DiveLog:
         Loads all dives from the divelog file
     """
 
-    def __init__(self, divelog_file):
+    def __init__(self, divelog_file=None):
         """Defines default attributes"""
         logger.debug("DiveLog.init")
         self.file_path = divelog_file
         self.dives = []
         self.load_dives()
 
-    def load_dives(self):
+    def load_dives(self, path=None):
         """Loads all dives from the stored divelog file"""
         # Find all pictures
         logger.info("DiveLog.load_dives")
+        if path:
+            self.file_path = path
         if not self.file_path:
             return
         xml_tree = xml.etree.ElementTree.parse(self.file_path)
@@ -98,13 +100,13 @@ class DiveTrip:
         self.name = xml_data.attrib.get("location", "")
 
         # Parse date/time
-        self.start_time = None
+        self.start_date = None
         time_iso = ""
         # Both attributes are mandatory, so no need to handle other cases
         if "date" in xml_data.attrib and "time" in xml_data.attrib:
             time_iso = xml_data.attrib["date"] + "T" + xml_data.attrib["time"]
         if time_iso:
-            self.start_time = datetime.datetime.fromisoformat(time_iso)
+            self.start_date = datetime.datetime.fromisoformat(time_iso)
 
         # Parse dives
         for child in xml_data:
@@ -123,7 +125,7 @@ class Dive:
         The maximum depth reached
     duration : datetime.time
         The duration of the whole dive
-    start_time : datetime.time
+    start_date : datetime.time
         When the dive started
     number : int
         The dive number
@@ -166,12 +168,16 @@ class Dive:
             )
 
         # Parse date/time
-        self.start_time = None
+        self.start_date = None
         time_iso = ""
         # Both attributes are mandatory, so no need to handle other cases
         if "date" in xml_data.attrib and "time" in xml_data.attrib:
             time_iso = xml_data.attrib["date"] + "T" + xml_data.attrib["time"]
         if time_iso:
-            self.start_time = datetime.datetime.fromisoformat(time_iso)
+            self.start_date = datetime.datetime.fromisoformat(time_iso)
 
+        # Parse number
         self.number = int(xml_data.attrib.get("number", 0))
+
+        # Is there a picture linked to it?
+        self.has_picture = xml_data.find("picture") is not None

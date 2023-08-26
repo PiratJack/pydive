@@ -34,8 +34,8 @@ class TestDiveLog:
         assert dive.type == "dive", "Element identified as dive correctly"
         assert dive.max_depth == 6, "Dive max depth correct"
         assert dive.duration == datetime.timedelta(minutes=15), "Dive duration correct"
-        start_time = datetime.datetime.fromisoformat("2002-07-24T14:00:06")
-        assert dive.start_time == start_time, "Dive start time correct"
+        start_date = datetime.datetime.fromisoformat("2002-07-24T14:00:06")
+        assert dive.start_date == start_date, "Dive start time correct"
         assert dive.number == 0, "Dive number correct"
 
         # Check a given trip
@@ -43,8 +43,8 @@ class TestDiveLog:
         assert trip.type == "trip", "Element identified as trip correctly"
         assert trip.name == "Cavalaire", "Trip name correct"
         assert len(trip.dives) == 6, "Trip count of dives correct"
-        start_time = datetime.datetime.fromisoformat("2019-10-04T10:49:05")
-        assert trip.start_time == start_time, "Dive start time correct"
+        start_date = datetime.datetime.fromisoformat("2019-10-04T10:49:05")
+        assert trip.start_date == start_date, "Dive start time correct"
 
     def test_error_no_file(self):
         # Load everything
