@@ -17,6 +17,9 @@ GenerateProcess
 RemoveProcess
     A process to delete pictures
 
+ChangeTripProcess
+    A process to change the trip of given pictures
+
 ProcessSignals
     Defines signals when processes are completed or in error
 """
