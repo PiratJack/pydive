@@ -4,7 +4,7 @@ import pytest
 import datetime
 import logging
 import zipfile
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -164,6 +164,32 @@ class TestUiPictures:
         for folder in sorted(self.all_folders, reverse=True):
             if os.path.exists(folder):
                 os.rmdir(folder)
+
+    def mouseWheelTurn(self, qapp, widget, pos, orientation):
+        globalPos = widget.mapToGlobal(pos)
+        pixelDelta = QtCore.QPoint()
+        angleDelta = QtCore.QPoint(0, 120) * orientation
+        buttons = Qt.NoButton
+        modifiers = Qt.NoModifier
+        phase = 0
+        inverted = False
+        source = 0
+
+        wheelEvent = QtGui.QWheelEvent(
+            pos,
+            globalPos,
+            pixelDelta,
+            angleDelta,
+            buttons,
+            modifiers,
+            phase,
+            inverted,
+            source,
+        )
+        # This is a very dirty solution, because it's not really processed by the application
+        # However, the solution below just fails.
+        widget.wheelEvent(wheelEvent)
+        # #qapp.postEvent(widget, wheelEvent)
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
         QtCore.QThreadPool.globalInstance().waitForDone()
@@ -768,7 +794,7 @@ class TestUiPictures:
         copy = container.layout().itemAt(2).widget()
 
         # Trigger action - 1 image copied
-        with qtbot.waitSignal(picture_group.pictureAdded, timeout=5000) as blocker:
+        with qtbot.waitSignal(picture_group.pictureAdded) as blocker:
             qtbot.mouseClick(copy, Qt.LeftButton)
 
         # Check signal is emitted, files have been created & models updated
@@ -826,7 +852,7 @@ class TestUiPictures:
         copy = container.layout().itemAt(2).widget()
 
         # Trigger action - 1 image copied
-        with qtbot.waitSignal(picture_group.pictureAdded, timeout=5000) as signal:
+        with qtbot.waitSignal(picture_group.pictureAdded) as signal:
             qtbot.mouseClick(copy, Qt.LeftButton)
 
         # Check signal is emitted, files have been created & models updated
@@ -1063,6 +1089,111 @@ class TestUiPictures:
         # Check display - Error is displayed
         error = container.layout().itemAt(3).widget()
         assert error.text() == "No conversion method found", "Error is displayed"
+
+    def test_pictures_grid_picture_zoom(self, qtbot, qapp):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(6)  # Sweden
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Sweden's IMG040
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Get one of the pictures being displayed & trigger mouse wheel
+        container = picturesGrid.ui["layout"].itemAtPosition(5, 2).widget()
+        picture = container.layout().itemAt(1).widget()
+        size_before = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
+        with qtbot.waitSignal(picture.zoomChanged):
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+
+        # Check results
+        size_after = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
+        assert size_before < size_after, "Picture is zoomed in"
+        assert picture._zoom == 1, "Picture _zoom changed"
+        container2 = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        picture2 = container2.layout().itemAt(1).widget()
+        size_picture_2 = picture2.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
+        delta_zoom = abs(size_after - size_picture_2) / size_after
+        assert delta_zoom < 0.01, "Other pictures are zoomed in with same zoom"
+        assert picture2._zoom == 1, "Other pictures' _zoom property changed"
+
+        # Zoom back to the original level
+        with qtbot.waitSignal(picture.zoomChanged):
+            self.mouseWheelTurn(qapp, picture, picture.pos(), -1)
+
+        # Check results
+        size_final = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
+        assert size_final < size_after, "Picture is back to original zoom level"
+        assert size_final == size_before, "Picture is back to original zoom level"
+        assert picture._zoom == 0, "Picture _zoom is back to original value"
+        size_picture_2 = picture2.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
+        delta_zoom = abs(size_final - size_picture_2) / size_after
+        assert delta_zoom < 0.01, "Other pictures are zoomed in with same zoom"
+        assert picture2._zoom == 0, "Other pictures' _zoom property changed"
+
+    def test_pictures_grid_picture_move(self, qtbot, qapp):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(6)  # Sweden
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Sweden's IMG040
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Get one of the pictures being displayed & trigger zoom (otherwise, no scrollbar)
+        container = picturesGrid.ui["layout"].itemAtPosition(5, 2).widget()
+        picture = container.layout().itemAt(1).widget()
+        with qtbot.waitSignal(picture.zoomChanged):
+            # This is needed to ensure horizontal scrollbar is visible
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+            self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
+        container2 = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        picture2 = container2.layout().itemAt(1).widget()
+
+        # I couldn't find how to trigger the mouse move event, so I trigger the signal directly
+        scrollbarh = picture.horizontalScrollBar()
+        scrollbarh.setValue(3)
+        assert scrollbarh.value() == 3, "Horizontal scrollbar has moved"
+
+        # Check results
+        scrollbarh2 = picture2.horizontalScrollBar()
+        assert (
+            scrollbarh2.value() == scrollbarh.value()
+        ), "Other pictures are moved similarly"
+
+        # I couldn't find how to trigger the mouse move event, so I trigger the signal directly
+        scrollbarv = picture.verticalScrollBar()
+        scrollbarv.valueChanged.emit(15)
+
+        # Check results
+        scrollbarv2 = picture2.verticalScrollBar()
+        assert (
+            scrollbarv2.value() == scrollbarv.value()
+        ), "Other pictures are moved similarly"
 
     def test_pictures_tree_trip_copy(self, qtbot):
         # Setup: get display, load pictures

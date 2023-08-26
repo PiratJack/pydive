@@ -115,8 +115,6 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
             t["error_details"] for t in process_group.tasks if "error_details" in t
         ]
         if role == Qt.DisplayRole:
-            # TODO: Think about how to display the errors
-            # Right now they're not very useful (lack details)
             if len(errors) == 0:
                 error_text = ""
             if len(errors) <= 1:

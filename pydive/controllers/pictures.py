@@ -797,6 +797,11 @@ class PictureGrid:
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
 
+        # Trigger image resize so they fit in the area
+        for row in self.picture_containers:
+            for column in self.picture_containers[row]:
+                self.picture_containers[row][column].fit_picture_in_view()
+
         self.grid[0][1].setText(_("RAW"))
 
     def picture_added(self, picture, conversion_type):
@@ -867,10 +872,10 @@ class PictureGrid:
         logger.info(
             f"PictureGrid.generate_image {self.picture_group.trip}/{self.picture_group.name} using {method} to {target_location.name}"
         )
+        # Updated data will be displayed through the signals directly
         self.repository.generate_pictures(
             label, target_location, [method], picture_group=self.picture_group
         )
-        # Updated data will be displayed through the signals directly
 
     def copy_image(self, row, column):
         """Copies an image to the provided row & column
@@ -926,6 +931,42 @@ class PictureGrid:
         self.repository.remove_pictures(label, None, self.picture_group, picture)
         self.picture_containers[row][column].set_empty_picture()
 
+    def pictures_set_scrollbar(self, row, column, horizontal, vertical):
+        """Moves the displayed pictures by the provided values
+
+        Will not move the picture in position (row, column)
+
+        row : int
+            The row of the triggering picture. That picture will not be changed.
+        column : int
+            The column of the triggering picture. That picture will not be changed.
+        horizontal : int
+            The position of the horizontal scrollbar. Negative when position shouldn't change
+        vertical : int
+            The position of the vertical scrollbar. Negative when position shouldn't change
+        """
+        for r in self.picture_containers:
+            for c in self.picture_containers[r]:
+                if (r, c) != (row, column):
+                    self.picture_containers[r][c].set_scrollbar(horizontal, vertical)
+
+    def pictures_set_zoom_factor(self, row, column, value):
+        """Changes the zoom factor of all displayed pictures
+
+        Will not move the picture in position (row, column)
+
+        row : int
+            The row of the triggering picture. That picture will not be changed.
+        column : int
+            The column of the triggering picture. That picture will not be changed.
+        value : float
+            The zoom factor to apply
+        """
+        for r in self.picture_containers:
+            for c in self.picture_containers[r]:
+                if (r, c) != (row, column):
+                    self.picture_containers[r][c].set_zoom_factor(value)
+
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
@@ -971,6 +1012,12 @@ class PictureContainer:
         Displays the provided error message
     clear_display
         Removes all widgets from the display & deletes them properly
+    fit_picture_in_view
+        Fits the picture to its container
+    set_scrollbar (horizontal, vertical)
+        Sets the picture's position to the provided values
+    set_zoom_factor (value)
+        Sets the zoom factor of the picture
     """
 
     def __init__(self, parent_controller, row, column):
@@ -1040,10 +1087,25 @@ class PictureContainer:
         pixmap = QtGui.QPixmap(self.picture.path)
         # Image exists and can be read by PyQt5
         if pixmap.width() > 0:
-            self.ui["elements"]["image"] = PictureDisplay()
-            self.ui["elements"]["image"].image_path = self.picture.path
-            self.ui["elements"]["image"].setPixmap(pixmap)
-            self.ui["layout"].addWidget(self.ui["elements"]["image"])
+            image = PictureDisplay(self.ui["main"])
+            self.ui["elements"]["image"] = image
+            image.set_pixmap(pixmap)
+            image.horizontalScrollBar().valueChanged.connect(
+                lambda val: self.parent_controller.pictures_set_scrollbar(
+                    self.row, self.column, val, -1
+                )
+            )
+            image.verticalScrollBar().valueChanged.connect(
+                lambda val: self.parent_controller.pictures_set_scrollbar(
+                    self.row, self.column, -1, val
+                )
+            )
+            image.zoomChanged.connect(
+                lambda val: self.parent_controller.pictures_set_zoom_factor(
+                    self.row, self.column, val
+                )
+            )
+            self.ui["layout"].addWidget(image)
         else:
             self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
             self.ui["elements"]["label"].setProperty("class", "small_note")
@@ -1108,6 +1170,38 @@ class PictureContainer:
             self.ui["layout"].removeWidget(self.ui["elements"][i])
         self.ui["elements"] = {}
 
+    def fit_picture_in_view(self):
+        """Fits the picture to its container"""
+        if "image" in self.ui["elements"]:
+            self.ui["elements"]["image"].fit_in_view()
+
+    def set_scrollbar(self, horizontal, vertical):
+        """Sets the picture's position to the provided values
+
+        Parameters
+        ----------
+        horizontal : int
+            The position of the horizontal scrollbar. Negative when position shouldn't change
+        vertical : int
+            The position of the vertical scrollbar. Negative when position shouldn't change
+        """
+        if "image" in self.ui["elements"]:
+            if horizontal > 0:
+                self.ui["elements"]["image"].horizontalScrollBar().setValue(horizontal)
+            if vertical > 0:
+                self.ui["elements"]["image"].verticalScrollBar().setValue(vertical)
+
+    def set_zoom_factor(self, value):
+        """Sets the zoom factor of the picture
+
+        Parameters
+        ----------
+        value : float
+            The zoom factor to apply
+        """
+        if "image" in self.ui["elements"]:
+            self.ui["elements"]["image"].set_zoom_factor(value)
+
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
@@ -1115,34 +1209,180 @@ class PictureContainer:
         return self.ui["main"]
 
 
-class PictureDisplay(QtWidgets.QLabel):
+class PictureDisplay(QtWidgets.QGraphicsView):
     """Displays a single image while preserving aspect ratio when resizing
+
+    Also allows for zooming and dragging
+    Zoom & drag are synced between all PictureDisplay2
+    This class is derived from the following page:
+    https://stackoverflow.com/questions/35508711/how-to-enable-pan-and-zoom-in-a-qgraphicsview
 
     Methods
     -------
+    __init__ (parent)
+        Sets various variables for display & calculations
+    fit_in_view
+        Resizes / repositions the image to fit the container
+    set_pixmap
+        Defines the pixmap to display. Enabled drag & drop to move image.
     resizeEvent (event)
-        Overloaded method to keep aspect ratio on images
+        Ensures image fills the viewport after resize of the entire window
+    wheelEvent
+        Zooms the image on using mouse wheel
+
+    Sngials
+    -------
+    zoomChanged (float)
+        Triggered when the zoom factor is changed (through scrolling)
     """
 
+    zoomChanged = QtCore.pyqtSignal(float)
+
+    def __init__(self, parent):
+        """Sets various variables for display & calculations
+
+        Parameters
+        ----------
+        parent : QtWidgets.QWidget
+            The parent element
+        """
+        super().__init__(parent)
+        self._zoom = 0
+        self._scene = QtWidgets.QGraphicsScene(self)
+        self._photo = QtWidgets.QGraphicsPixmapItem()
+        self._scene.addItem(self._photo)
+        self._width = self.viewport().rect().width()
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setScene(self._scene)
+
+    def fit_in_view(self):
+        """Resizes / repositions the image to fit the container"""
+        rect = QtCore.QRectF(self._photo.pixmap().rect())
+        if not rect.isNull():
+            self.setSceneRect(rect)
+            unity = self.transform().mapRect(QtCore.QRectF(0, 0, 1, 1))
+            self.scale(1 / unity.width(), 1 / unity.height())
+            viewrect = self.viewport().rect()
+            scenerect = self.transform().mapRect(rect)
+            factor = min(
+                viewrect.width() / scenerect.width(),
+                viewrect.height() / scenerect.height(),
+            )
+            self.scale(factor, factor)
+            self._zoom = 0
+
+    def set_pixmap(self, pixmap):
+        """Defines the pixmap to display. Enabled drag & drop to move image.
+
+        Parameters
+        ----------
+        pixmap : QtWidgets.QPixmap
+            The pixmap to display
+        """
+        self._zoom = 0
+        self.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
+        self._photo.setPixmap(pixmap)
+        self.fit_in_view()
+
     def resizeEvent(self, event):
-        """Overloaded method to keep aspect ratio on images
+        """Ensures image fills the viewport after resize of the entire window
 
         Parameters
         ----------
         event : QResizeEvent
-            The resize event
+            The triggering event
         """
         super().resizeEvent(event)
-        if self.pixmap() and self.pixmap().height():
-            self.pixmap().swap(
-                QtGui.QPixmap(self.image_path).scaled(
-                    self.width(), self.height(), Qt.KeepAspectRatio
-                )
-            )
+        if self._width != self.viewport().rect().width():
+            self._width = self.viewport().rect().width()
+            self.fit_in_view()
+
+    def wheelEvent(self, event):
+        """Zooms the image on using mouse wheel
+
+        Ensures the zoom's center point (identity) is on the mouse position
+
+        Parameters
+        ----------
+        event : QWheelEvent
+            The triggering event
+        """
+        if event.angleDelta().y() > 0:
+            factor = 1.25
+        else:
+            factor = 0.8
+
+        # The movements are based on this:
+        # https://stackoverflow.com/questions/58965209/zoom-on-mouse-position-qgraphicsview
+        # Center on the mouse position before zoom
+        mouse_position_in_scene = self.mapToScene(event.pos())
+        self.centerOn(mouse_position_in_scene)
+
+        # Set zoom & send to other images
+        self.set_zoom_factor(factor)
+        self.zoomChanged.emit(factor)
+
+        # Move to the zoomed position (which has changed due to zooming not being centered on the mouse)
+        # This movement will be sent to other images via the scrollbars
+        delta = self.mapToScene(event.pos()) - self.mapToScene(
+            self.viewport().rect().center()
+        )
+        self.centerOn(mouse_position_in_scene - delta)
+
+    def set_zoom_factor(self, factor):
+        """Sets the zoom factor. Ensures image doesn't get smaller than its container
+
+        Parameters
+        ----------
+        factor : float
+            The zoom factor to apply
+        """
+        if factor > 1:
+            self._zoom += 1
+        else:
+            self._zoom = max(0, self._zoom - 1)
+
+        if self._zoom > 0:
+            self.scale(factor, factor)
+        elif self._zoom == 0:
+            self.fit_in_view()
 
 
 class TasksProgressBar(QtWidgets.QProgressBar):
+    """Displays a progress bar for tasks in progress. Click to open details.
+
+    Attributes
+    ----------
+    parent_controller : PicturesController
+        A reference to the parent controller
+    repository: models.repository.Repository
+        This program's picture repository
+    process_groups: list of models.repository.ProcessGroup
+        This ongoing process groups (background tasks)
+    connections: list of signal/slot connections
+        The handlers for process group signals
+
+    Methods
+    -------
+    __init__ (parent_controller, repository)
+        Stores information & sets minimum / maximum values
+    update_progress
+        Updates the bar's displayed progress based on actual task progress
+    mouseReleaseEvent
+        Opens the details screen on mouse click
+    """
+
     def __init__(self, parent_controller, repository):
+        """Stores information & sets minimum / maximum values
+
+        Parameters
+        ----------
+        parent_controller : PicturesController
+            A reference to the parent controller
+        repository: models.repository.Repository
+            This program's picture repository
+        """
         logger.debug("TasksProgressBar.__init__")
         super().__init__(parent_controller.ui["main"])
         self.repository = repository
@@ -1154,6 +1394,7 @@ class TasksProgressBar(QtWidgets.QProgressBar):
         self.setMaximum(100)
 
     def update_progress(self):
+        """Updates the bar's displayed progress based on actual task progress"""
         logger.debug("TasksProgressBar.update_progress")
         # Disconnect & reconnect, in case new process groups are added
         for c in self.connections:
@@ -1171,21 +1412,62 @@ class TasksProgressBar(QtWidgets.QProgressBar):
             self.setValue(int(completed / total * 100))
 
     def mouseReleaseEvent(self, event):
+        """Opens the details screen on mouse click
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The triggering event
+        """
         if event.button() == Qt.LeftButton:
             self.parent_controller.display_tasks_dialog()
 
 
 class TasksProgressTitle(QtWidgets.QLabel):
+    """Displays the tasks in progress. Opens details screen on click.
+
+    Attributes
+    ----------
+    parent_controller : PicturesController
+        A reference to the parent controller
+    repository: models.repository.Repository
+        This program's picture repository
+    process_groups: list of models.repository.ProcessGroup
+        This ongoing process groups (background tasks)
+    connections: list of signal/slot connections
+        The handlers for process group signals
+
+    Methods
+    -------
+    __init__ (label, parent_controller)
+        Stores a reference to the parent controller
+    mouseReleaseEvent
+        Opens the details screen on mouse click
+    """
+
     def __init__(self, label, parent_controller):
+        """Stores a reference to the parent controller
+
+        Parameters
+        ----------
+        label : str
+            The text to display
+        parent_controller : PicturesController
+            A reference to the parent controller
+        """
         super().__init__(label, parent_controller.ui["main"])
         self.parent_controller = parent_controller
 
     def mouseReleaseEvent(self, event):
+        """Opens the details screen on mouse click
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The triggering event
+        """
         if event.button() == Qt.LeftButton:
             self.parent_controller.display_tasks_dialog()
-
-
-# TODO: Allow to zoom on pictures (with sync between images)
 
 
 class PicturesController:
