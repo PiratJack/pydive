@@ -52,6 +52,12 @@ class TestStorageLocation:
                     type="file",
                     path=os.path.join("", "Archives", "test.txt"),
                 ),
+                StorageLocation(
+                    id=5,
+                    name="Scan split folder",
+                    type="target_scan_folder",
+                    path=os.path.join("", "Divelog"),
+                ),
             ]
         )
         self.database.session.commit()
@@ -65,13 +71,16 @@ class TestStorageLocation:
     def test_gets(self):
         # Get all
         storage_locations = self.database.storagelocations_get()
-        assert len(storage_locations) == 4, "There are 4 storage locations"
+        assert len(storage_locations) == 5, "There are 5 storage locations"
 
         storage_locations = self.database.storagelocations_get_picture_folders()
         assert len(storage_locations) == 3, "There are 3 folder storage locations"
 
         storage_locations = self.database.storagelocations_get_divelog()
         assert len(storage_locations) == 1, "There is 1 file storage locations"
+
+        storage_locations = self.database.storagelocations_get_target_scan_folder()
+        assert storage_locations is not None, "There is 1 target scan folder locations"
 
         storage_location = self.database.storagelocation_get_by_id(2)
         assert storage_location.id == 2, "There is 1 storage locations with ID = 2"
@@ -93,8 +102,8 @@ class TestStorageLocation:
         self.database.delete(storage_location)
         storage_locations = self.database.storagelocations_get()
         assert (
-            len(storage_locations) == 3
-        ), "After deletion, there are 3 storage locations left"
+            len(storage_locations) == 4
+        ), "After deletion, there are 4 storage locations left"
 
     def test_validations(self):
         storage_location = StorageLocation(
