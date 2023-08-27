@@ -54,7 +54,8 @@ class PyDive:
             app.setStyleSheet(stylesheet.read())
 
         window = controllers.mainwindow.MainWindow(self.database, self.repository)
-        window.showMaximized()
+        # #window.showMaximized()
+        window.show()
         app.exec_()
 
 

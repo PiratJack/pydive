@@ -14,14 +14,14 @@ I have no idea whether this will be useful for other people. Probably not, but w
 ## What is the status of this project?
 
 What is done:
-- Models for pictures, picture groups, storage locations
+- Models for pictures, picture groups, storage locations, divelog, dive
 - Display / Edit of settings (will evolve depending on progress on other items)
 - Display / copy / conversion of image, individually or in batches (background processing)
+- Display of in-progress background processing
+- Display & split of paper dive log scans
 
 What is remaining:
-- Models for dive trips & dives (may be useless, depending on how the project goes)
-- Display of in-progress tasks
-- Views: home, paper dive log scans, dive analysis/comments
+- Views: home, dive analysis/comments
 
 ## What else should you know?
 

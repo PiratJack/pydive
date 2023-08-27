@@ -91,7 +91,7 @@ class Database:
             self.session.query(storagelocation.StorageLocation)
             .filter(
                 storagelocation.StorageLocation.type
-                == storagelocation.StorageLocationType.file
+                == storagelocation.StorageLocationType.target_scan_folder
             )
             .one_or_none()
         )
