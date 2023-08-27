@@ -82,17 +82,17 @@ class DiveTree(BaseTreeWidget):
         parent_controller : PicturesController
             A reference to the parent controller
         """
-        logger.debug("c.init")
+        logger.debug("DiveTree.init")
         super().__init__(parent_controller)
         self.parent_controller = parent_controller
         self.divelog = parent_controller.divelog
         self.setSortingEnabled(False)
         self.setMinimumSize(600, 100)
-        # TODO: setup drag and drop
+        self.setDragEnabled(True)
 
     def fill_tree(self):
         """Adds all trips & dives to the tree"""
-        logger.info("AlignRight.fill_tree")
+        logger.info("DiveTree.fill_tree")
         self.clear()
         for element in reversed(self.divelog.dives):
             if element.type == "dive":
@@ -101,7 +101,9 @@ class DiveTree(BaseTreeWidget):
             elif element.type == "trip":
                 data = [element.name]
                 widget = QtWidgets.QTreeWidgetItem(map(str, data))
-                widget._element = element
+                widget.setData(0, Qt.UserRole, element)
+                # Disable drag / drop for trips
+                widget.setFlags(widget.flags() ^ Qt.ItemIsDragEnabled)
                 self.addTopLevelItem(widget)
                 for dive in reversed(element.dives):
                     dive_widget = self.dive_to_widget(dive)
@@ -133,7 +135,7 @@ class DiveTree(BaseTreeWidget):
             widget.setIcon(4, QtGui.QIcon("assets/images/check.png"))
         else:
             widget.setIcon(4, QtGui.QIcon("assets/images/delete.png"))
-        widget._element = dive
+        widget.setData(0, Qt.UserRole, dive)
         return widget
 
 
@@ -160,8 +162,10 @@ class PictureGrid:
     -------
     __init__ (parent_controller)
         Stores reference to parent controller + initializes the display
-    display_split_scan
+    on_choose_scan_file
         Displays the divelog's 4 images after split
+    clear_display
+        Clears the display of images
     """
 
     y_split = 1120
@@ -195,7 +199,11 @@ class PictureGrid:
         self.source_image = QtGui.QImage(path)
         if self.source_image.isNull():
             # TODO: display an error in this case
+            self.parent_controller.display_scan_file_error(
+                _("Source file could not be read")
+            )
             return
+        self.parent_controller.display_scan_file_error("")
 
         # Rotate the image 90 degrees
         rotate = QtGui.QTransform()
@@ -211,19 +219,71 @@ class PictureGrid:
         ]
         for position, split in enumerate(split_matrix):
             image = self.source_image.copy(*split).transformed(rotate)
-            self.ui["image_" + str(position)] = PictureDisplay()
-            self.ui["image_" + str(position)].setPixmap(QtGui.QPixmap.fromImage(image))
+            widget = PictureContainer()
+            self.ui["picture_container" + str(position)] = widget
+            widget.setAcceptDrops(True)
+            layout = QtWidgets.QVBoxLayout()
+            widget.setLayout(layout)
 
-            self.ui["layout"].addWidget(
-                self.ui["image_" + str(position)], position % 2, position // 2
-            )
+            picture = PictureDisplay()
+            self.ui["picture_display" + str(position)] = picture
+            picture.setPixmap(QtGui.QPixmap.fromImage(image))
+            layout.addWidget(picture, 1)
 
-        # TODO: handle drag/drop (end point)
+            label = QtWidgets.QLabel()
+            layout.addWidget(label)
+
+            self.ui["layout"].addWidget(widget, position % 2, position // 2)
+
+    def clear_display(self):
+        """Clears the display of images"""
+        for i in self.ui:
+            if not i.startswith("picture_display"):
+                continue
+            self.ui[i].setPixmap(QtGui.QPixmap())
 
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
         return self.ui["main"]
+
+
+class PictureContainer(QtWidgets.QWidget):
+    """Displays an image with the dive reference below
+
+    Methods
+    -------
+    dragEnterEvent (event)
+        Accepts drag enter events (without doing anything else)
+    dropEvent (event)
+        Stores the source dive data (& displays it) when dives are dragged here
+    """
+
+    def dragEnterEvent(self, event):
+        """Accepts drag enter events (without doing anything else)
+
+        Parameters
+        ----------
+        event : QtGui.QDragEnterEvent
+            The drag enter event
+        """
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Stores the source dive data (& displays it) when dives are dragged here
+
+        Parameters
+        ----------
+        event : QtGui.QDropEvent
+            The drop event
+        """
+        logger.debug("PictureContainer.dropEvent")
+        source_item = event.source().selectedItems()[0]
+        dive = source_item.data(0, Qt.UserRole)
+        self.layout().itemAt(1).widget().setText(
+            f"Dive {dive.number} on {dive.start_date}"
+        )
+        self.setProperty("dive", dive)
 
 
 class PictureDisplay(QtWidgets.QLabel):
@@ -263,6 +323,18 @@ class DivelogScanController:
         The window displaying this controller
     ui : dict of QtWidgets.QWidget
         The different widgets displayed on the screen
+    divelog_path : str
+        Path to the divelog file
+    divelog : models.divelog.DiveLog
+        The divelog as application model
+    picture_grid : PictureGrid
+        The grid of pictures displayed (split of the divelog scan)
+    dive_tree : DiveTree
+        The tree of trips & dives displayed
+    divelog_scan_file : str
+        The original scan of the divelog
+    divelog_scan_target_folder : str
+        Where the split images should be stored
 
     Properties
     -------
@@ -275,14 +347,14 @@ class DivelogScanController:
     -------
     __init__ (parent_window)
         Stores reference to parent window & defines UI elements.
-    on_load_pictures
-        Refreshes the tree of images (left part)
-    refresh_folders
-        Reloads the paths displayed at the top left
+    on_choose_scan_file
+        Triggers the split of the divelog scan image when user chooses it
+    on_choose_target_folder
+        Stores the folder in which split images should be saved
+    on_validate
+        Moves, renames and changes split image EXIF data according to user selection
     refresh_display
-        Reloads the UI
-    display_picture_group
-        Displays a given picture group
+        Refreshes the display - reloads the list of dives
     """
 
     name = _("Divelog scan split")
@@ -304,8 +376,8 @@ class DivelogScanController:
         self.picture_grid = PictureGrid(self)
         self.dive_tree = DiveTree(self)
 
-        self.source_file_path = ""
-        self.target_folder_path = ""
+        self.divelog_scan_file = ""
+        self.divelog_scan_target_folder = ""
 
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
@@ -320,10 +392,20 @@ class DivelogScanController:
         # File label
         self.ui["scan_file_label"] = QtWidgets.QLabel(_("Divelog scan to split"))
         self.ui["top_layout"].addWidget(self.ui["scan_file_label"], 1)
+        # File path wrapper
+        self.ui["scan_file_wrapper"] = QtWidgets.QWidget()
+        self.ui["scan_file_wrapper_layout"] = QtWidgets.QVBoxLayout()
+        self.ui["scan_file_wrapper"].setLayout(self.ui["scan_file_wrapper_layout"])
+        self.ui["top_layout"].addWidget(self.ui["scan_file_wrapper"], 3)
         # File path
         self.ui["scan_file_path"] = QtWidgets.QLineEdit()
         self.ui["scan_file_path"].setEnabled(False)
-        self.ui["top_layout"].addWidget(self.ui["scan_file_path"], 3)
+        self.ui["scan_file_wrapper_layout"].addWidget(self.ui["scan_file_path"])
+        # File path error
+        self.ui["scan_file_path_error"] = QtWidgets.QLabel()
+        self.ui["scan_file_path_error"].setProperty("class", "validation_warning")
+        self.ui["scan_file_path_error"].hide()
+        self.ui["scan_file_wrapper_layout"].addWidget(self.ui["scan_file_path_error"])
         # File path selector
         self.ui["scan_file_path_change"] = PathSelectButton(
             QtGui.QIcon("assets/images/modify.png"),
@@ -354,9 +436,9 @@ class DivelogScanController:
         self.ui["target_folder_label"] = QtWidgets.QLabel(_("Target scan folder"))
         self.ui["bottom_layout"].addWidget(self.ui["target_folder_label"], 1)
         # Folder path
-        self.ui["target_folder_path"] = QtWidgets.QLineEdit()
-        self.ui["target_folder_path"].setEnabled(False)
-        self.ui["bottom_layout"].addWidget(self.ui["target_folder_path"], 2)
+        self.ui["divelog_scan_target_folder"] = QtWidgets.QLineEdit()
+        self.ui["divelog_scan_target_folder"].setEnabled(False)
+        self.ui["bottom_layout"].addWidget(self.ui["divelog_scan_target_folder"], 2)
         # Folder path selector
         self.ui["target_folder_change"] = PathSelectButton(
             QtGui.QIcon("assets/images/modify.png"),
@@ -374,17 +456,48 @@ class DivelogScanController:
         self.ui["validate"].clicked.connect(self.on_validate)
         self.ui["bottom_layout"].addWidget(self.ui["validate"])
 
+    def display_scan_file_error(self, error):
+        """Triggers the split of the divelog scan image when user chooses it
+
+        Parameters
+        ----------
+        path : str
+            The path of the divelog scan image
+        """
+        if error == "":
+            self.ui["scan_file_path_error"].setText("")
+            self.ui["scan_file_path_error"].hide()
+        else:
+            self.ui["scan_file_path_error"].setText(error)
+            self.ui["scan_file_path_error"].show()
+            self.picture_grid.clear_display()
+
     def on_choose_scan_file(self, path):
-        self.source_file_path = path
+        """Triggers the split of the divelog scan image when user chooses it
+
+        Parameters
+        ----------
+        path : str
+            The path of the divelog scan image
+        """
+        self.divelog_scan_file = path
         self.ui["scan_file_path"].setText(path)
 
-        self.picture_grid.on_choose_scan_file(self.source_file_path)
+        self.picture_grid.on_choose_scan_file(self.divelog_scan_file)
 
     def on_choose_target_folder(self, path):
-        self.target_folder_path = path
-        self.ui["target_folder_path"].setText(path)
+        """Stores the folder in which split images should be saved
+
+        Parameters
+        ----------
+        path : str
+            The path of the target folder
+        """
+        self.divelog_scan_target_folder = path
+        self.ui["divelog_scan_target_folder"].setText(path)
 
     def on_validate(self):
+        """Moves, renames and changes split image EXIF data according to user selection"""
         # TODO: Trigger the move & rename of images + EXIF data
         pass
 
@@ -414,5 +527,14 @@ class DivelogScanController:
         return button
 
     def refresh_display(self):
-        """Refreshes the display - update trips & pictures"""
+        """Refreshes the display - reloads the list of dives"""
         logger.debug("DivelogScanController.refresh_display")
+
+        divelog = self.database.storagelocations_get_divelog()
+        if divelog:
+            self.divelog_path = divelog[0].path
+        else:
+            self.divelog_path = None
+        self.divelog.load_dives(self.divelog_path)
+
+        self.dive_tree.fill_tree()
