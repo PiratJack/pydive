@@ -47,6 +47,7 @@ class DiveLog:
         """Loads all dives from the stored divelog file"""
         # Find all pictures
         logger.info("DiveLog.load_dives")
+        self.dives = []
         if path:
             self.file_path = path
         if not self.file_path:
