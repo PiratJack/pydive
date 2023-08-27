@@ -48,7 +48,7 @@ class TestDiveLog:
 
     def test_error_no_file(self):
         # Load everything
-        divelog = DiveLog()
+        DiveLog()
 
 
 if __name__ == "__main__":
