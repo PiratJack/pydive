@@ -47,7 +47,7 @@ msgid "Copy image here"
 msgstr ""
 
 #, python-brace-format
-msgid "Could not save {file_path}"
+msgid "Could not save {filename}"
 msgstr ""
 
 msgid "Date"
@@ -91,7 +91,7 @@ msgid "File name suffix"
 msgstr ""
 
 #, python-brace-format
-msgid "File {file_path} already exists"
+msgid "File {filename} already exists"
 msgstr ""
 
 msgid "Generate"

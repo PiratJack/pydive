@@ -199,7 +199,6 @@ class PictureGrid:
         logger.debug("PictureGrid.on_choose_scan_file")
         self.source_image = QtGui.QImage(path)
         if self.source_image.isNull():
-            # TODO: display an error in this case
             self.parent_controller.display_scan_file_error(
                 _("Source file could not be read")
             )
@@ -229,8 +228,8 @@ class PictureGrid:
     def clear_display(self):
         """Clears the display of images"""
         for i in self.ui:
-            if i.startswith("picture_display"):
-                self.ui[i].setPixmap(QtGui.QPixmap())
+            if i.startswith("picture_container"):
+                self.ui[i].set_image()
 
     def on_validate(self, target_folder, scan_file_split_mask):
         """Saves the 4 split images
@@ -291,11 +290,8 @@ class PictureContainer(QtWidgets.QWidget):
         self.ui = {}
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.setLayout(self.ui["layout"])
-        self.original_image = image
 
         self.ui["picture_display"] = PictureDisplay()
-        self.ui["picture_display"].setPixmap(QtGui.QPixmap.fromImage(image))
-        self.ui["picture_display"].original_image = image
         self.ui["layout"].addWidget(self.ui["picture_display"])
 
         self.ui["label"] = QtWidgets.QLabel()
@@ -306,7 +302,9 @@ class PictureContainer(QtWidgets.QWidget):
         self.ui["error_label"].hide()
         self.ui["layout"].addWidget(self.ui["error_label"])
 
-    def set_image(self, image):
+        self.set_image(image)
+
+    def set_image(self, image=None):
         """Displays / updates the image being displayed
 
         Methods
@@ -315,8 +313,11 @@ class PictureContainer(QtWidgets.QWidget):
             The image data to display
         """
         self.original_image = image
-        self.ui["picture_display"].setPixmap(QtGui.QPixmap.fromImage(image))
         self.ui["picture_display"].original_image = image
+        if image is None:
+            self.ui["picture_display"].setPixmap(QtGui.QPixmap())
+        else:
+            self.ui["picture_display"].setPixmap(QtGui.QPixmap.fromImage(image))
 
     def on_validate(self, target_folder, scan_file_split_mask):
         """Saves the image with matching EXIF data
@@ -355,7 +356,6 @@ class PictureContainer(QtWidgets.QWidget):
         # Change EXIF data
         picture_data = piexif.load(file_path)
         start_date = dive.start_date.strftime("%Y:%m:%d %H:%M:%S")
-        print("saving", start_date)
         picture_data["0th"][piexif.ImageIFD.DateTime] = start_date
         picture_data["Exif"][piexif.ExifIFD.DateTimeOriginal] = start_date
         picture_data["Exif"][piexif.ExifIFD.DateTimeDigitized] = start_date
@@ -463,7 +463,7 @@ class DivelogScanController:
         Stores reference to parent window & defines UI elements.
     display_scan_file_error (error)
         Displays an error next to the scan file selector
-    display_target_file_error (error)
+    display_target_folder_error (error)
         Displays an error next to the target folder selector
     on_choose_scan_file
         Triggers the split of the divelog scan image when user chooses it
@@ -616,7 +616,7 @@ class DivelogScanController:
             self.ui["scan_file_path_error"].show()
             self.picture_grid.clear_display()
 
-    def display_target_file_error(self, error=None):
+    def display_target_folder_error(self, error=None):
         """Displays an error next to the target folder selector
 
         Parameters
@@ -664,16 +664,16 @@ class DivelogScanController:
             )
 
         self.ui["target_folder"].setText(path)
-        self.display_target_file_error()
+        self.display_target_folder_error()
 
     def on_validate(self):
         """Moves, renames and changes split image EXIF data according to user selection"""
         target_folder = self.ui["target_folder"].text()
         if target_folder == "":
-            self.display_target_file_error(_("Please choose a target folder"))
+            self.display_target_folder_error(_("Please choose a target folder"))
             return
         else:
-            self.display_target_file_error()
+            self.display_target_folder_error()
         self.picture_grid.on_validate(target_folder, self.scan_file_split_mask)
 
     @property
@@ -696,6 +696,7 @@ class DivelogScanController:
         """Refreshes the display - reloads the list of dives"""
         logger.debug("DivelogScanController.refresh_display")
 
+        # Reload divelog data
         divelog = self.database.storagelocations_get_divelog()
         if divelog:
             self.divelog_path = divelog[0].path
@@ -704,3 +705,9 @@ class DivelogScanController:
         self.divelog.load_dives(self.divelog_path)
 
         self.dive_tree.fill_tree()
+
+        # Reload divelog scan target folder
+        target_folder = self.database.storagelocations_get_target_scan_folder()
+        if target_folder is not None:
+            self.target_folder = target_folder
+            self.ui["target_folder"].setText(target_folder.path)
