@@ -46,6 +46,16 @@ msgstr ""
 msgid "Copy image here"
 msgstr ""
 
+#, python-brace-format
+msgid "Could not save {file_path}"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Depth"
+msgstr ""
+
 msgid "Details"
 msgstr ""
 
@@ -55,7 +65,16 @@ msgstr ""
 msgid "Dive management"
 msgstr ""
 
+msgid "Divelog scan split"
+msgstr ""
+
+msgid "Divelog scan to split"
+msgstr ""
+
 msgid "Do you really want to delete this conversion method?"
+msgstr ""
+
+msgid "Duration"
 msgstr ""
 
 msgid ""
@@ -71,6 +90,10 @@ msgstr ""
 msgid "File name suffix"
 msgstr ""
 
+#, python-brace-format
+msgid "File {file_path} already exists"
+msgstr ""
+
 msgid "Generate"
 msgstr ""
 
@@ -80,7 +103,7 @@ msgstr ""
 msgid "ID"
 msgstr ""
 
-msgid "Image storage locations"
+msgid "Image folders"
 msgstr ""
 
 msgid "Image unreadable"
@@ -137,7 +160,13 @@ msgstr ""
 msgid "Path"
 msgstr ""
 
+msgid "Picture"
+msgstr ""
+
 msgid "Pictures"
+msgstr ""
+
+msgid "Please choose a target folder"
 msgstr ""
 
 msgid "Please confirm"
@@ -159,6 +188,9 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+msgid "Source file could not be read"
+msgstr ""
+
 msgid "Source file does not exists"
 msgstr ""
 
@@ -174,6 +206,9 @@ msgstr ""
 
 #, python-brace-format
 msgid "Target file already exists: {short_path} - {target_file}"
+msgstr ""
+
+msgid "Target scan folder"
 msgstr ""
 
 msgid "Tasks"
@@ -204,6 +239,9 @@ msgstr ""
 
 #, python-brace-format
 msgid "Using {method}"
+msgstr ""
+
+msgid "Validate"
 msgstr ""
 
 #, python-brace-format

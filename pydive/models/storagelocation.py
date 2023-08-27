@@ -24,11 +24,17 @@ _ = gettext.gettext
 class StorageLocationType(enum.Enum):
     """Either Folder or File"""
 
-    folder = {
-        "name": "folder",
+    picture_folder = {
+        "name": "picture_folder",
+        "file_or_folder": "folder",
+    }
+    target_scan_folder = {
+        "name": "target_scan_folder",
+        "file_or_folder": "folder",
     }
     file = {
         "name": "file",
+        "file_or_folder": "file",
     }
 
 
@@ -94,7 +100,7 @@ class StorageLocation(Base):
     def validate_path(self, key, value):
         self.validate_missing_field(key, value)
         if self.type:
-            if self.type in ("folder", StorageLocationType["folder"]):
+            if self.type in ("picture_folder", StorageLocationType["picture_folder"]):
                 if not value.endswith(os.path.sep):
                     value += os.path.sep
 

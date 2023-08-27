@@ -31,19 +31,19 @@ class TestStorageLocation:
                 StorageLocation(
                     id=1,
                     name="Camera",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join("...", "SD_Card"),
                 ),
                 StorageLocation(
                     id=2,
                     name="Temporary",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join("tmp", "Pictures"),
                 ),
                 StorageLocation(
                     id=3,
                     name="Archive",
-                    type=StorageLocationType["folder"],
+                    type=StorageLocationType["picture_folder"],
                     path=os.path.join("", "Archives"),
                 ),
                 StorageLocation(
@@ -67,7 +67,7 @@ class TestStorageLocation:
         storage_locations = self.database.storagelocations_get()
         assert len(storage_locations) == 4, "There are 4 storage locations"
 
-        storage_locations = self.database.storagelocations_get_folders()
+        storage_locations = self.database.storagelocations_get_picture_folders()
         assert len(storage_locations) == 3, "There are 3 folder storage locations"
 
         storage_locations = self.database.storagelocations_get_divelog()
@@ -76,8 +76,8 @@ class TestStorageLocation:
         storage_location = self.database.storagelocation_get_by_id(2)
         assert storage_location.id == 2, "There is 1 storage locations with ID = 2"
         assert (
-            storage_location.type.name == "folder"
-        ), "The storage location with ID = 2 has type folder"
+            storage_location.type.name == "picture_folder"
+        ), "The storage location with ID = 2 has type picture_folder"
         # String representation
         assert str(storage_location) == "Temporary @ " + os.path.join(
             "tmp", "Pictures", ""
@@ -88,8 +88,8 @@ class TestStorageLocation:
             storage_location.id == 1
         ), "There is 1 storage locations with name = Camera and it has ID = 1"
         assert (
-            storage_location.type.name == "folder"
-        ), "The storage location with name = Camera has type folder"
+            storage_location.type.name == "picture_folder"
+        ), "The storage location with name = Camera has type picture_folder"
         self.database.delete(storage_location)
         storage_locations = self.database.storagelocations_get()
         assert (
@@ -100,7 +100,7 @@ class TestStorageLocation:
         storage_location = StorageLocation(
             id=45,
             name="USB stick",
-            type="folder",
+            type="picture_folder",
             path="usb_stick",
         )
 

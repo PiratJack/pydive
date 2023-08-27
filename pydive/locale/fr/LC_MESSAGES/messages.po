@@ -59,6 +59,16 @@ msgstr "Copier les images de {source} vers {target}"
 msgid "Copy image here"
 msgstr "Copier l'image ici"
 
+#, python-brace-format
+msgid "Could not save {file_path}"
+msgstr "Impossible de sauvegarder le fichier {file_path}"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Depth"
+msgstr "Profondeur"
+
 msgid "Details"
 msgstr "Détails"
 
@@ -68,8 +78,17 @@ msgstr "Historique des plongées"
 msgid "Dive management"
 msgstr "Gestion de plongées"
 
+msgid "Divelog scan split"
+msgstr "Découpage du scan de carnet de plongée"
+
+msgid "Divelog scan to split"
+msgstr "Scan à découper"
+
 msgid "Do you really want to delete this conversion method?"
 msgstr "Voulez-vous vraiment supprimer cette méthode de conversion?"
+
+msgid "Duration"
+msgstr "Durée"
 
 msgid ""
 "Enter the command to run to generate the target file (from a raw file)\n"
@@ -88,6 +107,10 @@ msgstr "Erreurs"
 msgid "File name suffix"
 msgstr "Suffixe de nom de fichier"
 
+#, python-brace-format
+msgid "File {file_path} already exists"
+msgstr "Le fichier {file_path} existe déjà"
+
 msgid "Generate"
 msgstr "Générer"
 
@@ -97,8 +120,8 @@ msgstr "Survoler pour le détail des erreurs"
 msgid "ID"
 msgstr "ID"
 
-msgid "Image storage locations"
-msgstr "Lieu de stockage d'images"
+msgid "Image folders"
+msgstr "Dossiers d'image"
 
 msgid "Image unreadable"
 msgstr "Image non lisible"
@@ -154,8 +177,14 @@ msgstr "Organiser les photos"
 msgid "Path"
 msgstr "Chemin"
 
+msgid "Picture"
+msgstr "Photo"
+
 msgid "Pictures"
 msgstr "Photos"
+
+msgid "Please choose a target folder"
+msgstr "Veuillez choisir un dossier cible"
 
 msgid "Please confirm"
 msgstr "Veuillez confirmer"
@@ -176,6 +205,9 @@ msgstr "Renommer le voyage"
 msgid "Settings"
 msgstr "Paramètres"
 
+msgid "Source file could not be read"
+msgstr "Le fichier source n'a pu être lu"
+
 msgid "Source file does not exists"
 msgstr "Le fichier source n'existe pas"
 
@@ -192,6 +224,9 @@ msgstr "Le fichier cible existe déjà"
 #, python-brace-format
 msgid "Target file already exists: {short_path} - {target_file}"
 msgstr "Le fichier cible existe déjà: {short_path} - {target_file}"
+
+msgid "Target scan folder"
+msgstr "Dossier cible pour les images découpées"
 
 msgid "Tasks"
 msgstr "Tâches"
@@ -223,6 +258,9 @@ msgstr "Avec toutes les méthodes de conversion"
 msgid "Using {method}"
 msgstr "Avec la méthode {method}"
 
+msgid "Validate"
+msgstr "Valider"
+
 #, python-brace-format
 msgid "{error}: {short_path} - {path}"
 msgstr "{error}: {short_path} - {path}"
@@ -234,11 +272,18 @@ msgstr "{error}: {short_path} vers {target_trip} - {source_file}"
 #~ msgid "Archives"
 #~ msgstr "Archives"
 
+#~ msgid "Image storage locations"
+#~ msgstr "Lieu de stockage d'images"
+
 #~ msgid "No image to delete"
 #~ msgstr "Pas d'image à supprimer"
 
 #~ msgid "No source image available for generation"
 #~ msgstr "Pas d'image source disponible pour la génération"
+
+#, fuzzy
+#~ msgid "Organize divelog scans"
+#~ msgstr "Organiser les photos"
 
 #~ msgid "SD Card"
 #~ msgstr "Carte SD"

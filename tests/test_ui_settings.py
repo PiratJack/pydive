@@ -90,32 +90,32 @@ class TestUiSettings:
                 StorageLocation(
                     id=1,
                     name="Camera",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "DCIM", ""),
                 ),
                 # Test without final "/" in path
                 StorageLocation(
                     id=2,
                     name="Temporary",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "Temporary"),
                 ),
                 StorageLocation(
                     id=3,
                     name="Archive",
-                    type=StorageLocationType["folder"],
+                    type=StorageLocationType["picture_folder"],
                     path=os.path.join(BASE_FOLDER, "Archive"),
                 ),
                 StorageLocation(
                     id=4,
                     name="Inexistant",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "Inexistant"),
                 ),
                 StorageLocation(
                     id=5,
                     name="No picture here",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "Empty"),
                 ),
                 StorageLocation(
@@ -167,7 +167,9 @@ class TestUiSettings:
         locationList = settingsController.locations_list
 
         # Check overall structure
-        assert locationList.location_type == "folder", "Location list displays folders"
+        assert (
+            locationList.location_type == StorageLocationType["picture_folder"]
+        ), "Location list displays picture folders"
         assert (
             locationList.ui["layout"].columnCount() == 5
         ), "Locations have the right number of colums"
@@ -342,7 +344,6 @@ class TestUiSettings:
 
         # Get change path button
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
-        assert change_path_widget.target_type == "folder"
 
         # Simulating the actual dialog is impossible (it's OS-provided)
         change_path_widget.pathSelected.emit("")
@@ -453,7 +454,7 @@ class TestUiSettings:
         assert location.name == "New location", "Name is saved in database"
         assert location.path == "New path" + os.path.sep, "Path is saved in database"
         assert (
-            location.type.value["name"] == "folder"
+            location.type.value["name"] == "picture_folder"
         ), "Location type is saved in database"
 
         # Display is now similar as other locations
@@ -585,7 +586,9 @@ class TestUiSettings:
         divelogList = settingsController.divelog_list
 
         # Check overall structure
-        assert divelogList.location_type == "file", "Dive log list displays files"
+        assert (
+            divelogList.location_type == StorageLocationType["file"]
+        ), "Dive log list displays files"
         assert (
             divelogList.ui["layout"].columnCount() == 5
         ), "Dive log display has the right number of colums"

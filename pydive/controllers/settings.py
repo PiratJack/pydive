@@ -102,7 +102,7 @@ class LocationsList:
         ----------
         parent_window : QtWidgets.QWidget (most likely QtWidgets.QMainWindow)
             The window displaying this controller
-        location_type : Either "file" for dive log file or "folder" for image folders
+        location_type : Either "file" for dive log file or "picture_folder" for image folders
             The type of locations to display / edit
         """
         logger.debug(f"LocationsList.init {location_type}")
@@ -111,7 +111,7 @@ class LocationsList:
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget(parent_controller.ui["main"])
         self.ui["layout"] = QtWidgets.QGridLayout()
-        self.location_type = location_type
+        self.location_type = models.storagelocation.StorageLocationType[location_type]
 
         # Add headers
         for i, col in enumerate(self.columns):
@@ -136,8 +136,8 @@ class LocationsList:
         """Returns the QtWidgets.QWidget for display of this list"""
 
         self.ui["locations"] = {}
-        if self.location_type == "folder":
-            locations = self.database.storagelocations_get_folders()
+        if self.location_type.name == "picture_folder":
+            locations = self.database.storagelocations_get_picture_folders()
 
             # Create new location
             self.ui["add_new"] = IconButton(
@@ -242,7 +242,7 @@ class LocationsList:
         location["path_change"] = PathSelectButton(
             QtGui.QIcon("assets/images/modify.png"),
             self.ui["main"],
-            location_model.type.name,
+            location_model.type.value["file_or_folder"],
         )
         location["path_change"].pathSelected.connect(
             lambda path, location=location: self.on_validate_path_change(
@@ -251,7 +251,7 @@ class LocationsList:
         )
         self.ui["layout"].addWidget(location["path_change"], row, 3)
 
-        if self.location_type == "folder":
+        if self.location_type.name == "picture_folder":
             # Delete location
             location["delete"] = IconButton(
                 QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
@@ -367,7 +367,9 @@ class LocationsList:
 
         # Location path change
         location["path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"), self.ui["main"], self.location_type
+            QtGui.QIcon("assets/images/modify.png"),
+            self.ui["main"],
+            self.location_type.value["file_or_folder"],
         )
         location["path_change"].pathSelected.connect(
             lambda a, location=location: self.on_validate_path_change(0, a)
@@ -1027,8 +1029,8 @@ class SettingsController:
         self.ui["layout"] = QtWidgets.QVBoxLayout()
         self.ui["main"].setLayout(self.ui["layout"])
 
-        self.locations_list = LocationsList(self, "folder")
-        self.ui["locations_list_label"] = QtWidgets.QLabel(_("Image storage locations"))
+        self.locations_list = LocationsList(self, "picture_folder")
+        self.ui["locations_list_label"] = QtWidgets.QLabel(_("Image folders"))
         self.ui["locations_list_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["locations_list_label"])
         self.ui["locations_list"] = self.locations_list.display_widget

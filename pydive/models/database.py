@@ -30,13 +30,28 @@ class Database:
     __init__ (self, database_file)
         Loads (or creates) the database from the provided file
 
-    create_tables (self)
+    create_tables
         Creates all the DB tables
 
-    storagelocations_get (self)
+    storagelocations_get
         Returns a list of all storage locations
-    storagelocation_get_by_id (self, storagelocation_id)
+    storagelocations_get_picture_folders
+        Returns a list of all picture folder storage locations
+    storagelocations_get_target_scan_folder
+        Returns the folder where to store divelog scan splitted image
+    storagelocations_get_divelog
+        Returns the storage location for dive log
+    storagelocation_get_by_id (storagelocation_id)
         Returns a storage location based on its ID
+    storagelocation_get_by_name (storagelocation_name)
+        Returns a storage location based on its name
+
+    conversionmethods_get
+        Returns all conversion methods
+    conversionmethods_get_by_suffix (suffix)
+        Returns a conversion method based on its suffix
+    conversionmethods_get_by_name (name)
+        Returns a conversion method based on its suffix
 
     delete (self, item)
         Deletes the provided item
@@ -59,15 +74,26 @@ class Database:
         """Returns a list of all storage locations"""
         return self.session.query(storagelocation.StorageLocation).all()
 
-    def storagelocations_get_folders(self):
-        """Returns a list of all folder storage locations"""
+    def storagelocations_get_picture_folders(self):
+        """Returns a list of all picture folders"""
         return (
             self.session.query(storagelocation.StorageLocation)
             .filter(
                 storagelocation.StorageLocation.type
-                == storagelocation.StorageLocationType.folder
+                == storagelocation.StorageLocationType.picture_folder
             )
             .all()
+        )
+
+    def storagelocations_get_target_scan_folder(self):
+        """Returns the storage location for divelog scan files"""
+        return (
+            self.session.query(storagelocation.StorageLocation)
+            .filter(
+                storagelocation.StorageLocation.type
+                == storagelocation.StorageLocationType.file
+            )
+            .one_or_none()
         )
 
     def storagelocations_get_divelog(self):

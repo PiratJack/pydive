@@ -93,7 +93,7 @@ class Repository:
         """
         # Find all pictures
         logger.info("Repository.load_pictures")
-        self.storage_locations = self.database.storagelocations_get_folders()
+        self.storage_locations = self.database.storagelocations_get_picture_folders()
         self.picture_groups = []
         for location in self.storage_locations:
             pictures = self.read_folder([], location.path)

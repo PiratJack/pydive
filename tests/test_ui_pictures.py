@@ -93,32 +93,32 @@ class TestUiPictures:
                 StorageLocation(
                     id=1,
                     name="Camera",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "DCIM", ""),
                 ),
                 # Test without final "/" in path
                 StorageLocation(
                     id=2,
                     name="Temporary",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "Temporary"),
                 ),
                 StorageLocation(
                     id=3,
                     name="Archive",
-                    type=StorageLocationType["folder"],
+                    type=StorageLocationType["picture_folder"],
                     path=os.path.join(BASE_FOLDER, "Archive"),
                 ),
                 StorageLocation(
                     id=4,
                     name="Inexistant",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "Inexistant"),
                 ),
                 StorageLocation(
                     id=5,
                     name="No picture here",
-                    type="folder",
+                    type="picture_folder",
                     path=os.path.join(BASE_FOLDER, "Empty"),
                 ),
                 StorageLocation(
@@ -268,7 +268,7 @@ class TestUiPictures:
 
     def test_pictures_display_folders(self):
         # Setup: get display
-        folders = self.database.storagelocations_get_folders()
+        folders = self.database.storagelocations_get_picture_folders()
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
         # Check what happens when display is refreshed twice in a row

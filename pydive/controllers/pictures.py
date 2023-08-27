@@ -119,7 +119,7 @@ class PicturesTree(BaseTreeWidget):
         self.menu_actions = []
         self.submenus = []
         # This only stores references, otherwise the menu disappears immediately
-        locations = self.database.storagelocations_get_folders()
+        locations = self.database.storagelocations_get_picture_folders()
         methods = self.database.conversionmethods_get()
         # No parent = trip
         if not tree_item.parent():
@@ -736,7 +736,9 @@ class PictureGrid:
 
         # Include locations from the DB + "" for the header
         rows = {"": ""}
-        rows.update({l.name: l for l in self.database.storagelocations_get_folders()})
+        rows.update(
+            {l.name: l for l in self.database.storagelocations_get_picture_folders()}
+        )
 
         # Include conversion types for existing pictures
         # "" is added for RAW files
@@ -1609,7 +1611,7 @@ class PicturesController:
         """Refreshes the list of folders from DB"""
         logger.debug("PicturesController.refresh_folders")
         # Load list from DB
-        self.folders = self.database.storagelocations_get_folders()
+        self.folders = self.database.storagelocations_get_picture_folders()
 
         # Remove existing widgets
         for folder in self.ui["folders"].values():
