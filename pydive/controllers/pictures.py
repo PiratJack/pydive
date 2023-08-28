@@ -1114,10 +1114,10 @@ class PictureContainer:
             self.ui["layout"].addWidget(self.ui["elements"]["label"])
 
         # Delete button
-        # TODO: Ensure delete button is next to image (by default the image takes all the vertical space)
         self.ui["elements"]["delete"] = IconButton(
             QtGui.QIcon("assets/images/delete.png")
         )
+        self.ui["elements"]["delete"].setMaximumHeight(35)
         self.ui["elements"]["delete"].clicked.connect(lambda: self.on_click_delete())
         self.ui["layout"].addWidget(self.ui["elements"]["delete"])
 
