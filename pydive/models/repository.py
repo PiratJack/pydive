@@ -812,6 +812,10 @@ class CopyProcess(QtCore.QRunnable):
             source_picture.filename,
         )
 
+        self.short_path = self.target_file.replace(
+            target_location.path, "[" + target_location.name + "]" + os.path.sep
+        )
+
     def run(self):
         """Runs the copy, after making sure it won't create issues
 
@@ -824,14 +828,10 @@ class CopyProcess(QtCore.QRunnable):
             logger.warning(
                 f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Target file exists"
             )
-            location = self.target_location
-            short_path = self.target_file.replace(
-                location.path, "[" + location.name + "]" + os.path.sep
-            )
             self.signals.taskError.emit(
                 _("Target file already exists"),
                 _("Target file already exists: {short_path} - {target_file}").format(
-                    short_path=short_path, target_file=self.target_file
+                    short_path=self.short_path, target_file=self.target_file
                 ),
             )
             return
@@ -841,15 +841,10 @@ class CopyProcess(QtCore.QRunnable):
             logger.warning(
                 f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Source file missing"
             )
-            picture = self.source_picture
-            location = picture.location
-            short_path = picture.path.replace(
-                location.path, "[" + location.name + "]" + os.path.sep
-            )
             self.signals.taskError.emit(
                 _("Source file does not exists"),
                 _("Source file does not exists: {short_path} - {source_file}").format(
-                    short_path=short_path, source_file=self.source_file
+                    short_path=self.short_path, source_file=self.source_file
                 ),
             )
             return
@@ -910,6 +905,10 @@ class GenerateProcess(QtCore.QRunnable):
         target_file_name = source_picture.name + "_" + method.suffix + ".jpg"
         self.target_file = os.path.join(self.target_folder, target_file_name)
 
+        self.short_path = self.target_file.replace(
+            self.location.path, "[" + self.location.name + "]" + os.path.sep
+        )
+
         # Let's mix all that together!
         command = method.command
         command = command.replace("%SOURCE_FILE%", self.source_file)
@@ -931,14 +930,10 @@ class GenerateProcess(QtCore.QRunnable):
             logger.warning(
                 f"GenerateProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name} - Target file exists"
             )
-            location = self.location
-            short_path = self.target_file.replace(
-                location.path, "[" + location.name + "]" + os.path.sep
-            )
             self.signals.taskError.emit(
                 _("Target file already exists"),
                 _("Target file already exists: {short_path} - {target_file}").format(
-                    short_path=short_path, target_file=self.target_file
+                    short_path=self.short_path, target_file=self.target_file
                 ),
             )
 
@@ -994,6 +989,10 @@ class RemoveProcess(QtCore.QRunnable):
         self.file = picture.path
         self.location = picture.location
 
+        self.short_path = self.file.replace(
+            self.location.path, "[" + self.location.name + "]" + os.path.sep
+        )
+
     def run(self):
         """Runs the command, after making sure it won't create issues
 
@@ -1002,10 +1001,6 @@ class RemoveProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         logger.debug(f"RemoveProcess.run {self.file}")
-        location = self.location
-        short_path = self.file.replace(
-            location.path, "[" + location.name + "]" + os.path.sep
-        )
         if not os.path.exists(self.file):
             logger.warning(
                 f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: File does not exist"
@@ -1013,7 +1008,7 @@ class RemoveProcess(QtCore.QRunnable):
             self.signals.taskError.emit(
                 _("The file to delete does not exist"),
                 _("The file to delete does not exist: {short_path} - {path}").format(
-                    short_path=short_path, path=self.file
+                    short_path=self.short_path, path=self.file
                 ),
             )
 
@@ -1025,7 +1020,7 @@ class RemoveProcess(QtCore.QRunnable):
             self.signals.taskError.emit(
                 _("The element to delete is not a file"),
                 _("The element to delete is not a file: {short_path} - {path}").format(
-                    short_path=short_path, path=self.file
+                    short_path=self.short_path, path=self.file
                 ),
             )
             return
@@ -1048,7 +1043,7 @@ class RemoveProcess(QtCore.QRunnable):
                 e.args.__repr__(),
                 _("{error}: {short_path} - {path}").format(
                     error=e.args.__repr__(),
-                    short_path=short_path,
+                    short_path=self.short_path,
                     path=self.source_file,
                 ),
             )
@@ -1098,6 +1093,10 @@ class ChangeTripProcess(QtCore.QRunnable):
         )
         self.target_file = os.path.join(self.target_folder, picture.filename)
 
+        self.short_path = self.source_file.replace(
+            picture.location.path, "[" + picture.location.name + "]" + os.path.sep
+        )
+
     def run(self):
         """Runs the command, after making sure it won't create issues
 
@@ -1112,14 +1111,10 @@ class ChangeTripProcess(QtCore.QRunnable):
             logger.warning(
                 f"ChangeTripProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}: Target file exists"
             )
-            location = self.target_location
-            short_path = self.target_file.replace(
-                location.path, "[" + location.name + "]" + os.path.sep
-            )
             self.signals.taskError.emit(
                 _("Target file already exists"),
                 _("Target file already exists: {short_path} - {target_file}").format(
-                    short_path=short_path, target_file=self.target_file
+                    short_path=self.short_path, target_file=self.target_file
                 ),
             )
             return
@@ -1141,15 +1136,11 @@ class ChangeTripProcess(QtCore.QRunnable):
             logger.warning(
                 f"ChangeTripProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}: {e.args}"
             )
-            location = self.source_picture.location
-            short_path = self.source_file.replace(
-                location.path, "[" + location.name + "]" + os.path.sep
-            )
             self.signals.taskError.emit(
                 e.args.__repr__(),
                 _("{error}: {short_path} to {target_trip} - {source_file}").format(
                     error=e.args.__repr__(),
-                    short_path=short_path,
+                    short_path=self.short_path,
                     target_trip=self.target_trip,
                     source_file=self.source_file,
                 ),
