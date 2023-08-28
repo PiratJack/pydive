@@ -53,9 +53,10 @@ class PyDive:
         with open(self.STYLESHEET_FILE, "r", encoding="UTF-8") as stylesheet:
             app.setStyleSheet(stylesheet.read())
 
+        app.aboutToQuit.connect(PyQt5.QtCore.QThreadPool.globalInstance().clear)
+
         window = controllers.mainwindow.MainWindow(self.database, self.repository)
-        # #window.showMaximized()
-        window.show()
+        window.showMaximized()
         app.exec_()
 
 
