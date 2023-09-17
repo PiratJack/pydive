@@ -135,9 +135,21 @@ class DiveTree(BaseTreeWidget):
         ]
         widget = QtWidgets.QTreeWidgetItem(map(str, data))
         if dive.has_picture:
-            widget.setIcon(4, QtGui.QIcon("assets/images/check.png"))
+            widget.setIcon(
+                4,
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/check.png"
+                ),
+            )
         else:
-            widget.setIcon(4, QtGui.QIcon("assets/images/delete.png"))
+            widget.setIcon(
+                4,
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/delete.png"
+                ),
+            )
         widget.setData(0, Qt.UserRole, dive)
         return widget
 
@@ -534,7 +546,10 @@ class DivelogScanController:
         self.ui["scan_file_wrapper_layout"].addWidget(self.ui["scan_file_path_error"])
         # File path selector
         self.ui["scan_file_path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"),
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/modify.png"
+            ),
             self.ui["main"],
             "file",
         )
@@ -583,7 +598,10 @@ class DivelogScanController:
         self.ui["target_folder_layout"].addWidget(self.ui["target_folder_error"])
         # Folder path selector
         self.ui["target_folder_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"),
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/modify.png"
+            ),
             self.ui["main"],
             "folder",
         )
@@ -686,7 +704,12 @@ class DivelogScanController:
     def toolbar_button(self):
         """Returns a QtWidgets.QAction for display in the main window toolbar"""
         button = QtWidgets.QAction(
-            QtGui.QIcon("assets/images/divelog.png"), self.name, self.parent_window
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/divelog.png"
+            ),
+            self.name,
+            self.parent_window,
         )
         button.setStatusTip(_("Divelog scan split"))
         button.triggered.connect(lambda: self.parent_window.display_tab(self.code))

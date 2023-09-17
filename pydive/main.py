@@ -17,7 +17,9 @@ logging.basicConfig(level=logging.INFO)
 
 class PyDive:
     LOCALE_FOLDER = os.path.join(os.path.dirname(__file__), "locale")
-    STYLESHEET_FILE = "./assets/style/app.css"
+    STYLESHEET_FILE = (
+        os.path.dirname(os.path.realpath(__file__)) + "/assets/style/app.css"
+    )
     DATABASE_FILE = "sandbox.sqlite"
 
     def __init__(self, database_file=None):

@@ -15,6 +15,7 @@ PicturesController
 """
 import gettext
 import logging
+import os
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
@@ -598,7 +599,12 @@ class PicturesTree(BaseTreeWidget):
         # Add "task in progress" icon
         if picture_group.tasks:
             picture_group_widget.setData(
-                0, Qt.DecorationRole, QtGui.QIcon("assets/images/hourglass.png")
+                0,
+                Qt.DecorationRole,
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/hourglass.png"
+                ),
             )
         else:
             picture_group_widget.setData(0, Qt.DecorationRole, QtCore.QVariant())
@@ -1115,7 +1121,10 @@ class PictureContainer:
 
         # Delete button
         self.ui["elements"]["delete"] = IconButton(
-            QtGui.QIcon("assets/images/delete.png")
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/delete.png"
+            )
         )
         self.ui["elements"]["delete"].setMaximumHeight(35)
         self.ui["elements"]["delete"].clicked.connect(lambda: self.on_click_delete())
@@ -1592,7 +1601,12 @@ class PicturesController:
     def toolbar_button(self):
         """Returns a QtWidgets.QAction for display in the main window toolbar"""
         button = QtWidgets.QAction(
-            QtGui.QIcon("assets/images/pictures.png"), _("Pictures"), self.parent_window
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/pictures.png"
+            ),
+            _("Pictures"),
+            self.parent_window,
         )
         button.setStatusTip(_("Organize pictures"))
         button.triggered.connect(lambda: self.parent_window.display_tab(self.code))

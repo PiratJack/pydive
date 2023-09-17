@@ -11,6 +11,7 @@ ConversionMethodsList
 """
 import gettext
 import logging
+import os
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
@@ -141,7 +142,12 @@ class LocationsList:
 
             # Create new location
             self.ui["add_new"] = IconButton(
-                QtGui.QIcon("assets/images/add.png"), "", self.ui["main"]
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/add.png"
+                ),
+                "",
+                self.ui["main"],
             )
             self.ui["add_new"].clicked.connect(lambda: self.on_click_new_location())
 
@@ -212,7 +218,12 @@ class LocationsList:
 
         # Location name - Edit button
         location["name_change_start"] = IconButton(
-            QtGui.QIcon("assets/images/modify.png"), "", location["name_change"]
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/modify.png"
+            ),
+            "",
+            location["name_change"],
         )
         location["name_change_start"].clicked.connect(
             lambda: self.on_click_name_change(location["model"].id)
@@ -221,7 +232,12 @@ class LocationsList:
 
         # Location name - Validate button
         location["name_change_end"] = IconButton(
-            QtGui.QIcon("assets/images/save.png"), "", location["name_change"]
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/save.png"
+            ),
+            "",
+            location["name_change"],
         )
         location["name_change_end"].clicked.connect(
             lambda: self.on_validate_name_change(location["model"].id)
@@ -240,7 +256,10 @@ class LocationsList:
 
         # Location path change
         location["path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"),
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/modify.png"
+            ),
             self.ui["main"],
             location_model.type.value["file_or_folder"],
         )
@@ -254,7 +273,12 @@ class LocationsList:
         if self.location_type.name == "picture_folder":
             # Delete location
             location["delete"] = IconButton(
-                QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/delete.png"
+                ),
+                "",
+                self.ui["main"],
             )
             location["delete"].clicked.connect(
                 lambda a, location=location: self.on_click_delete_location(
@@ -367,7 +391,10 @@ class LocationsList:
 
         # Location path change
         location["path_change"] = PathSelectButton(
-            QtGui.QIcon("assets/images/modify.png"),
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/modify.png"
+            ),
             self.ui["main"],
             self.location_type.value["file_or_folder"],
         )
@@ -378,7 +405,12 @@ class LocationsList:
 
         # Location name - Validate button
         location["validate_new"] = IconButton(
-            QtGui.QIcon("assets/images/save.png"), "", self.ui["main"]
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/save.png"
+            ),
+            "",
+            self.ui["main"],
         )
         location["validate_new"].clicked.connect(self.on_validate_new_location)
         self.ui["layout"].addWidget(location["validate_new"], row, 4)
@@ -663,7 +695,12 @@ class ConversionMethodsList:
 
         # Create new conversion method
         self.ui["add_new"] = IconButton(
-            QtGui.QIcon("assets/images/add.png"), "", self.ui["main"]
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/add.png"
+            ),
+            "",
+            self.ui["main"],
         )
         self.ui["add_new"].clicked.connect(lambda: self.on_click_new_method())
 
@@ -720,7 +757,12 @@ class ConversionMethodsList:
 
             # Conversion method field - Edit button
             method[field + "_change_start"] = IconButton(
-                QtGui.QIcon("assets/images/modify.png"), "", method[field + "_change"]
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/modify.png"
+                ),
+                "",
+                method[field + "_change"],
             )
             method[field + "_change_start"].clicked.connect(
                 lambda a, field=field: self.on_click_field_change(
@@ -731,7 +773,12 @@ class ConversionMethodsList:
 
             # Conversion method field - Validate button
             method[field + "_change_end"] = IconButton(
-                QtGui.QIcon("assets/images/save.png"), "", method[field + "_change"]
+                QtGui.QIcon(
+                    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                    + "/assets/images/save.png"
+                ),
+                "",
+                method[field + "_change"],
             )
             method[field + "_change_end"].clicked.connect(
                 lambda a, field=field: self.on_validate_field_change(
@@ -742,7 +789,12 @@ class ConversionMethodsList:
 
         # Delete Conversion method
         method["delete"] = IconButton(
-            QtGui.QIcon("assets/images/delete.png"), "", self.ui["main"]
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/delete.png"
+            ),
+            "",
+            self.ui["main"],
         )
         method["delete"].clicked.connect(
             lambda a, method=method: self.on_click_delete_method(method["model"].id)
@@ -834,7 +886,12 @@ class ConversionMethodsList:
 
         # Validate button
         method["validate_new"] = IconButton(
-            QtGui.QIcon("assets/images/save.png"), "", self.ui["main"]
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/save.png"
+            ),
+            "",
+            self.ui["main"],
         )
         method["validate_new"].clicked.connect(self.on_validate_new_method)
         self.ui["layout"].addWidget(method["validate_new"], len(self.ui["methods"]), 6)
@@ -1060,7 +1117,12 @@ class SettingsController:
     def toolbar_button(self):
         """Returns a QtWidgets.QAction for display in the main window toolbar"""
         button = QtWidgets.QAction(
-            QtGui.QIcon("assets/images/settings.png"), self.name, self.parent_window
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/settings.png"
+            ),
+            self.name,
+            self.parent_window,
         )
         button.setStatusTip(self.name)
         button.triggered.connect(lambda: self.parent_window.display_tab(self.code))
