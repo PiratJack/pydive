@@ -11,6 +11,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.3.2\n"
 
+msgid "Cancel"
+msgstr "Annuler"
+
 msgid "Change name to ..."
 msgstr "Renommer ..."
 
@@ -227,6 +230,13 @@ msgstr "Le fichier cible existe déjà: {short_path} - {target_file}"
 
 msgid "Target scan folder"
 msgstr "Dossier cible pour les images découpées"
+
+msgid "Task cancelled"
+msgstr "Tâche annulée"
+
+#, python-brace-format
+msgid "Task cancelled {short_path} - {target_file}"
+msgstr "Tâche annulée {short_path} - {target_file}"
 
 msgid "Tasks"
 msgstr "Tâches"

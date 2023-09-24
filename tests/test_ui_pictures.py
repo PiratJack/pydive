@@ -30,6 +30,13 @@ PICTURE_ZIP_FILE = os.path.join(BASE_DIR, "test_photos.zip")
 
 
 class TestUiPictures:
+    progress_group_columns = {
+        "Completed": 3,
+        "Errors": 5,
+        "Error details": 6,
+        "Count columns": 7,
+    }
+
     @pytest.fixture(scope="function", autouse=True)
     def setup_and_teardown(self, qtbot):
         try:
@@ -189,7 +196,6 @@ class TestUiPictures:
         # This is a very dirty solution, because it's not really processed by the application
         # However, the solution below just fails.
         widget.wheelEvent(wheelEvent)
-        # #qapp.postEvent(widget, wheelEvent)
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
         QtCore.QThreadPool.globalInstance().waitForDone()
@@ -459,16 +465,20 @@ class TestUiPictures:
 
             # Check table structure & contents
             dialog_model = dialog_table.model
-            index = dialog_model.createIndex(0, 4, QtCore.QModelIndex())
+            index = dialog_model.createIndex(
+                0, self.progress_group_columns["Errors"], QtCore.QModelIndex()
+            )
             assert (
                 dialog_model.rowCount(index) == 1
             ), "ProcessGroup table has correct number of rows"
             assert (
-                dialog_model.columnCount(index) == 6
+                dialog_model.columnCount(index) == 7
             ), "ProcessGroup table has correct number of columns"
             cell_error_count = dialog_model.data(index, Qt.DisplayRole)
             assert cell_error_count == 2, "ProcessGroup table displays errors"
-            index = dialog_model.createIndex(0, 5, QtCore.QModelIndex())
+            index = dialog_model.createIndex(
+                0, self.progress_group_columns["Error details"], QtCore.QModelIndex()
+            )
             cell_error_details = dialog_model.data(index, Qt.DisplayRole)
             assert (
                 cell_error_details == "Hover for error details"
@@ -513,42 +523,24 @@ class TestUiPictures:
             assert dialog is not None, "Dialog gets displayed"
 
             # Check overall structure
-            assert isinstance(
-                dialog.layout(), QtWidgets.QVBoxLayout
-            ), "ProcessGroup dialog layout is QVBoxLayout"
             dialog_ui = dialog.layout().itemAt(0).widget()
-            assert isinstance(
-                dialog_ui.layout(), QtWidgets.QVBoxLayout
-            ), "ProcessGroup layout is QVBoxLayout"
-            assert (
-                dialog_ui.layout().count() == 2
-            ), "ProcessGroup has correct number of items"
-            dialog_label = dialog_ui.layout().itemAt(0).widget()
             dialog_table = dialog_ui.layout().itemAt(1).widget()
-            assert isinstance(
-                dialog_label, QtWidgets.QLabel
-            ), "ProcessGroup title is a QLabel"
-            assert isinstance(
-                dialog_table, QtWidgets.QTableView
-            ), "ProcessGroup table is a QTableView"
 
             # Check table structure & contents
             dialog_model = dialog_table.model
-            index = dialog_model.createIndex(0, 4, QtCore.QModelIndex())
-            assert (
-                dialog_model.rowCount(index) == 1
-            ), "ProcessGroup table has correct number of rows"
-            assert (
-                dialog_model.columnCount(index) == 6
-            ), "ProcessGroup table has correct number of columns"
+            index = dialog_model.createIndex(
+                0, self.progress_group_columns["Errors"], QtCore.QModelIndex()
+            )
             cell_error_count = dialog_model.data(index, Qt.DisplayRole)
-            assert cell_error_count == 1, "ProcessGroup table displays errors"
-            index = dialog_model.createIndex(0, 5, QtCore.QModelIndex())
+            assert cell_error_count == 1, "ProcessGroup table displays 1 error"
+            index = dialog_model.createIndex(
+                0, self.progress_group_columns["Error details"], QtCore.QModelIndex()
+            )
             cell_error_details = dialog_model.data(index, Qt.DisplayRole)
             assert cell_error_details != "", "ProcessGroup table displays error details"
             assert (
                 cell_error_details != "Hover for error details"
-            ), "ProcessGroup table displays error details"
+            ), "ProcessGroup table displays error details directly"
             cell_error_tooltip = dialog_model.data(index, Qt.ToolTipRole)
             assert (
                 cell_error_tooltip == cell_error_details
@@ -590,37 +582,22 @@ class TestUiPictures:
             assert dialog is not None, "Dialog gets displayed"
 
             # Check overall structure
-            assert isinstance(
-                dialog.layout(), QtWidgets.QVBoxLayout
-            ), "ProcessGroup dialog layout is QVBoxLayout"
             dialog_ui = dialog.layout().itemAt(0).widget()
-            assert isinstance(
-                dialog_ui.layout(), QtWidgets.QVBoxLayout
-            ), "ProcessGroup layout is QVBoxLayout"
-            assert (
-                dialog_ui.layout().count() == 2
-            ), "ProcessGroup has correct number of items"
-            dialog_label = dialog_ui.layout().itemAt(0).widget()
             dialog_table = dialog_ui.layout().itemAt(1).widget()
-            assert isinstance(
-                dialog_label, QtWidgets.QLabel
-            ), "ProcessGroup title is a QLabel"
-            assert isinstance(
-                dialog_table, QtWidgets.QTableView
-            ), "ProcessGroup table is a QTableView"
 
             # Check table structure & contents
             dialog_model = dialog_table.model
-            index = dialog_model.createIndex(0, 4, QtCore.QModelIndex())
+            index = dialog_model.createIndex(
+                0, self.progress_group_columns["Errors"], QtCore.QModelIndex()
+            )
             assert (
                 dialog_model.rowCount(index) == 1
             ), "ProcessGroup table has correct number of rows"
-            assert (
-                dialog_model.columnCount(index) == 6
-            ), "ProcessGroup table has correct number of columns"
             cell_error_count = dialog_model.data(index, Qt.DisplayRole)
             assert cell_error_count == 0, "ProcessGroup table displays no error"
-            index = dialog_model.createIndex(0, 5, QtCore.QModelIndex())
+            index = dialog_model.createIndex(
+                0, self.progress_group_columns["Error details"], QtCore.QModelIndex()
+            )
             cell_error_details = dialog_model.data(index, Qt.DisplayRole)
             assert (
                 cell_error_details == ""

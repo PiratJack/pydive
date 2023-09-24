@@ -1,3 +1,6 @@
+msgid "Cancel"
+msgstr ""
+
 msgid "Change name to ..."
 msgstr ""
 
@@ -209,6 +212,13 @@ msgid "Target file already exists: {short_path} - {target_file}"
 msgstr ""
 
 msgid "Target scan folder"
+msgstr ""
+
+msgid "Task cancelled"
+msgstr ""
+
+#, python-brace-format
+msgid "Task cancelled {short_path} - {target_file}"
 msgstr ""
 
 msgid "Tasks"
