@@ -1149,15 +1149,15 @@ class PictureContainer:
         logger.debug(
             f"PictureContainer.on_click_delete in row {self.row}, column {self.column}"
         )
-        dialog = QtWidgets.QMessageBox(self.ui["main"])
-        dialog.setWindowTitle("Please confirm")
-        dialog.setText("Do you really want to delete this image?")
-        dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-        dialog.setIcon(QtWidgets.QMessageBox.Warning)
-        button = dialog.exec()
+        # #dialog = QtWidgets.QMessageBox(self.ui["main"])
+        # #dialog.setWindowTitle("Please confirm")
+        # #dialog.setText("Do you really want to delete this image?")
+        # #dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+        # #dialog.setIcon(QtWidgets.QMessageBox.Warning)
+        # #button = dialog.exec()
 
-        if button == QtWidgets.QMessageBox.Yes:
-            self.parent_controller.delete_image(self.row, self.column)
+        # #if button == QtWidgets.QMessageBox.Yes:
+        self.parent_controller.delete_image(self.row, self.column)
 
     def display_error(self, message):
         """Displays the provided error message
