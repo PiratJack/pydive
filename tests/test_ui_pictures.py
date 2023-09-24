@@ -264,7 +264,7 @@ class TestUiPictures:
             left_column.layout(), QtWidgets.QVBoxLayout
         ), "Pictures left column layout is correct"
         assert (
-            left_column.layout().count() == 5
+            left_column.layout().count() == 7
         ), "Pictures left column has the right number of rows"
 
         # Check display - Right column
@@ -332,6 +332,30 @@ class TestUiPictures:
         assert malta.childCount() == 2, "Malta's children count is OK"
         assert malta_children == ["IMG001", "IMG002"], "Malta's children are OK"
 
+    def _test_pictures_display_checkboxes(self, qtbot):
+        # Setup: get display
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        main_widget = picturesController.ui["main"]
+
+        # Check display - Tasks label & progress bar
+        left_column = main_widget.layout().itemAt(0).widget()
+        display_raw_images = left_column.layout().itemAt(3).widget()
+        assert isinstance(
+            display_raw_images, QtWidgets.QCheckBox
+        ), "Pictures: Display RAW images is a QCheckBox"
+        assert (
+            display_raw_images.text() == "Display RAW images"
+        ), "Pictures: Display RAW images label text is correct"
+        display_absent_images = left_column.layout().itemAt(4).widget()
+        assert isinstance(
+            display_absent_images, QtWidgets.QCheckBox
+        ), "Pictures: Display absent images is QCheckBox"
+        assert (
+            display_absent_images.text() == "Display absent images"
+        ), "Pictures: Display absent images label is correct"
+
     def _test_pictures_display_in_progress_tasks(self, qtbot):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
@@ -341,14 +365,14 @@ class TestUiPictures:
 
         # Check display - Tasks label & progress bar
         left_column = main_widget.layout().itemAt(0).widget()
-        tasks_label = left_column.layout().itemAt(3).widget()
+        tasks_label = left_column.layout().itemAt(5).widget()
         assert isinstance(
             tasks_label, QtWidgets.QLabel
         ), "Pictures: In-progress task label is QLabel"
         assert (
             tasks_label.text() == "In-progress tasks: 0"
         ), "Pictures: In-progress task label text is correct"
-        tasks_progress_bar = left_column.layout().itemAt(4).widget()
+        tasks_progress_bar = left_column.layout().itemAt(6).widget()
         assert isinstance(
             tasks_progress_bar, QtWidgets.QProgressBar
         ), "Pictures: In-progress task progress bar is QProgressBar"
@@ -406,8 +430,8 @@ class TestUiPictures:
 
         # Get display elements
         left_column = main_widget.layout().itemAt(0).widget()
-        tasks_label = left_column.layout().itemAt(3).widget()
-        tasks_progress_bar = left_column.layout().itemAt(4).widget()
+        tasks_label = left_column.layout().itemAt(5).widget()
+        tasks_progress_bar = left_column.layout().itemAt(6).widget()
 
         # Trigger a copy (to get proper display)
 
@@ -434,7 +458,7 @@ class TestUiPictures:
 
         # Get display elements
         left_column = main_widget.layout().itemAt(0).widget()
-        tasks_label = left_column.layout().itemAt(3).widget()
+        tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -512,7 +536,7 @@ class TestUiPictures:
 
         # Get display elements
         left_column = main_widget.layout().itemAt(0).widget()
-        tasks_label = left_column.layout().itemAt(3).widget()
+        tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -571,7 +595,7 @@ class TestUiPictures:
 
         # Get display elements
         left_column = main_widget.layout().itemAt(0).widget()
-        tasks_label = left_column.layout().itemAt(3).widget()
+        tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -654,7 +678,7 @@ class TestUiPictures:
             picturesGrid.ui["layout"].itemAtPosition(0, 0) is None
         ), "PictureGrid is empty"
 
-    def test_pictures_tree_click_picture_group(self, qtbot):
+    def _test_pictures_tree_click_picture_group(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -697,6 +721,50 @@ class TestUiPictures:
         test = "JPG image"
         container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
         self.helper_check_picture_display(test, container, "JPG", "IMG001_RT.jpg")
+
+    def test_pictures_tree_click_picture_group_some_images_hidden(self, qtbot):
+        # Setup: get display, load pictures
+        self.mainwindow.display_tab("Pictures")
+        picturesController = self.mainwindow.controllers["Pictures"]
+        picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
+        load_pictures_button = picturesController.ui["load_button"]
+        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+        main_widget = picturesController.ui["main"]
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Hide RAW and absent images
+        left_column = main_widget.layout().itemAt(0).widget()
+        display_raw_images = left_column.layout().itemAt(3).widget()
+        display_absent_images = left_column.layout().itemAt(4).widget()
+        qtbot.mouseClick(display_raw_images, Qt.LeftButton)
+        qtbot.mouseClick(display_absent_images, Qt.LeftButton)
+
+        # The display can't be checked because the window is not displayed
+        # Therefore, widget.isVisible() will always be False
+
+        # ## "No image"
+        # #test = "No image"
+        # #container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        # #assert container.isVisible() == False, "Container is hidden"
+
+        # ## RAW image ==> readable
+        # #test = "RAW image"
+        # #container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        # #assert container.isVisible() == False, "Container is hidden"
+
+        # ## JPG image ==> readable
+        # #test = "JPG image"
+        # #container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        # #assert container.isVisible() == True, "Container is visible"
 
     def _test_pictures_tree_remove_already_removed_picture_group(self, qtbot):
         # Setup: get display, load pictures

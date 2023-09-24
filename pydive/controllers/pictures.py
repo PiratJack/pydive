@@ -698,6 +698,10 @@ class PictureGrid:
         Copies an image to the provided row & column
     delete_image (row, column)
         Deletes the image in the provided row & column
+    on_display_raw_images (checked):
+        Displays or hide RAW images in the grid
+    on_display_absent_images (checked):
+        Displays or hide space for absent images
     """
 
     def __init__(self, parent_controller):
@@ -719,6 +723,9 @@ class PictureGrid:
         self.ui["layout"] = QtWidgets.QGridLayout()
         self.ui["main"].setProperty("class", "picture_grid")
         self.ui["main"].setLayout(self.ui["layout"])
+
+        self.display_raw_images = False
+        self.display_absent_images = False
 
     def display_picture_group(self, picture_group):
         """Displays the provided picture group in the grid
@@ -749,9 +756,9 @@ class PictureGrid:
         # Include conversion types for existing pictures
         # "" is added for RAW files
         columns = [""] + list(self.picture_group.pictures.keys())
-        # Add conversion types based on conversion methods
+        # Add conversion types based on conversion methods stored in DB
         columns = columns + [m.suffix for m in self.database.conversionmethods_get()]
-        # "" is added for header row
+        # Remove duplicates + add "" for header row
         columns = [""] + sorted(set(columns))
 
         # Add row & column headers
@@ -771,6 +778,10 @@ class PictureGrid:
             label = QtWidgets.QLabel(name)
             label.model = rows[name]
             self.grid.append([label])
+
+        # Headers should take the minimum space possible
+        self.ui["layout"].setRowStretch(0, 0)
+        self.ui["layout"].setColumnStretch(0, 0)
 
         # Add the images themselves
         for column, conversion_type in enumerate(columns):
@@ -805,14 +816,29 @@ class PictureGrid:
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
 
+        # When a row has images + cells without images, in the cell without images, the elements are distributed vertically
+        # The goal here is to push everything up
         for row in range(1, len(rows.keys())):
-            # When a row has images + cells without images, in the cell without images, the elements are distributed vertically
-            # The goal here is to push everything up
             empty_cells = [
                 p for p in self.picture_containers[row].values() if p.picture == None
             ]
             if len(empty_cells) != len(columns) - 1:
                 [p.ui["layout"].addStretch() for p in empty_cells]
+
+        # Columns without images displayed should take minimum width
+        for column in range(2, len(columns)):
+            empty_cells = [
+                row
+                for row in range(1, len(rows))
+                if column not in self.picture_containers[row]
+                or self.picture_containers[row][column].picture == None
+            ]
+            if len(empty_cells) == len(rows) - 1:
+                self.ui["layout"].setColumnStretch(column, 0)
+            else:
+                self.ui["layout"].setColumnStretch(column, 1)
+        # RAW column will never display images
+        self.ui["layout"].setColumnStretch(1, 0)
 
         # Trigger image resize so they fit in the area
         for row in self.picture_containers:
@@ -820,6 +846,10 @@ class PictureGrid:
                 self.picture_containers[row][column].fit_picture_in_view()
 
         self.grid[0][1].setText(_("RAW"))
+
+        # Hide / display images based on checkboxes
+        self.on_display_raw_images()
+        self.on_display_absent_images()
 
     def picture_added(self, picture, conversion_type):
         """Receives the signal from the picture_group
@@ -852,6 +882,9 @@ class PictureGrid:
     def clear_display(self):
         """Removes all widgets from the display & deletes them properly"""
         logger.info("PictureGrid.clear_display")
+        for row in self.picture_containers:
+            for column in self.picture_containers[row]:
+                self.picture_containers[row][column].clear_display()
         for row in self.grid:
             for element in row:
                 self.ui["layout"].removeWidget(element)
@@ -984,6 +1017,51 @@ class PictureGrid:
                 if (r, c) != (row, column):
                     self.picture_containers[r][c].set_zoom_factor(value)
 
+    def on_display_raw_images(self, checked=None):
+        """Displays or hide RAW images in the grid"""
+        if checked is not None:
+            self.display_raw_images = checked
+        for row in self.grid:
+            if checked:
+                row[1].show()
+            else:
+                row[1].hide()
+
+    def on_display_absent_images(self, checked=None):
+        """Displays or hide space for absent images"""
+        if checked is not None:
+            self.display_absent_images = checked
+
+        if not self.grid:
+            return
+
+        # If we have to display everything, let's just do it
+        if self.display_absent_images:
+            for row in self.grid:
+                for column, cell in enumerate(row):
+                    # Location (row) headers are always displayed
+                    if column == 0:
+                        continue
+                    if column == 1 and not self.display_raw_images:
+                        cell.hide()
+                    else:
+                        cell.show()
+            return
+
+        # Otherwise, we need to determine whether columns needs to be fully hidden or not
+        nb_rows = self.ui["layout"].rowCount()
+        nb_columns = self.ui["layout"].columnCount()
+        empty = {col: 0 for col in range(1, nb_columns)}
+        for row in range(1, nb_rows):
+            for column in range(1, nb_columns):
+                if not self.picture_containers[row][column].picture_displayed:
+                    empty[column] += 1
+                    self.grid[row][column].hide()
+
+        for column in empty:
+            if empty[column] == nb_rows - 1:
+                self.grid[0][column].hide()
+
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
@@ -1053,6 +1131,7 @@ class PictureContainer:
         self.row = row
         self.column = column
         self.picture = None
+        self.picture_displayed = False
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
         self.ui["layout"] = QtWidgets.QVBoxLayout()
@@ -1066,6 +1145,7 @@ class PictureContainer:
         )
         self.clear_display()
         self.picture = None
+        self.picture_displayed = False
         ui_elements = self.ui["elements"]
 
         ui_elements["label"] = QtWidgets.QLabel(_("No image"))
@@ -1073,15 +1153,14 @@ class PictureContainer:
         self.ui["layout"].addWidget(ui_elements["label"])
 
         # Button box
-        ui_elements["buttonbox"] = QtWidgets.QWidget()
-        ui_elements["buttonbox_layout"] = QtWidgets.QHBoxLayout()
-        ui_elements["buttonbox"].setLayout(ui_elements["buttonbox_layout"])
-        self.ui["layout"].addWidget(ui_elements["buttonbox"])
+        self.ui["buttonbox"] = QtWidgets.QWidget()
+        self.ui["buttonbox_layout"] = QtWidgets.QHBoxLayout()
+        self.ui["buttonbox"].setLayout(self.ui["buttonbox_layout"])
+        self.ui["layout"].addWidget(self.ui["buttonbox"])
 
-        ui_elements["buttonbox_layout"].addStretch()
+        self.ui["buttonbox_layout"].addStretch()
 
         # Generate image from RAW file
-        # #ui_elements["generate"] = QtWidgets.QPushButton(_("Generate"))
         ui_elements["generate"] = IconButton(
             QtGui.QIcon(
                 os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -1090,10 +1169,9 @@ class PictureContainer:
         )
         # I have no idea why I had to use a lambda here, but it works...
         ui_elements["generate"].clicked.connect(lambda: self.on_click_generate())
-        ui_elements["buttonbox_layout"].addWidget(ui_elements["generate"])
+        self.ui["buttonbox_layout"].addWidget(ui_elements["generate"])
 
         # Copy image from another location
-        # #ui_elements["copy"] = QtWidgets.QPushButton(_("Copy image here"))
         ui_elements["copy"] = IconButton(
             QtGui.QIcon(
                 os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -1101,9 +1179,9 @@ class PictureContainer:
             )
         )
         ui_elements["copy"].clicked.connect(self.on_click_copy)
-        ui_elements["buttonbox_layout"].addWidget(ui_elements["copy"])
+        self.ui["buttonbox_layout"].addWidget(ui_elements["copy"])
 
-        ui_elements["buttonbox_layout"].addStretch()
+        self.ui["buttonbox_layout"].addStretch()
 
     def set_picture(self, picture):
         """Displays the provided picture as well as action buttons
@@ -1149,6 +1227,7 @@ class PictureContainer:
         pixmap = QtGui.QPixmap(self.picture.path)
         # Image exists and can be read by PyQt5
         if pixmap.width() > 0:
+            self.picture_displayed = True
             image = PictureDisplay(self.ui["main"])
             self.ui["elements"]["image"] = image
             image.set_pixmap(pixmap)
@@ -1169,6 +1248,7 @@ class PictureContainer:
             )
             self.ui["layout"].addWidget(image)
         else:
+            self.picture_displayed = False
             self.ui["layout"].addStretch()
 
     def on_click_generate(self):
@@ -1573,6 +1653,10 @@ class PicturesController:
         Reloads the UI
     display_picture_group
         Displays a given picture group
+    on_display_raw_images (checked):
+        Displays or hide RAW images in the grid
+    on_display_absent_images (checked):
+        Displays or hide space for absent images
     """
 
     name = _("Pictures")
@@ -1621,6 +1705,16 @@ class PicturesController:
         self.ui["picture_tree"] = PicturesTree(self, self.repository)
         self.ui["left_layout"].addWidget(self.ui["picture_tree"], 1)
 
+        # Display RAW images
+        self.ui["display_raw_images"] = QtWidgets.QCheckBox(_("Display RAW images"))
+        self.ui["display_raw_images"].clicked.connect(self.on_display_raw_images)
+        self.ui["left_layout"].addWidget(self.ui["display_raw_images"], 0)
+
+        # Hide "No image"
+        self.ui["display_absent"] = QtWidgets.QCheckBox(_("Display absent images"))
+        self.ui["display_absent"].clicked.connect(self.on_display_absent_images)
+        self.ui["left_layout"].addWidget(self.ui["display_absent"], 0)
+
         # Tasks in progress
         self.ui["tasks_label"] = TasksProgressTitle(_("In-progress tasks"), self)
         self.ui["left_layout"].addWidget(self.ui["tasks_label"], 0)
@@ -1643,6 +1737,10 @@ class PicturesController:
         self.ui["tasks_dialog"].setWindowTitle(_("In-progress tasks"))
         self.ui["tasks_dialog_layout"] = QtWidgets.QVBoxLayout()
         self.ui["tasks_dialog"].setLayout(self.ui["tasks_dialog_layout"])
+
+        # Trigger handlers with default values
+        self.on_display_raw_images(False)
+        self.on_display_absent_images(False)
 
     @property
     def display_widget(self):
@@ -1757,3 +1855,11 @@ class PicturesController:
     def display_picture_group(self, picture_group):
         """Displays pictures from a given group"""
         self.ui["picture_grid"].display_picture_group(picture_group)
+
+    def on_display_raw_images(self, checked):
+        """Displays or hide RAW images in the grid"""
+        self.ui["picture_grid"].on_display_raw_images(checked)
+
+    def on_display_absent_images(self, checked):
+        """Displays or hide space for absent images"""
+        self.ui["picture_grid"].on_display_absent_images(checked)

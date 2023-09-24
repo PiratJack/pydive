@@ -20,10 +20,6 @@ class IconButton(QtWidgets.QPushButton):
         self.setSizePolicy(sizePolicy)
         self.setSizeIncrement(0, 0)
 
-        size = QtCore.QSize(39, 36)
-        # #self.setMinimumSize(size)
-        # #self.setMaximumSize(size)
-
     def paintEvent(self, event):
 
         qp = QtGui.QPainter()

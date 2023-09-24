@@ -72,6 +72,12 @@ msgstr "Profondeur"
 msgid "Details"
 msgstr "Détails"
 
+msgid "Display RAW images"
+msgstr "Afficher les images brutes"
+
+msgid "Display absent images"
+msgstr "Afficher les cases sans images"
+
 msgid "Dive log file"
 msgstr "Historique des plongées"
 

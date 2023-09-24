@@ -59,6 +59,12 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
+msgid "Display RAW images"
+msgstr ""
+
+msgid "Display absent images"
+msgstr ""
+
 msgid "Dive log file"
 msgstr ""
 
