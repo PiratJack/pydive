@@ -212,6 +212,9 @@ class LocationsList:
 
         # Location name - Edit / validate button
         location["name_change"] = QtWidgets.QWidget(self.ui["main"])
+        location["name_change"].setSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
         location["name_change_layout"] = QtWidgets.QStackedLayout()
         location["name_change"].setLayout(location["name_change_layout"])
         self.ui["layout"].addWidget(location["name_change"], row, 1)
@@ -751,6 +754,9 @@ class ConversionMethodsList:
 
             # Conversion method field - Edit / validate button
             method[field + "_change"] = QtWidgets.QWidget(self.ui["main"])
+            method[field + "_change"].setSizePolicy(
+                QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+            )
             method[field + "_change_layout"] = QtWidgets.QStackedLayout()
             method[field + "_change"].setLayout(method[field + "_change_layout"])
             self.ui["layout"].addWidget(method[field + "_change"], row, column * 2 + 1)
@@ -1093,12 +1099,16 @@ class SettingsController:
         self.ui["locations_list"] = self.locations_list.display_widget
         self.ui["layout"].addWidget(self.ui["locations_list"])
 
+        self.ui["layout"].addStretch()
+
         self.divelog_list = LocationsList(self, "file")
         self.ui["divelog_label"] = QtWidgets.QLabel(_("Dive log file"))
         self.ui["divelog_label"].setProperty("class", "title")
         self.ui["layout"].addWidget(self.ui["divelog_label"])
         self.ui["divelog"] = self.divelog_list.display_widget
         self.ui["layout"].addWidget(self.ui["divelog"])
+
+        self.ui["layout"].addStretch()
 
         self.conversion_methods_list = ConversionMethodsList(self)
         self.ui["methods_list_label"] = QtWidgets.QLabel(_("Conversion methods"))

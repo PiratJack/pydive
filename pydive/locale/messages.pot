@@ -46,9 +46,6 @@ msgstr ""
 msgid "Copy all images from {source} to {target}"
 msgstr ""
 
-msgid "Copy image here"
-msgstr ""
-
 #, python-brace-format
 msgid "Could not save {filename}"
 msgstr ""
@@ -97,9 +94,6 @@ msgstr ""
 msgid "File {filename} already exists"
 msgstr ""
 
-msgid "Generate"
-msgstr ""
-
 msgid "Hover for error details"
 msgstr ""
 
@@ -107,9 +101,6 @@ msgid "ID"
 msgstr ""
 
 msgid "Image folders"
-msgstr ""
-
-msgid "Image unreadable"
 msgstr ""
 
 msgid "In-progress tasks"

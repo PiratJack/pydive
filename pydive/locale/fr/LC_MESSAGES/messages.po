@@ -59,9 +59,6 @@ msgstr "Copier 1 image vers {target}"
 msgid "Copy all images from {source} to {target}"
 msgstr "Copier les images de {source} vers {target}"
 
-msgid "Copy image here"
-msgstr "Copier l'image ici"
-
 #, python-brace-format
 msgid "Could not save {filename}"
 msgstr "Impossible de sauvegarder le fichier {filename}"
@@ -114,9 +111,6 @@ msgstr "Suffixe de nom de fichier"
 msgid "File {filename} already exists"
 msgstr "Le fichier {filename} existe déjà"
 
-msgid "Generate"
-msgstr "Générer"
-
 msgid "Hover for error details"
 msgstr "Survoler pour le détail des erreurs"
 
@@ -125,9 +119,6 @@ msgstr "ID"
 
 msgid "Image folders"
 msgstr "Dossiers d'image"
-
-msgid "Image unreadable"
-msgstr "Image non lisible"
 
 msgid "In-progress tasks"
 msgstr "Tâches en cours"
@@ -282,8 +273,17 @@ msgstr "{error}: {short_path} vers {target_trip} - {source_file}"
 #~ msgid "Archives"
 #~ msgstr "Archives"
 
+#~ msgid "Copy image here"
+#~ msgstr "Copier l'image ici"
+
+#~ msgid "Generate"
+#~ msgstr "Générer"
+
 #~ msgid "Image storage locations"
 #~ msgstr "Lieu de stockage d'images"
+
+#~ msgid "Image unreadable"
+#~ msgstr "Image non lisible"
 
 #~ msgid "No image to delete"
 #~ msgstr "Pas d'image à supprimer"

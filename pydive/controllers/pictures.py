@@ -805,6 +805,15 @@ class PictureGrid:
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
 
+        for row in range(1, len(rows.keys())):
+            # When a row has images + cells without images, in the cell without images, the elements are distributed vertically
+            # The goal here is to push everything up
+            empty_cells = [
+                p for p in self.picture_containers[row].values() if p.picture == None
+            ]
+            if len(empty_cells) != len(columns) - 1:
+                [p.ui["layout"].addStretch() for p in empty_cells]
+
         # Trigger image resize so they fit in the area
         for row in self.picture_containers:
             for column in self.picture_containers[row]:
@@ -1057,23 +1066,44 @@ class PictureContainer:
         )
         self.clear_display()
         self.picture = None
+        ui_elements = self.ui["elements"]
 
-        self.ui["elements"]["label"] = QtWidgets.QLabel(_("No image"))
-        self.ui["elements"]["label"].setProperty("class", "small_note")
-        self.ui["layout"].addWidget(self.ui["elements"]["label"])
+        ui_elements["label"] = QtWidgets.QLabel(_("No image"))
+        ui_elements["label"].setProperty("class", "small_note")
+        self.ui["layout"].addWidget(ui_elements["label"])
+
+        # Button box
+        ui_elements["buttonbox"] = QtWidgets.QWidget()
+        ui_elements["buttonbox_layout"] = QtWidgets.QHBoxLayout()
+        ui_elements["buttonbox"].setLayout(ui_elements["buttonbox_layout"])
+        self.ui["layout"].addWidget(ui_elements["buttonbox"])
+
+        ui_elements["buttonbox_layout"].addStretch()
 
         # Generate image from RAW file
-        self.ui["elements"]["generate"] = QtWidgets.QPushButton(_("Generate"))
-        # I have no idea why I had to use a lambda here, but it works...
-        self.ui["elements"]["generate"].clicked.connect(
-            lambda: self.on_click_generate()
+        # #ui_elements["generate"] = QtWidgets.QPushButton(_("Generate"))
+        ui_elements["generate"] = IconButton(
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/generate_monochrome.png"
+            )
         )
-        self.ui["layout"].addWidget(self.ui["elements"]["generate"])
+        # I have no idea why I had to use a lambda here, but it works...
+        ui_elements["generate"].clicked.connect(lambda: self.on_click_generate())
+        ui_elements["buttonbox_layout"].addWidget(ui_elements["generate"])
 
         # Copy image from another location
-        self.ui["elements"]["copy"] = QtWidgets.QPushButton(_("Copy image here"))
-        self.ui["elements"]["copy"].clicked.connect(self.on_click_copy)
-        self.ui["layout"].addWidget(self.ui["elements"]["copy"])
+        # #ui_elements["copy"] = QtWidgets.QPushButton(_("Copy image here"))
+        ui_elements["copy"] = IconButton(
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/copy_monochrome.png"
+            )
+        )
+        ui_elements["copy"].clicked.connect(self.on_click_copy)
+        ui_elements["buttonbox_layout"].addWidget(ui_elements["copy"])
+
+        ui_elements["buttonbox_layout"].addStretch()
 
     def set_picture(self, picture):
         """Displays the provided picture as well as action buttons
@@ -1091,6 +1121,30 @@ class PictureContainer:
 
         self.ui["elements"]["filename"] = QtWidgets.QLabel(self.picture.filename)
         self.ui["layout"].addWidget(self.ui["elements"]["filename"])
+
+        # Button box - needed for vertical alignment (setting an alignment in addWidget doesn't seem to be enough)
+        ui_elements = self.ui["elements"]
+        ui_elements["buttonbox"] = QtWidgets.QWidget()
+        self.ui["buttonbox_layout"] = QtWidgets.QHBoxLayout()
+        ui_elements["buttonbox"].setLayout(self.ui["buttonbox_layout"])
+        self.ui["layout"].addWidget(ui_elements["buttonbox"])
+
+        self.ui["buttonbox_layout"].addStretch()
+
+        # Delete button
+        self.ui["elements"]["delete"] = IconButton(
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/delete_monochrome.png"
+            )
+        )
+        self.ui["elements"]["delete"].setMaximumHeight(35)
+        self.ui["elements"]["delete"].clicked.connect(lambda: self.on_click_delete())
+        self.ui["buttonbox_layout"].addWidget(
+            self.ui["elements"]["delete"], Qt.AlignHCenter
+        )
+
+        self.ui["buttonbox_layout"].addStretch()
 
         pixmap = QtGui.QPixmap(self.picture.path)
         # Image exists and can be read by PyQt5
@@ -1115,20 +1169,7 @@ class PictureContainer:
             )
             self.ui["layout"].addWidget(image)
         else:
-            self.ui["elements"]["label"] = QtWidgets.QLabel(_("Image unreadable"))
-            self.ui["elements"]["label"].setProperty("class", "small_note")
-            self.ui["layout"].addWidget(self.ui["elements"]["label"])
-
-        # Delete button
-        self.ui["elements"]["delete"] = IconButton(
-            QtGui.QIcon(
-                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-                + "/assets/images/delete.png"
-            )
-        )
-        self.ui["elements"]["delete"].setMaximumHeight(35)
-        self.ui["elements"]["delete"].clicked.connect(lambda: self.on_click_delete())
-        self.ui["layout"].addWidget(self.ui["elements"]["delete"])
+            self.ui["layout"].addStretch()
 
     def on_click_generate(self):
         """Handler for generate button: triggers parent's handler"""
@@ -1176,6 +1217,20 @@ class PictureContainer:
 
     def clear_display(self):
         """Removes all widgets from the display & deletes them properly"""
+        if "generate" in self.ui["elements"]:
+            self.ui["buttonbox_layout"].removeWidget(self.ui["elements"]["generate"])
+            self.ui["buttonbox_layout"].removeWidget(self.ui["elements"]["copy"])
+            self.ui["elements"]["generate"].deleteLater()
+            self.ui["elements"]["copy"].deleteLater()
+            del self.ui["buttonbox_layout"]
+            del self.ui["elements"]["generate"]
+            del self.ui["elements"]["copy"]
+        elif "delete" in self.ui["elements"]:
+            self.ui["buttonbox_layout"].removeWidget(self.ui["elements"]["delete"])
+            self.ui["elements"]["delete"].deleteLater()
+            del self.ui["buttonbox_layout"]
+            del self.ui["elements"]["delete"]
+
         for i in self.ui["elements"]:
             self.ui["elements"][i].deleteLater()
             self.ui["layout"].removeWidget(self.ui["elements"][i])
