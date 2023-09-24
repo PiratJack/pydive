@@ -13,8 +13,9 @@ ProcessGroupsController
 """
 import gettext
 import logging
+import os
 
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
 from controllers.widgets import autoresize
@@ -22,7 +23,7 @@ from controllers.widgets import autoresize
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
 
-# TODO: Allow to cancel background processes
+
 class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
     """Model for display of transactions, based on user selection
 
@@ -124,13 +125,23 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
             return [
                 process_group.label,
                 process_group.progress,
+                "",
                 process_group.count_completed,
                 process_group.count_total,
                 process_group.count_errors,
                 error_text,
             ][col]
 
-        if role == Qt.ToolTipRole and col == 5:
+        if role == Qt.DecorationRole and col == 2:
+            if process_group.progress != 1:
+                return QtCore.QVariant(
+                    QtGui.QIcon(
+                        os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                        + "/assets/images/delete.png"
+                    )
+                )
+
+        if role == Qt.ToolTipRole and col == 6:
             return "\n".join(errors)
 
         if role == Qt.TextAlignmentRole:
@@ -162,6 +173,21 @@ class ProcessGroupsTableModel(QtCore.QAbstractTableModel):
         if orientation == Qt.Horizontal:
             return QtCore.QVariant(_(self.columns[column]["name"]))
         return QtCore.QVariant()
+
+    def get_process_group(self, index):
+        """Returns the process group displayed in a given position (index/row)
+
+        Parameters
+        ----------
+        index : QtCore.QModelIndex
+            A reference to the cell to display
+
+        Returns
+        -------
+        models.repository.ProcessGroup
+            The process group display in a given index/row
+        """
+        return self.process_groups[index.row()]
 
     def refresh_display(self):
         """Refreshes the list of process groups displayed"""
@@ -231,6 +257,11 @@ class ProcessGroupsTableView(QtWidgets.QTableView, autoresize.AutoResize):
             "alignment": Qt.AlignCenter,
         },
         {
+            "name": _("Cancel"),
+            "size": 30,
+            "alignment": Qt.AlignLeft,
+        },
+        {
             "name": _("Completed"),
             "size": 0.1,
             "alignment": Qt.AlignCenter,
@@ -269,6 +300,27 @@ class ProcessGroupsTableView(QtWidgets.QTableView, autoresize.AutoResize):
         self.setModel(self.model)
         self.progress_bar = ProgressBarItemDelegate(self)
         self.setItemDelegateForColumn(1, self.progress_bar)
+
+        self.doubleClicked.connect(self.on_table_double_clicked)
+
+    def on_table_double_clicked(self, index):
+        """User double-click on cancel button - cancel process
+
+        #######################################Will trigger a reload of the table once the action is complete
+
+        Parameters
+        ----------
+        index : QtCore.QModelIndex
+            A reference to the cell clicked
+        """
+        logger.debug(
+            f"ProcessGroupsTableView.on_table_double_clicked {index.row()} {index.column()}"
+        )
+        # Click on other columns
+        if index.column() != 2:
+            return
+        process_group = self.model.get_process_group(index)
+        process_group.cancel_tasks()
 
     def refresh_display(self):
         """Refreshes the list of process groups displayed"""

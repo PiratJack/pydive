@@ -24,6 +24,7 @@ ProcessSignals
     Defines signals when processes are completed or in error
 """
 import os
+import shlex
 import shutil
 import gettext
 import logging
@@ -739,6 +740,12 @@ class ProcessGroup(QtCore.QObject):
         task["error_details"] = error_details
         self.update_progress()
 
+    def cancel_tasks(self):
+        """Cancels all the pending tasks"""
+        logger.debug(f"ProcessGroup.cancel_tasks {self.label}")
+        for task in self.tasks:
+            task["process"].cancel()
+
     def run(self):
         """Starts all processes"""
         for task in self.tasks:
@@ -772,7 +779,19 @@ class ProcessGroup(QtCore.QObject):
         return f"{self.label} ({len(self.tasks)} tasks)"
 
 
-class CopyProcess(QtCore.QRunnable):
+class ProcessScaffold:
+    def cancel(self):
+        if self.status == "Queued":
+            self.status = "Cancelled"
+            self.signals.taskError.emit(
+                _("Task cancelled"),
+                _("Task cancelled {short_path} - {target_file}").format(
+                    short_path=self.short_path, target_file=self.target_file
+                ),
+            )
+
+
+class CopyProcess(QtCore.QRunnable, ProcessScaffold):
     """A process to copy pictures between locations
 
     Methods
@@ -799,6 +818,7 @@ class CopyProcess(QtCore.QRunnable):
             f"CopyProcess.init {picture_group.trip}/{picture_group.name}/{source_picture.filename} to {target_location.name}"
         )
         super().__init__()
+        self.status = "Queued"
         self.signals = ProcessSignals()
         self.picture_group = picture_group
         self.source_picture = source_picture
@@ -824,6 +844,9 @@ class CopyProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         logger.debug(f"CopyProcess.run {self.source_file} to {self.target_file}")
+        if self.status == "Cancelled":
+            return
+        self.status = "Running"
         if os.path.exists(self.target_file):
             logger.warning(
                 f"CopyProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name} - Target file exists"
@@ -865,7 +888,7 @@ class CopyProcess(QtCore.QRunnable):
         return f"Copy picture: {self.source_file} to {self.target_file}"
 
 
-class GenerateProcess(QtCore.QRunnable):
+class GenerateProcess(QtCore.QRunnable, ProcessScaffold):
     """A process to generate pictures from raw pictures
 
     Methods
@@ -894,6 +917,7 @@ class GenerateProcess(QtCore.QRunnable):
             f"GenerateProcess.init: {picture_group.trip}/{picture_group.name}/{source_picture.filename} to {location.name} using {method}"
         )
         super().__init__()
+        self.status = "Queued"
         self.signals = ProcessSignals()
         self.picture_group = picture_group
         self.location = location
@@ -911,9 +935,9 @@ class GenerateProcess(QtCore.QRunnable):
 
         # Let's mix all that together!
         command = method.command
-        command = command.replace("%SOURCE_FILE%", self.source_file)
-        command = command.replace("%TARGET_FILE%", self.target_file)
-        command = command.replace("%TARGET_FOLDER%", self.target_folder)
+        command = command.replace("%SOURCE_FILE%", shlex.quote(self.source_file))
+        command = command.replace("%TARGET_FILE%", shlex.quote(self.target_file))
+        command = command.replace("%TARGET_FOLDER%", shlex.quote(self.target_folder))
         self.command = command
 
     def run(self):
@@ -926,6 +950,9 @@ class GenerateProcess(QtCore.QRunnable):
         logger.debug(
             f"GenerateProcess.run {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name}..{os.path.basename(self.target_file)}"
         )
+        if self.status == "Cancelled":
+            return
+        self.status = "Running"
         if os.path.exists(self.target_file):
             logger.warning(
                 f"GenerateProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name} - Target file exists"
@@ -956,7 +983,7 @@ class GenerateProcess(QtCore.QRunnable):
         return f"Generate picture: {self.command}"
 
 
-class RemoveProcess(QtCore.QRunnable):
+class RemoveProcess(QtCore.QRunnable, ProcessScaffold):
     """A process to delete pictures
 
     Methods
@@ -981,6 +1008,7 @@ class RemoveProcess(QtCore.QRunnable):
             f"RemoveProcess.init: {picture_group.trip}/{picture_group.name}/{picture.filename}"
         )
         super().__init__()
+        self.status = "Queued"
         self.signals = ProcessSignals()
         self.picture_group = picture_group
         self.source_picture = picture
@@ -1001,6 +1029,9 @@ class RemoveProcess(QtCore.QRunnable):
         """
         # Check target doesn't exist already
         logger.debug(f"RemoveProcess.run {self.file}")
+        if self.status == "Cancelled":
+            return
+        self.status = "Running"
         if not os.path.exists(self.file):
             logger.warning(
                 f"RemoveProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.file)}: File does not exist"
@@ -1052,7 +1083,7 @@ class RemoveProcess(QtCore.QRunnable):
         return f"Delete picture: {self.file}"
 
 
-class ChangeTripProcess(QtCore.QRunnable):
+class ChangeTripProcess(QtCore.QRunnable, ProcessScaffold):
     """A process to change the trip of given pictures
 
     Methods
@@ -1079,6 +1110,7 @@ class ChangeTripProcess(QtCore.QRunnable):
             f"ChangeTripProcess.init: {picture_group.trip}/{picture_group.name}/{picture.filename} from {picture_group.trip} to {target_trip}"
         )
         super().__init__()
+        self.status = "Queued"
         self.signals = ProcessSignals()
         self.picture_group = picture_group
         self.source_picture = picture
@@ -1106,6 +1138,9 @@ class ChangeTripProcess(QtCore.QRunnable):
         logger.debug(
             f"ChangeTripProcess.run {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} from {self.picture_group.trip} to {self.target_trip}"
         )
+        if self.status == "Cancelled":
+            return
+        self.status = "Running"
         # Check target doesn't exist already
         if os.path.exists(self.target_file):
             logger.warning(
