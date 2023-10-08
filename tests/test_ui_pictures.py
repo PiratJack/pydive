@@ -244,7 +244,7 @@ class TestUiPictures:
         else:
             raise ValueError("display_type should be RAW, JPG or No image")
 
-    def _test_pictures_display_overall(self):
+    def test_pictures_display_overall(self):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -276,7 +276,7 @@ class TestUiPictures:
             right_column.layout().count() == 1
         ), "Pictures right column has the right number of rows"
 
-    def _test_pictures_display_folders(self):
+    def test_pictures_display_folders(self):
         # Setup: get display
         folders = self.database.storagelocations_get_picture_folders()
         self.mainwindow.display_tab("Pictures")
@@ -307,7 +307,7 @@ class TestUiPictures:
             path_label.text() == folders[0].path
         ), "Path field displays the expected data"
 
-    def _test_pictures_display_tree_load_pictures(self, qtbot):
+    def test_pictures_display_tree_load_pictures(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -332,7 +332,7 @@ class TestUiPictures:
         assert malta.childCount() == 2, "Malta's children count is OK"
         assert malta_children == ["IMG001", "IMG002"], "Malta's children are OK"
 
-    def _test_pictures_display_checkboxes(self, qtbot):
+    def test_pictures_display_checkboxes(self, qtbot):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -356,7 +356,7 @@ class TestUiPictures:
             display_absent_images.text() == "Display absent images"
         ), "Pictures: Display absent images label is correct"
 
-    def _test_pictures_display_in_progress_tasks(self, qtbot):
+    def test_pictures_display_in_progress_tasks(self, qtbot):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -422,7 +422,7 @@ class TestUiPictures:
             tasks_progress_bar.text() == "100%"
         ), "Pictures: In-progress task progress bar value is correct"
 
-    def _test_pictures_process_groups_display(self, qtbot, qapp):
+    def test_pictures_process_groups_display(self, qtbot, qapp):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -449,7 +449,7 @@ class TestUiPictures:
         QtCore.QTimer.singleShot(700, handle_dialog)
         qtbot.mouseClick(tasks_progress_bar, Qt.LeftButton)
 
-    def _test_pictures_process_groups_multiple_errors(self, qtbot, qapp):
+    def test_pictures_process_groups_multiple_errors(self, qtbot, qapp):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -527,7 +527,7 @@ class TestUiPictures:
         ]
         self.helper_check_paths(action_name, new_files)
 
-    def _test_pictures_process_groups_one_error(self, qtbot, qapp):
+    def test_pictures_process_groups_one_error(self, qtbot, qapp):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -586,7 +586,7 @@ class TestUiPictures:
         ]
         self.helper_check_paths(action_name, new_files)
 
-    def _test_pictures_process_groups_no_error(self, qtbot, qapp):
+    def test_pictures_process_groups_no_error(self, qtbot, qapp):
         # Setup: get display
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -654,7 +654,7 @@ class TestUiPictures:
         self.helper_check_paths(action_name, new_files)
         self.all_folders.append(os.path.join(BASE_FOLDER, "DCIM", "Malta"))
 
-    def _test_pictures_tree_click_trip(self, qtbot):
+    def test_pictures_tree_click_trip(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -678,7 +678,7 @@ class TestUiPictures:
             picturesGrid.ui["layout"].itemAtPosition(0, 0) is None
         ), "PictureGrid is empty"
 
-    def _test_pictures_tree_click_picture_group(self, qtbot):
+    def test_pictures_tree_click_picture_group(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -766,7 +766,7 @@ class TestUiPictures:
         # #container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
         # #assert container.isVisible() == True, "Container is visible"
 
-    def _test_pictures_tree_remove_already_removed_picture_group(self, qtbot):
+    def test_pictures_tree_remove_already_removed_picture_group(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -783,7 +783,7 @@ class TestUiPictures:
         picturesTree.remove_picture_group(picture_item)
         picturesTree.remove_picture_group(None)
 
-    def _test_pictures_tree_picture_group_removed_before_add_again(self, qtbot):
+    def test_pictures_tree_picture_group_removed_before_add_again(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -818,7 +818,7 @@ class TestUiPictures:
 
         qtbot.waitSignal(picture_group.pictureAdded)
 
-    def _test_pictures_grid_copy_raw_picture(self, qtbot):
+    def test_pictures_grid_copy_raw_picture(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -877,7 +877,7 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def _test_pictures_grid_copy_jpg_picture(self, qtbot):
+    def test_pictures_grid_copy_jpg_picture(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -936,7 +936,7 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def _test_pictures_grid_copy_error(self, qtbot):
+    def test_pictures_grid_copy_error(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -966,7 +966,7 @@ class TestUiPictures:
         error = container.layout().itemAt(2).widget()
         assert error.text() == "No source image found", "Error is displayed"
 
-    def _test_pictures_grid_delete_jpg_picture(self, qtbot, monkeypatch):
+    def test_pictures_grid_delete_jpg_picture(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1019,7 +1019,7 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(1), "1 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def _test_pictures_grid_delete_raw_picture(self, qtbot, monkeypatch):
+    def test_pictures_grid_delete_raw_picture(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1070,7 +1070,7 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def _test_pictures_grid_convert_picture(self, qtbot):
+    def test_pictures_grid_convert_picture(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1117,7 +1117,7 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(2), "2 image in Archive"
 
-    def _test_pictures_grid_convert_picture_no_method_found(self, qtbot):
+    def test_pictures_grid_convert_picture_no_method_found(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1147,7 +1147,7 @@ class TestUiPictures:
         error = container.layout().itemAt(2).widget()
         assert error.text() == "No conversion method found", "Error is displayed"
 
-    def _test_pictures_grid_picture_zoom(self, qtbot, qapp):
+    def test_pictures_grid_picture_zoom(self, qtbot, qapp):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1197,7 +1197,7 @@ class TestUiPictures:
         assert delta_zoom < 0.01, "Other pictures are zoomed in with same zoom"
         assert picture2._zoom == 0, "Other pictures' _zoom property changed"
 
-    def _test_pictures_grid_picture_move(self, qtbot, qapp):
+    def test_pictures_grid_picture_move(self, qtbot, qapp):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1252,7 +1252,7 @@ class TestUiPictures:
             scrollbarv2.value() == scrollbarv.value()
         ), "Other pictures are moved similarly"
 
-    def _test_pictures_tree_trip_copy(self, qtbot):
+    def test_pictures_tree_trip_copy(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1308,7 +1308,7 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def _test_pictures_tree_trip_convert(self, qtbot):
+    def test_pictures_tree_trip_convert(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1358,7 +1358,7 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
-    def _test_pictures_tree_trip_change_name(self, qtbot, monkeypatch):
+    def test_pictures_tree_trip_change_name(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1408,7 +1408,7 @@ class TestUiPictures:
         assert "Italy" in top_level_items, "Italy added to the tree"
         assert "Korea" not in top_level_items, "Korea removed from the tree"
 
-    def _test_pictures_tree_trip_change_name_exists(self, qtbot, monkeypatch):
+    def test_pictures_tree_trip_change_name_exists(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1457,7 +1457,7 @@ class TestUiPictures:
         assert "Georgia" in top_level_items, "Georgia still in the tree"
         assert "Korea" not in top_level_items, "Korea removed from the tree"
 
-    def _test_pictures_tree_trip_wrong_action_name(self, qtbot, monkeypatch):
+    def test_pictures_tree_trip_wrong_action_name(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1472,7 +1472,7 @@ class TestUiPictures:
         with pytest.raises(ValueError):
             picturesTree.add_trip_action("", "", action_name, "", "", "")
 
-    def _test_pictures_tree_picture_group_copy(self, qtbot):
+    def test_pictures_tree_picture_group_copy(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1508,7 +1508,7 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 image in Archive"
 
-    def _test_pictures_tree_picture_group_convert(self, qtbot):
+    def test_pictures_tree_picture_group_convert(self, qtbot):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1550,7 +1550,7 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 image in Archive"
 
-    def _test_pictures_tree_picture_group_change_trip(self, qtbot, monkeypatch):
+    def test_pictures_tree_picture_group_change_trip(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
@@ -1622,7 +1622,7 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def _test_pictures_tree_picture_group_change_trip_target_exists(
+    def test_pictures_tree_picture_group_change_trip_target_exists(
         self, qtbot, monkeypatch
     ):
         # Setup: get display, load pictures
@@ -1693,7 +1693,7 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def _test_pictures_tree_picture_group_wrong_action_name(self, qtbot, monkeypatch):
+    def test_pictures_tree_picture_group_wrong_action_name(self, qtbot, monkeypatch):
         # Setup: get display, load pictures
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
