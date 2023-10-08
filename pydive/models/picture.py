@@ -27,6 +27,11 @@ class StorageLocationCollision(ValueError):
 class Picture:
     """A single picture, corresponding to 1 image file on disk
 
+    The file path is considered to be composed as such:
+    - Location path
+    - Trip (can span multiple folders)
+    - Category (may be absent)
+
     Attributes
     ----------
     path : str
@@ -35,6 +40,8 @@ class Picture:
         The image's trip (leaf folder)
     location : StorageLocation
         The image's storage location
+    category : str
+        The category of the image (subfolder)
     name : str
         Image file's name (without folder or extension)
     filename : str
@@ -72,6 +79,10 @@ class Picture:
         if len(storage_location) == 1:
             location = storage_location[0]
             self.trip = os.path.dirname(path)[len(location.path) :]
+            self.category = ""
+            if os.path.sep in self.trip:
+                self.category = self.trip.split(os.path.sep)[-1]
+                self.trip = self.trip[: -len(self.category) - 1]
             self.location = location
             self.name = os.path.basename(path).rsplit(".", 1)[-2]
             self.filename = os.path.basename(path)

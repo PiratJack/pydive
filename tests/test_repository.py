@@ -41,6 +41,7 @@ class TestRepository:
             os.path.join(BASE_FOLDER, "DCIM", "Sweden", ""),
             os.path.join(BASE_FOLDER, "Temporary", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", ""),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "Sélection", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Georgia", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Korea", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", ""),
@@ -63,6 +64,9 @@ class TestRepository:
             os.path.join(BASE_FOLDER, "DCIM", "IMG020.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
+            os.path.join(
+                BASE_FOLDER, "Temporary", "Malta", "Sélection", "IMG001_RT.jpg"
+            ),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
             os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2"),
@@ -179,10 +183,21 @@ class TestRepository:
         test = "Load pictures: Count pictures in a given trip"
         assert len(self.repository.trips["Malta"]) == 2, test
 
+        test = "Load pictures: Check picture's trip"
+        picture_group = self.repository.trips["Malta"]["IMG001"]
+        picture = picture_group.categories["Temporary"][""][0]
+        assert picture.trip == "Malta", test
+        assert picture.category == "", test
+
+        test = "Load pictures: Check picture's category"
+        picture = picture_group.categories["Temporary"]["Sélection"][0]
+        assert picture.trip == "Malta", test
+        assert picture.category == "Sélection", test
+
     def test_string_representation(self):
         test = "String representation: picture group"
         picture_group = self.repository.trips["Malta"]["IMG001"]
-        assert str(picture_group) == "('IMG001', 'Malta', '3 pictures')", test
+        assert str(picture_group) == "('IMG001', 'Malta', '4 pictures')", test
 
         picture = [
             p

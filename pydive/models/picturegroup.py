@@ -67,6 +67,7 @@ class PictureGroup(QtCore.QObject):
         self.trip = None
         self.pictures = {}  # Structure is conversion_type: picture model
         self.locations = {}
+        self.categories = {}
         self.tasks = []
 
     def add_picture(self, picture):
@@ -119,9 +120,13 @@ class PictureGroup(QtCore.QObject):
                 "Picture " + picture.name + " does not belong to group " + self.name
             )
 
-        # Update locations
-        self.locations[picture.location.name] = self.locations.get(
-            picture.location.name, []
+        # Update locations & categories
+        location = picture.location.name
+        self.locations[location] = self.locations.get(location, []) + [picture]
+        if location not in self.categories:
+            self.categories[location] = {}
+        self.categories[location][picture.category] = self.categories[location].get(
+            picture.category, []
         ) + [picture]
 
         logger.debug(
