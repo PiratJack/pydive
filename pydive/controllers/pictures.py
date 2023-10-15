@@ -592,9 +592,11 @@ class PicturesTree(BaseTreeWidget):
         for col, column in enumerate(self.columns[1:]):
             pictures = picture_group.locations.get(column["name"], [])
             if pictures:
-                picture_group_widget.setToolTip(
-                    col + 1, "\n".join([p.filename for p in pictures])
-                )
+                labels = [
+                    p.category + os.path.sep + p.filename if p.category else p.filename
+                    for p in pictures
+                ]
+                picture_group_widget.setToolTip(col + 1, "\n".join(labels))
 
         # Add "task in progress" icon
         if picture_group.tasks:
@@ -740,7 +742,6 @@ class PictureGrid:
         logger.debug(
             f"PictureGrid.display_picture_group {picture_group.trip}/{picture_group.name}"
         )
-        # TODO: Picture grid > Allow to filter which pictures to display (via checkbox)
         self.clear_display()
         self.picture_group = picture_group
         self.picture_group.pictureAdded.connect(self.picture_added)
@@ -792,6 +793,9 @@ class PictureGrid:
                     continue
 
                 picture_container = PictureContainer(self, row, column)
+                if row not in self.picture_containers:
+                    self.picture_containers[row] = {}
+                self.picture_containers[row][column] = picture_container
 
                 # No picture at all for this conversion type
                 if conversion_type not in self.picture_group.pictures:
@@ -808,10 +812,6 @@ class PictureGrid:
                         # Assumption: for a given group, location and conversion type, there is a single picture
                         picture = picture[0]
                         picture_container.set_picture(picture)
-
-                if row not in self.picture_containers:
-                    self.picture_containers[row] = {}
-                self.picture_containers[row][column] = picture_container
 
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
@@ -995,6 +995,9 @@ class PictureGrid:
         vertical : int
             The position of the vertical scrollbar. Negative when position shouldn't change
         """
+        logger.debug(
+            f"PictureGrid.pictures_set_scrollbar from {row} {column} in position {horizontal} {vertical}"
+        )
         for r in self.picture_containers:
             for c in self.picture_containers[r]:
                 if (r, c) != (row, column):
@@ -1018,49 +1021,70 @@ class PictureGrid:
                     self.picture_containers[r][c].set_zoom_factor(value)
 
     def on_display_raw_images(self, checked=None):
-        """Displays or hide RAW images in the grid"""
+        """Displays or hides RAW images in the grid"""
+        logger.debug(f"PictureGrid.on_display_raw_images {checked}")
         if checked is not None:
             self.display_raw_images = checked
-        for row in self.grid:
-            if checked:
-                row[1].show()
-            else:
-                row[1].hide()
+        self.on_show_hide_images()
 
     def on_display_absent_images(self, checked=None):
-        """Displays or hide space for absent images"""
+        """Displays or hides space for absent images"""
+        logger.debug(f"PictureGrid.on_display_absent_images {checked}")
         if checked is not None:
             self.display_absent_images = checked
+        self.on_show_hide_images()
 
+    def on_show_hide_images(self):
+        """Displays or hides RAW / absent images in the grid"""
+        logger.debug(
+            f"PictureGrid.on_show_hide_images - RAW {self.display_raw_images} - Absent {self.display_absent_images}"
+        )
         if not self.grid:
             return
 
-        # If we have to display everything, let's just do it
+        # Reset display & hide RAW image column
+        for row in self.grid:
+            for column, cell in enumerate(row):
+                if column == 1 and not self.display_raw_images:
+                    cell.hide()
+                else:
+                    cell.show()
+        # Everything is displayed by default
         if self.display_absent_images:
-            for row in self.grid:
-                for column, cell in enumerate(row):
-                    # Location (row) headers are always displayed
-                    if column == 0:
-                        continue
-                    if column == 1 and not self.display_raw_images:
-                        cell.hide()
-                    else:
-                        cell.show()
             return
 
-        # Otherwise, we need to determine whether columns needs to be fully hidden or not
+        # If absent images have to be hidden, determine whether columns / rows need to be fully hidden or not
         nb_rows = self.ui["layout"].rowCount()
         nb_columns = self.ui["layout"].columnCount()
-        empty = {col: 0 for col in range(1, nb_columns)}
-        for row in range(1, nb_rows):
-            for column in range(1, nb_columns):
-                if not self.picture_containers[row][column].picture_displayed:
-                    empty[column] += 1
-                    self.grid[row][column].hide()
+        filled_columns = {col: 0 for col in range(1, nb_columns)}
+        filled_rows = {row: 0 for row in range(1, nb_rows)}
+        for row in filled_rows:
+            for column in filled_columns:
+                # Do not count RAW images if they're hidden
+                if column == 1 and not self.display_raw_images:
+                    continue
+                if self.picture_containers[row][column].picture_displayed:
+                    filled_columns[column] += 1
+                    filled_rows[row] += 1
+                else:
+                    if row < len(self.grid) and column < len(self.grid[row]):
+                        self.grid[row][column].hide()
 
-        for column in empty:
-            if empty[column] == nb_rows - 1:
-                self.grid[0][column].hide()
+        for column in filled_columns:
+            if filled_columns[column] == 0:
+                [
+                    self.grid[row][column].hide()
+                    for row in range(nb_rows)
+                    if row < len(self.grid) and column < len(self.grid[row])
+                ]
+
+        for row in filled_rows:
+            if filled_rows[row] == 0:
+                [
+                    self.grid[row][column].hide()
+                    for column in range(nb_columns)
+                    if row < len(self.grid) and column < len(self.grid[row])
+                ]
 
     @property
     def display_widget(self):
@@ -1127,6 +1151,10 @@ class PictureContainer:
         column: int
             The row where the picture should be displayed"""
         logger.debug(f"PictureContainer.init row {row}, column {column}")
+        # TODO: Add icon buttons for image organization
+        # Each icon corresponds to a subfolder
+        # On click: add or remove jpg from folder
+        # Update icon: should have color (or background?) when image is present in subfolder
         self.parent_controller = parent_controller
         self.row = row
         self.column = column
@@ -1224,10 +1252,11 @@ class PictureContainer:
 
         self.ui["buttonbox_layout"].addStretch()
 
+        self.picture_displayed = True
+
         pixmap = QtGui.QPixmap(self.picture.path)
         # Image exists and can be read by PyQt5
         if pixmap.width() > 0:
-            self.picture_displayed = True
             image = PictureDisplay(self.ui["main"])
             self.ui["elements"]["image"] = image
             image.set_pixmap(pixmap)
@@ -1248,7 +1277,6 @@ class PictureContainer:
             )
             self.ui["layout"].addWidget(image)
         else:
-            self.picture_displayed = False
             self.ui["layout"].addStretch()
 
     def on_click_generate(self):
@@ -1315,6 +1343,9 @@ class PictureContainer:
             self.ui["elements"][i].deleteLater()
             self.ui["layout"].removeWidget(self.ui["elements"][i])
         self.ui["elements"] = {}
+
+        self.picture = None
+        self.picture_displayed = False
 
     def fit_picture_in_view(self):
         """Fits the picture to its container"""
@@ -1454,6 +1485,7 @@ class PictureDisplay(QtWidgets.QGraphicsView):
         event : QWheelEvent
             The triggering event
         """
+        logger.debug(f"PictureDisplay.wheelEvent {event.angleDelta().y()}")
         if event.angleDelta().y() > 0:
             factor = 1.25
         else:

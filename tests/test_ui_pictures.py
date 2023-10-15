@@ -194,7 +194,7 @@ class TestUiPictures:
             source,
         )
         # This is a very dirty solution, because it's not really processed by the application
-        # However, the solution below just fails.
+        # However, other solutions simply fail
         widget.wheelEvent(wheelEvent)
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
@@ -337,6 +337,7 @@ class TestUiPictures:
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
         picturesTree = picturesController.ui["picture_tree"]
+        picturesGrid = picturesController.ui["picture_grid"]
         main_widget = picturesController.ui["main"]
 
         # Check display - Tasks label & progress bar
@@ -355,6 +356,89 @@ class TestUiPictures:
         assert (
             display_absent_images.text() == "Display absent images"
         ), "Pictures: Display absent images label is correct"
+
+        # Get tree item, trip & picture groups
+        trip_item = picturesTree.topLevelItem(5)  # Malta
+        trip_item.setExpanded(True)
+        picture_item = trip_item.child(0)  # Malta's IMG001
+        topleft = picturesTree.visualItemRect(picture_item).topLeft()
+        # Trigger display of picture grid
+        qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
+
+        # Check display - Correct display of columns & rows
+        hidden_columns = [1, 2]  # RAW (hidden by default), DT (no image)
+        hidden_rows = [
+            1,
+            2,
+            3,
+            4,
+        ]  # Archive (only RAW image), Camera, Inexistant, No picture here (no image in any of those)
+        layout = picturesGrid.ui["layout"]
+        for row in range(layout.rowCount()):
+            for col in range(layout.columnCount()):
+                container = layout.itemAtPosition(row, col).widget()
+                if row in hidden_rows or col in hidden_columns:
+                    assert container.isHidden(), "Element is properly hidden"
+                else:
+                    assert not container.isHidden(), "Element is properly visible"
+
+        # Display RAW images ==> 1st column should be displayed
+        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
+        qtbot.mouseClick(display_raw_images, Qt.LeftButton, Qt.NoModifier, topleft)
+        assert display_raw_images.isChecked(), "Checkbox is indeed checked"
+        hidden_columns = [2]  # DT (no image)
+        hidden_rows = [
+            2,
+            3,
+            4,
+        ]  # Camera, Inexistant, No picture here (no image in any of those)
+        hidden_cells = {1: [3]}
+        # Row 1: col 1 is RAW and present, 2 is hidden already, 3 is RT doesn't exist
+        # Rows 2-4 are hidden already
+        # Row 5: col 1 is RAW and present, 2 is hidden already, 3 is RT and exists ==> all displayed
+        layout = picturesGrid.ui["layout"]
+        for row in range(layout.rowCount()):
+            for col in range(layout.columnCount()):
+                container = layout.itemAtPosition(row, col).widget()
+                if row in hidden_rows or col in hidden_columns:
+                    assert container.isHidden(), "Element is properly hidden"
+                elif row in hidden_cells and col in hidden_cells[row]:
+                    assert container.isHidden(), "Element is properly hidden"
+                else:
+                    assert not container.isHidden(), "Element is properly visible"
+
+        # Display empty images ==> Everything should be displayed
+        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
+        qtbot.mouseClick(display_absent_images, Qt.LeftButton, Qt.NoModifier, topleft)
+        assert display_absent_images.isChecked(), "Checkbox is indeed checked"
+        hidden_columns = []
+        hidden_rows = []
+        hidden_cells = {}
+        layout = picturesGrid.ui["layout"]
+        for row in range(layout.rowCount()):
+            for col in range(layout.columnCount()):
+                container = layout.itemAtPosition(row, col).widget()
+                if row in hidden_rows or col in hidden_columns:
+                    assert container.isHidden(), "Element is properly hidden"
+                elif row in hidden_cells and col in hidden_cells[row]:
+                    assert container.isHidden(), "Element is properly hidden"
+                else:
+                    assert not container.isHidden(), "Element is properly visible"
+
+        # Display empty but not RAW images ==> 1st column should be hidden
+        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
+        qtbot.mouseClick(display_raw_images, Qt.LeftButton, Qt.NoModifier, topleft)
+        assert not display_raw_images.isChecked(), "Checkbox is indeed u checked"
+        hidden_columns = [1]  # RAW
+        hidden_rows = []  # All displayed due to "display absent" being checked
+        layout = picturesGrid.ui["layout"]
+        for row in range(layout.rowCount()):
+            for col in range(layout.columnCount()):
+                container = layout.itemAtPosition(row, col).widget()
+                if row in hidden_rows or col in hidden_columns:
+                    assert container.isHidden(), "Element is properly hidden"
+                else:
+                    assert not container.isHidden(), "Element is properly visible"
 
     def test_pictures_display_in_progress_tasks(self, qtbot):
         # Setup: get display
@@ -727,7 +811,7 @@ class TestUiPictures:
         self.mainwindow.display_tab("Pictures")
         picturesController = self.mainwindow.controllers["Pictures"]
         picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
+        # #picturesGrid = picturesController.ui["picture_grid"]
         load_pictures_button = picturesController.ui["load_button"]
         qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
         main_widget = picturesController.ui["main"]
@@ -1218,6 +1302,8 @@ class TestUiPictures:
         # Get one of the pictures being displayed & trigger zoom (otherwise, no scrollbar)
         container = picturesGrid.ui["layout"].itemAtPosition(5, 2).widget()
         picture = container.layout().itemAt(2).widget()
+        logger = logging.getLogger("controllers.pictures")
+        logger.setLevel(logging.DEBUG)
         with qtbot.waitSignal(picture.zoomChanged):
             # This is needed to ensure horizontal scrollbar is visible
             self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
@@ -1234,6 +1320,9 @@ class TestUiPictures:
         # I couldn't find how to trigger the mouse move event, so I trigger the signal directly
         scrollbarh = picture.horizontalScrollBar()
         scrollbarh.setValue(3)
+        scrollbarv = picture.verticalScrollBar()
+        # This fails... for a weird reason. The wheelEvent is correctly triggered
+        # However, the scrollbars are not generated (that should be automatic)
         assert scrollbarh.value() == 3, "Horizontal scrollbar has moved"
 
         # Check results
