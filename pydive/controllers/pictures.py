@@ -890,7 +890,11 @@ class PictureGrid:
                 self.ui["layout"].removeWidget(element)
                 element.deleteLater()
                 element = None
+        # Reset rowCount and columnCount
+        self.ui["layout"].invalidate()
+
         self.grid = []
+        self.picture_containers = {}
 
         if self.picture_group:
             self.picture_group.pictureAdded.disconnect(self.picture_added)
@@ -1058,12 +1062,16 @@ class PictureGrid:
         nb_columns = self.ui["layout"].columnCount()
         filled_columns = {col: 0 for col in range(1, nb_columns)}
         filled_rows = {row: 0 for row in range(1, nb_rows)}
+
         for row in filled_rows:
             for column in filled_columns:
                 # Do not count RAW images if they're hidden
                 if column == 1 and not self.display_raw_images:
                     continue
-                if self.picture_containers[row][column].picture_displayed:
+                if (
+                    column in self.picture_containers[row]
+                    and self.picture_containers[row][column].picture_displayed
+                ):
                     filled_columns[column] += 1
                     filled_rows[row] += 1
                 else:
