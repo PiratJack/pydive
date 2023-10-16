@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.3.2\n"
+"X-Generator: Poedit 3.4\n"
 
 msgid "Cancel"
 msgstr "Annuler"
@@ -137,6 +137,10 @@ msgid "Load pictures"
 msgstr "Charger les photos"
 
 #, python-brace-format
+msgid "Max length for category {field} is 250 characters"
+msgstr "La longueur maximale du champ {field} pour la catégorie est de 250 caractères"
+
+#, python-brace-format
 msgid "Max length for conversion method {field} is 1000 characters"
 msgstr "La longueur maximale du champ {field} pour la méthode de conversion est de 1000 caractères"
 
@@ -147,6 +151,10 @@ msgstr "La longueur maximale du champ {field} pour la méthode de conversion est
 #, python-brace-format
 msgid "Max length for conversion method {field} is 50 characters"
 msgstr "La longueur maximale du champ {field} pour la méthode de conversion est de 50 caractères"
+
+#, python-brace-format
+msgid "Missing category {field}"
+msgstr "Champ manquant: {field} pour catégorie"
 
 #, python-brace-format
 msgid "Missing conversion method {field}"

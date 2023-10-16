@@ -9,6 +9,7 @@ import sqlalchemy
 
 from . import storagelocation
 from . import conversionmethod
+from . import category
 
 from .base import Base
 
@@ -51,7 +52,12 @@ class Database:
     conversionmethods_get_by_suffix (suffix)
         Returns a conversion method based on its suffix
     conversionmethods_get_by_name (name)
-        Returns a conversion method based on its suffix
+        Returns a conversion method based on its name
+
+    categories_get
+        Returns all categories
+    category_get_by_name (name)
+        Returns a category based on its name
 
     delete (self, item)
         Deletes the provided item
@@ -141,6 +147,19 @@ class Database:
         return (
             self.session.query(conversionmethod.ConversionMethod)
             .filter(conversionmethod.ConversionMethod.name == name)
+            .one()
+        )
+
+    # Categories
+    def categories_get(self):
+        """Returns a list of all categories"""
+        return self.session.query(category.Category).all()
+
+    def category_get_by_name(self, name):
+        """Returns a category based on its name"""
+        return (
+            self.session.query(category.Category)
+            .filter(category.Category.name == name)
             .one()
         )
 

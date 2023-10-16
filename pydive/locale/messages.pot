@@ -120,6 +120,10 @@ msgid "Load pictures"
 msgstr ""
 
 #, python-brace-format
+msgid "Max length for category {field} is 250 characters"
+msgstr ""
+
+#, python-brace-format
 msgid "Max length for conversion method {field} is 1000 characters"
 msgstr ""
 
@@ -129,6 +133,10 @@ msgstr ""
 
 #, python-brace-format
 msgid "Max length for conversion method {field} is 50 characters"
+msgstr ""
+
+#, python-brace-format
+msgid "Missing category {field}"
 msgstr ""
 
 #, python-brace-format
