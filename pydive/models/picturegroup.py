@@ -125,8 +125,9 @@ class PictureGroup(QtCore.QObject):
         self.locations[location] = self.locations.get(location, []) + [picture]
         if location not in self.categories:
             self.categories[location] = {}
-        self.categories[location][picture.category] = self.categories[location].get(
-            picture.category, []
+        category = picture.category.name if picture.category else ""
+        self.categories[location][category] = self.categories[location].get(
+            category, []
         ) + [picture]
 
         logger.debug(

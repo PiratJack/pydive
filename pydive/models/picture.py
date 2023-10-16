@@ -49,11 +49,11 @@ class Picture:
 
     Methods
     -------
-    __init__ (storage_locations, path)
+    __init__ (storage_locations, categories, path)
         Stores information based on provided parameters & file path
     """
 
-    def __init__(self, storage_locations, path):
+    def __init__(self, storage_locations, categories, path):
         """Stores information based on provided parameters & file path
 
         Matches the image to its storage location
@@ -65,10 +65,12 @@ class Picture:
         -------
         storage_locations : list of StorageLocation
             The available storage locations
+        categories : list of Category
+            The available categories
         path : str
             Image's file path
         """
-        logger.debug(f"Picture.init: {storage_locations}, {path}")
+        logger.debug(f"Picture.init: {storage_locations}, {categories}, {path}")
         self.path = path
         # In which folder / storage location is the picture?
         storage_location = [
@@ -78,13 +80,21 @@ class Picture:
         ]
         if len(storage_location) == 1:
             location = storage_location[0]
-            self.trip = os.path.dirname(path)[len(location.path) :]
+            self.trip = os.path.dirname(path)[len(location.path) :].strip(os.path.sep)
             self.category = ""
-            if os.path.sep in self.trip:
-                self.category = self.trip.split(os.path.sep)[-1]
-                self.trip = self.trip[: -len(self.category) - 1]
+            matching_categories = [c for c in categories if self.trip.endswith(c.path)]
+            if matching_categories:
+                if len(matching_categories) != 1:
+                    logger.warning(
+                        f"Picture recognition failed: found categories {', '.join([c.name for c in matching_categories])} for {path}"
+                    )
+                    raise StorageLocationCollision("recognition failed", path)
+                self.category = matching_categories[0]
+                self.trip = self.trip.removesuffix(self.category.path).strip(
+                    os.path.sep
+                )
             self.location = location
-            self.name = os.path.basename(path).rsplit(".", 1)[-2]
+            self.name = os.path.basename(path).rsplit(".", 1)[-2]  # Remove extension
             self.filename = os.path.basename(path)
         else:
             logger.warning(

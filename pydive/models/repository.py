@@ -75,6 +75,7 @@ class Repository:
         """Defines default attributes"""
         logger.debug("Repository.init")
         self.storage_locations = []
+        self.categories = []
         self.picture_groups = []
         self.process_groups = []
         self.database = database
@@ -95,6 +96,7 @@ class Repository:
         # Find all pictures
         logger.info("Repository.load_pictures")
         self.storage_locations = self.database.storagelocations_get_picture_folders()
+        self.categories = self.database.categories_get()
         self.picture_groups = []
         for location in self.storage_locations:
             pictures = self.read_folder([], location.path)
@@ -154,7 +156,9 @@ class Repository:
                     if full_path.lower().endswith(ext)
                 ]
                 if matching_extension:
-                    pictures.append(PictureModel(self.storage_locations, full_path))
+                    pictures.append(
+                        PictureModel(self.storage_locations, self.categories, full_path)
+                    )
         logger.debug(f"Repository.read_folder done : {path}, {len(pictures)} pictures")
         return pictures
 
@@ -175,7 +179,7 @@ class Repository:
         logger.info(
             f"Repository.add_picture for {picture_group.trip}/{picture_group.name} in {location.name} - {path}"
         )
-        picture = PictureModel([location], path)
+        picture = PictureModel([location], self.categories, path)
         picture_group.add_picture(picture)
 
     def remove_picture(self, picture_group, location, path):
@@ -235,6 +239,7 @@ class Repository:
             The group of background processes copying pictures
         """
         logger.info(f"Repository.copy_pictures {label}")
+        # TODO: Copy in base category (rather than location folder)
         logger.debug(
             f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name}{(' (only ' + (conversion_method.name if isinstance(conversion_method, ConversionMethod) else conversion_method) +')') if conversion_method else ''}"
         )
@@ -320,6 +325,7 @@ class Repository:
         process_group : ProcessGroup
             The group of background processes generating pictures
         """
+        # TODO: Generate in base category (rather than location folder)
         # Determine all the picture groups to process
         logger.info(f"Repository.generate_pictures {label}")
         logger.debug(
@@ -436,14 +442,14 @@ class Repository:
             The name of the process (used for display)
         trip : str
             The trip where the files are. Ignored if picture or picture_group is provided.
-            Either trip, picture_group or picture must be provided
+            Either trip, picture_group or picture+picture_group must be provided
         picture_group : PictureGroup
-            The picture group to copy. Required if picture is provided.
-            Either trip, picture_group or picture must be provided
+            The picture group to remove. Required if picture is provided.
+            Either trip, picture_group or picture+picture_group must be provided
         picture : Picture
-            The picture to copy.
+            The picture to remove.
             picture_group is required if picture is provided
-            Either trip, picture_group or picture must be provided
+            Either trip, picture_group or picture+picture_group must be provided
 
         Returns
         ----------

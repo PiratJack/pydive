@@ -17,6 +17,7 @@ from models.conversionmethod import ConversionMethod
 from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
 from models.picture import Picture, StorageLocationCollision
+from models.category import Category
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -42,6 +43,7 @@ class TestRepository:
             os.path.join(BASE_FOLDER, "Temporary", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "Sélection", ""),
+            os.path.join(BASE_FOLDER, "Temporary", "Malta", "Unknown_category", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Georgia", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Korea", ""),
             os.path.join(BASE_FOLDER, "Temporary", "Sweden", ""),
@@ -66,6 +68,9 @@ class TestRepository:
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
             os.path.join(
                 BASE_FOLDER, "Temporary", "Malta", "Sélection", "IMG001_RT.jpg"
+            ),
+            os.path.join(
+                BASE_FOLDER, "Temporary", "Malta", "Unknown_category", "IMG001_RT.jpg"
             ),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
             os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
@@ -146,12 +151,18 @@ class TestRepository:
                     suffix="RT",
                     command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c RT > /dev/null",
                 ),
+                Category(
+                    id=1,
+                    name="Star",
+                    path="Sélection",
+                ),
             ]
         )
         self.database.session.commit()
 
         # Load the pictures
         self.locations = self.database.storagelocations_get_picture_folders()
+        self.categories = self.database.categories_get()
 
         self.repository = models.repository.Repository(self.database)
         self.mainwindow = controllers.mainwindow.MainWindow(
@@ -175,7 +186,7 @@ class TestRepository:
     def test_load_pictures_trip_recognition(self):
         # Check if recognition worked
         test = "Load pictures: Count trips"
-        assert len(self.repository.trips) == 7, test
+        assert len(self.repository.trips) == 8, test
 
         test = "Load pictures: Count pictures with no trips"
         assert len(self.repository.trips[""]) == 4, test
@@ -190,9 +201,14 @@ class TestRepository:
         assert picture.category == "", test
 
         test = "Load pictures: Check picture's category"
-        picture = picture_group.categories["Temporary"]["Sélection"][0]
+        picture = picture_group.categories["Temporary"]["Star"][0]
         assert picture.trip == "Malta", test
-        assert picture.category == "Sélection", test
+        assert picture.category.name == "Star", test
+
+        test = "Load pictures: Check unknown category"
+        picture_group = self.repository.trips["Malta/Unknown_category"]["IMG001_RT"]
+        picture = picture_group.categories["Temporary"][""][0]
+        assert picture.trip == "Malta/Unknown_category", test
 
     def test_string_representation(self):
         test = "String representation: picture group"
@@ -257,6 +273,23 @@ class TestRepository:
             path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
         )
         self.database.session.add(new_location)
+        self.database.session.commit()
+        with pytest.raises(StorageLocationCollision) as cm:
+            logger = logging.getLogger("models.picture")
+            logger.setLevel(logging.CRITICAL)
+            self.repository.load_pictures()
+            logger.setLevel(logging.WARNING)
+            pytest.fail(test)
+        assert cm.value.args[0] == "recognition failed", test
+
+    def test_recognition_with_category_collision(self):
+        test = "Add a storage location: subfolder of existing folder"
+        new_category = Category(
+            id=999,
+            name="Vrac",
+            path="lection",
+        )
+        self.database.session.add(new_category)
         self.database.session.commit()
         with pytest.raises(StorageLocationCollision) as cm:
             logger = logging.getLogger("models.picture")
@@ -1045,7 +1078,9 @@ class TestRepository:
         # The conversion types should change as well
         picture_group = self.repository.trips["Georgia"]["IMG011_convert"]
         new_picture = Picture(
-            self.locations, os.path.join(BASE_FOLDER, "DCIM", "IMG011.CR2")
+            self.locations,
+            self.categories,
+            os.path.join(BASE_FOLDER, "DCIM", "IMG011.CR2"),
         )
         picture_group.add_picture(new_picture)
 
