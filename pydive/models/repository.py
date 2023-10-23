@@ -215,6 +215,9 @@ class Repository:
         This function will create new picture files (by copying them)
         Triggers self.add_picture once the copy is complete
 
+        Note: if the picture exists in 2 categories in the source folder, it'll try to copy both.
+        This will generate an error "target file exists"
+
         Parameters
         ----------
         label : str
@@ -239,7 +242,6 @@ class Repository:
             The group of background processes copying pictures
         """
         logger.info(f"Repository.copy_pictures {label}")
-        # TODO: Copy in base category (rather than location folder)
         logger.debug(
             f"#Args: {trip if trip is not None else '*'}/{picture_group.name if picture_group else '*'} from {source_location.name if source_location else '*'} to {target_location.name}{(' (only ' + (conversion_method.name if isinstance(conversion_method, ConversionMethod) else conversion_method) +')') if conversion_method else ''}"
         )
@@ -325,7 +327,6 @@ class Repository:
         process_group : ProcessGroup
             The group of background processes generating pictures
         """
-        # TODO: Generate in base category (rather than location folder)
         # Determine all the picture groups to process
         logger.info(f"Repository.generate_pictures {label}")
         logger.debug(
@@ -1127,7 +1128,9 @@ class ChangeTripProcess(QtCore.QRunnable, ProcessScaffold):
         self.source_file = picture.path
 
         self.target_folder = os.path.join(
-            os.path.dirname(os.path.dirname(picture.path)), target_trip
+            picture.location.path,
+            target_trip,
+            picture.category.path if picture.category else "",
         )
         self.target_file = os.path.join(self.target_folder, picture.filename)
 

@@ -187,7 +187,7 @@ msgid "RAW"
 msgstr ""
 
 #, python-brace-format
-msgid "Remove 1 image in {target}"
+msgid "Remove {nb_pictures} image in {target}"
 msgstr ""
 
 msgid "Rename trip"

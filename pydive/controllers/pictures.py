@@ -593,7 +593,9 @@ class PicturesTree(BaseTreeWidget):
             pictures = picture_group.locations.get(column["name"], [])
             if pictures:
                 labels = [
-                    p.category + os.path.sep + p.filename if p.category else p.filename
+                    os.path.join(p.category.path, p.filename)
+                    if p.category
+                    else p.filename
                     for p in pictures
                 ]
                 picture_group_widget.setToolTip(col + 1, "\n".join(labels))
@@ -967,6 +969,7 @@ class PictureGrid:
 
     def delete_image(self, row, column):
         """Deletes an image in the provided row & column
+        If the image exists in multiple categories, it'll be deleted from all of them
 
         Parameters
         ----------
@@ -976,13 +979,28 @@ class PictureGrid:
             The column in which to copy the image"""
         logger.debug(f"PictureGrid.delete_image row {row}, column {column}")
 
+        # Get all pictures from the group with the same location & conversion method
         picture = self.picture_containers[row][column].picture
+        try:
+            method = self.grid[0][column].model.suffix
+        except AttributeError:
+            method = self.grid[0][column].text()
+        if column == 1:
+            method = ""  # RAW images, label is overridden in code
+        pictures = [
+            p
+            for p in self.picture_group.locations[picture.location.name]
+            if p in self.picture_group.pictures[method]
+        ]
 
-        label = _("Remove 1 image in {target}").format(target=picture.location.name)
-        logger.info(
-            f"PictureGrid.delete_image {self.picture_group.trip}/{self.picture_group.name}/{picture.filename} in {picture.location.name}"
+        label = _("Remove {nb_pictures} image in {target}").format(
+            nb_pictures=len(pictures), target=picture.location.name
         )
-        self.repository.remove_pictures(label, None, self.picture_group, picture)
+        for picture in pictures:
+            logger.info(
+                f"PictureGrid.delete_image {self.picture_group.trip}/{self.picture_group.name}/{picture.filename} in {picture.location.name}"
+            )
+            self.repository.remove_pictures(label, None, self.picture_group, picture)
         self.picture_containers[row][column].set_empty_picture()
 
     def pictures_set_scrollbar(self, row, column, horizontal, vertical):
