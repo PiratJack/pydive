@@ -9,6 +9,7 @@ DiveTrip
 Dive
     Represents a single dive from the divelog
 """
+import os
 import gettext
 import logging
 import xml.etree.ElementTree
@@ -52,15 +53,20 @@ class DiveLog:
             self.file_path = path
         if not self.file_path:
             return
-        xml_tree = xml.etree.ElementTree.parse(self.file_path)
-        xml_root = xml_tree.getroot()
-        xml_dives = xml_root.find("dives")
+        if not os.path.isfile(self.file_path):
+            return
+        try:
+            xml_tree = xml.etree.ElementTree.parse(self.file_path)
+            xml_root = xml_tree.getroot()
+            xml_dives = xml_root.find("dives")
 
-        for child in xml_dives:
-            if child.tag == "dive":
-                self.dives.append(Dive(child))
-            elif child.tag == "trip":
-                self.dives.append(DiveTrip(child))
+            for child in xml_dives:
+                if child.tag == "dive":
+                    self.dives.append(Dive(child))
+                elif child.tag == "trip":
+                    self.dives.append(DiveTrip(child))
+        except:
+            pass
 
 
 class DiveTrip:
