@@ -721,10 +721,7 @@ class DivelogScanController:
 
         # Reload divelog data
         divelog = self.database.storagelocations_get_divelog()
-        if divelog:
-            self.divelog_path = divelog[0].path
-        else:
-            self.divelog_path = None
+        self.divelog_path = divelog[0].path
         self.divelog.load_dives(self.divelog_path)
 
         self.dive_tree.fill_tree()
