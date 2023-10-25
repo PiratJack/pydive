@@ -731,6 +731,8 @@ class DivelogScanController:
 
         # Reload divelog scan target folder
         target_folder = self.database.storagelocations_get_target_scan_folder()
-        if target_folder is not None:
-            self.target_folder = target_folder
+        self.target_folder = target_folder
+        if target_folder is None:
+            self.ui["target_folder"].setText("")
+        else:
             self.ui["target_folder"].setText(target_folder.path)

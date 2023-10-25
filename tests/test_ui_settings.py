@@ -1,8 +1,6 @@
 import os
 import sys
 import pytest
-import datetime
-import logging
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
@@ -21,150 +19,18 @@ from models.conversionmethod import ConversionMethod
 
 import sqlalchemy.orm.exc
 
-logging.basicConfig(level=logging.WARNING)
-
-DATABASE_FILE = "test.sqlite"
-BASE_FOLDER = "./test_images" + str(int(datetime.datetime.now().timestamp())) + "/"
-
 
 class TestUiSettings:
-    @pytest.fixture(scope="function", autouse=True)
-    def setup_and_teardown(self, qtbot):
-        try:
-            os.remove(BASE_FOLDER)
-        except OSError:
-            pass
-        self.all_folders = [
-            os.path.join(BASE_FOLDER),
-            os.path.join(BASE_FOLDER, "DCIM", ""),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Temporary", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Archive", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", ""),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", ""),
-            os.path.join(BASE_FOLDER, "Empty", ""),
-        ]
-        for folder in self.all_folders:
-            os.makedirs(folder, exist_ok=True)
-        self.all_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG020.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG011_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", "IMG037.CR2"),
-        ]
-        for test_file in self.all_files:
-            open(test_file, "w").close()
+    @pytest.fixture
+    def pydive_settings(self, qtbot, pydive_mainwindow, pydive_fake_pictures):
+        pydive_mainwindow.display_tab("Settings")
+        self.all_files = pydive_fake_pictures
 
-        try:
-            os.remove(DATABASE_FILE)
-        except OSError:
-            pass
-        self.database = models.database.Database(DATABASE_FILE)
-        self.database.session.add_all(
-            [
-                # Test with final "/" in path
-                StorageLocation(
-                    id=1,
-                    name="Camera",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "DCIM", ""),
-                ),
-                # Test without final "/" in path
-                StorageLocation(
-                    id=2,
-                    name="Temporary",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Temporary"),
-                ),
-                StorageLocation(
-                    id=3,
-                    name="Archive",
-                    type=StorageLocationType["picture_folder"],
-                    path=os.path.join(BASE_FOLDER, "Archive"),
-                ),
-                StorageLocation(
-                    id=4,
-                    name="Inexistant",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Inexistant"),
-                ),
-                StorageLocation(
-                    id=5,
-                    name="No picture here",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Empty"),
-                ),
-                StorageLocation(
-                    id=6,
-                    name="Dive log",
-                    type="file",
-                    path=os.path.join(BASE_FOLDER, "Archives", "test.txt"),
-                ),
-                ConversionMethod(
-                    id=1,
-                    name="DarkTherapee",
-                    suffix="DT",
-                    command="../../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c DT",
-                ),
-                ConversionMethod(
-                    id=2,
-                    name="RawTherapee",
-                    suffix="RT",
-                    command="../../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c RT",
-                ),
-            ]
-        )
-        self.database.session.commit()
-        self.database.session.close()
-        self.database.engine.dispose()
+        yield pydive_mainwindow.controllers["Settings"]
 
-        self.repository = models.repository.Repository(self.database)
-        self.mainwindow = controllers.mainwindow.MainWindow(
-            self.database, self.repository
-        )
-
-        yield
-
-        self.mainwindow.database.session.close()
-        self.mainwindow.database.engine.dispose()
-        # Delete database
-        os.remove(DATABASE_FILE)
-
-        # ## Delete folders
-        for test_file in self.all_files:
-            if os.path.exists(test_file):
-                os.remove(test_file)
-        for folder in sorted(self.all_folders, reverse=True):
-            os.rmdir(folder)
-
-    def test_settings_location_list_display(self):
-        location = self.database.storagelocation_get_by_id(1)
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_display(self, pydive_settings, pydive_db):
+        location = pydive_db.storagelocation_get_by_id(1)
+        locationList = pydive_settings.locations_list
 
         # Check overall structure
         assert (
@@ -222,9 +88,8 @@ class TestUiSettings:
         add_new_widget = locationList.ui["layout"].itemAtPosition(6, 1).widget()
         assert isinstance(add_new_widget, IconButton), "Add new button is a IconButton"
 
-    def test_settings_location_list_edit_name(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_edit_name(self, pydive_settings, pydive_db, qtbot):
+        locationList = pydive_settings.locations_list
 
         # Get name-related widgets
         name_wrapper_layout = (
@@ -263,7 +128,7 @@ class TestUiSettings:
             qtbot.mouseClick(name_change_end, Qt.LeftButton)
 
         # Changes are saved in DB
-        location = self.database.storagelocation_get_by_id(1)
+        location = pydive_db.storagelocation_get_by_id(1)
         assert location.name == "SD Card", "Name is updated in database"
 
         # Display is back to initial state
@@ -276,9 +141,10 @@ class TestUiSettings:
             name_change_widget == name_change_start
         ), "Save button replaced by Edit button"
 
-    def test_settings_location_list_edit_name_error(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_edit_name_error(
+        self, pydive_settings, pydive_db, qtbot
+    ):
+        locationList = pydive_settings.locations_list
 
         # Get name-related widgets
         name_wrapper_layout = (
@@ -309,12 +175,11 @@ class TestUiSettings:
         ), "Error gets displayed"
 
         # Changes are not saved in DB
-        location = self.database.storagelocation_get_by_id(1)
+        location = pydive_db.storagelocation_get_by_id(1)
         assert location.name != "", "Name is not modified to empty"
 
-    def test_settings_location_list_edit_path(self):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_edit_path(self, pydive_settings, pydive_db):
+        locationList = pydive_settings.locations_list
 
         # Get change path button
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
@@ -326,7 +191,7 @@ class TestUiSettings:
         change_path_widget.pathSelected.emit("This is a new path")
 
         # Changes are saved in DB
-        location = self.database.storagelocation_get_by_id(1)
+        location = pydive_db.storagelocation_get_by_id(1)
         assert location.path == os.path.join(
             "This is a new path", ""
         ), "Path is updated in database"
@@ -338,9 +203,8 @@ class TestUiSettings:
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert path_widget.text() == "This is a new path", "Path is updated on display"
 
-    def test_settings_location_list_edit_path_error(self):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_edit_path_error(self, pydive_settings):
+        locationList = pydive_settings.locations_list
 
         # Get change path button
         change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
@@ -357,9 +221,10 @@ class TestUiSettings:
             error_widget.text() == "Missing storage location path"
         ), "Error gets displayed"
 
-    def test_settings_location_list_delete_cancel(self, qtbot, monkeypatch):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_delete_cancel(
+        self, pydive_settings, pydive_db, qtbot, monkeypatch
+    ):
+        locationList = pydive_settings.locations_list
 
         # Get delete button
         delete_widget = locationList.ui["layout"].itemAtPosition(1, 4).widget()
@@ -369,12 +234,13 @@ class TestUiSettings:
             QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.No
         )
         qtbot.mouseClick(delete_widget, Qt.LeftButton)
-        location = self.database.storagelocation_get_by_id(1)
+        location = pydive_db.storagelocation_get_by_id(1)
         assert location.name == "Camera", "Location still exists"
 
-    def test_settings_location_list_delete_confirm(self, qtbot, monkeypatch):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_delete_confirm(
+        self, pydive_settings, pydive_db, qtbot, monkeypatch
+    ):
+        locationList = pydive_settings.locations_list
 
         # Get delete button
         delete_widget = locationList.ui["layout"].itemAtPosition(2, 4).widget()
@@ -385,15 +251,14 @@ class TestUiSettings:
         )
         qtbot.mouseClick(delete_widget, Qt.LeftButton)
         with pytest.raises(sqlalchemy.orm.exc.NoResultFound):
-            self.database.storagelocation_get_by_id(2)
+            pydive_db.storagelocation_get_by_id(2)
 
         # Location no longer visible in UI
         name = locationList.ui["layout"].itemAtPosition(2, 0)
         assert name is None, "Location is deleted from UI"
 
-    def test_settings_location_list_add_location_display(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_add_location_display(self, pydive_settings, qtbot):
+        locationList = pydive_settings.locations_list
 
         # Get "add new" button
         add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
@@ -422,9 +287,10 @@ class TestUiSettings:
             path_change, IconButton
         ), "Add new - path change is an IconButton"
 
-    def test_settings_location_list_add_location_save(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_add_location_save(
+        self, pydive_settings, pydive_db, qtbot
+    ):
+        locationList = pydive_settings.locations_list
 
         # Get "add new" button
         add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
@@ -450,7 +316,7 @@ class TestUiSettings:
         qtbot.mouseClick(save_button, Qt.LeftButton)
 
         # Data is saved in DB
-        location = self.database.storagelocation_get_by_name("New location")
+        location = pydive_db.storagelocation_get_by_name("New location")
         assert location.name == "New location", "Name is saved in database"
         assert location.path == "New path" + os.path.sep, "Path is saved in database"
         assert (
@@ -501,9 +367,8 @@ class TestUiSettings:
         delete_widget = locationList.ui["layout"].itemAtPosition(6, 4).widget()
         assert isinstance(delete_widget, IconButton), "Delete button is a IconButton"
 
-    def test_settings_location_list_add_new_twice(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_add_new_twice(self, pydive_settings, qtbot):
+        locationList = pydive_settings.locations_list
 
         # Get "add new" button
         add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
@@ -515,9 +380,8 @@ class TestUiSettings:
         # "New location" fields are visible only once
         assert locationList.ui["layout"].rowCount() == 8, "Only 1 line is added"
 
-    def test_settings_location_list_add_with_errors(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        locationList = settingsController.locations_list
+    def test_settings_location_list_add_with_errors(self, pydive_settings, qtbot):
+        locationList = pydive_settings.locations_list
 
         # Click "Add new"
         add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
@@ -580,10 +444,9 @@ class TestUiSettings:
 
         assert path_wrapper.itemAt(1) is None, "Path error is hidden"
 
-    def test_settings_divelog_display(self):
-        divelog = self.database.storagelocation_get_by_id(6)
-        settingsController = self.mainwindow.controllers["Settings"]
-        divelogList = settingsController.divelog_list
+    def test_settings_divelog_display(self, pydive_settings, pydive_db):
+        divelog = pydive_db.storagelocation_get_by_id(6)
+        divelogList = pydive_settings.divelog_list
 
         # Check overall structure
         assert (
@@ -637,9 +500,8 @@ class TestUiSettings:
         delete_widget = divelogList.ui["layout"].itemAtPosition(1, 4)
         assert delete_widget == None, "Impossible to delete divelog file"
 
-    def test_settings_divelog_edit_name(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        divelogList = settingsController.divelog_list
+    def test_settings_divelog_edit_name(self, pydive_settings, pydive_db, qtbot):
+        divelogList = pydive_settings.divelog_list
 
         # Get name-related widgets
         name_wrapper_layout = (
@@ -681,7 +543,7 @@ class TestUiSettings:
             qtbot.mouseClick(name_change_end, Qt.LeftButton)
 
         # Changes are saved in DB
-        divelog = self.database.storagelocation_get_by_id(6)
+        divelog = pydive_db.storagelocation_get_by_id(6)
         assert divelog.name == "Subsurface file", "Name is updated in database"
 
         # Display is back to initial state
@@ -694,9 +556,8 @@ class TestUiSettings:
             name_change_widget == name_change_start
         ), "Save button replaced by Edit button"
 
-    def test_settings_divelog_edit_path(self):
-        settingsController = self.mainwindow.controllers["Settings"]
-        divelogList = settingsController.divelog_list
+    def test_settings_divelog_edit_path(self, pydive_settings, pydive_db):
+        divelogList = pydive_settings.divelog_list
 
         # Get change path button
         change_path_widget = divelogList.ui["layout"].itemAtPosition(1, 3).widget()
@@ -706,7 +567,7 @@ class TestUiSettings:
         change_path_widget.pathSelected.emit("This is a new path")
 
         # Changes are saved in DB
-        divelog = self.database.storagelocation_get_by_id(6)
+        divelog = pydive_db.storagelocation_get_by_id(6)
         assert divelog.path == "This is a new path", "Path is updated in database"
 
         # New path is displayed
@@ -716,10 +577,9 @@ class TestUiSettings:
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert path_widget.text() == "This is a new path", "Path is updated on display"
 
-    def test_settings_method_display(self):
-        method = self.database.conversionmethods_get_by_name("DarkTherapee")
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_display(self, pydive_settings, pydive_db):
+        method = pydive_db.conversionmethods_get_by_name("DarkTherapee")
+        methodList = pydive_settings.conversion_methods_list
 
         # Check overall structure
         assert (
@@ -792,9 +652,8 @@ class TestUiSettings:
         add_new_widget = methodList.ui["layout"].itemAtPosition(3, 1).widget()
         assert isinstance(add_new_widget, IconButton), "Add new button is a IconButton"
 
-    def test_settings_method_edit_name(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_edit_name(self, pydive_settings, pydive_db, qtbot):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get name-related widgets
         name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
@@ -831,7 +690,7 @@ class TestUiSettings:
             qtbot.mouseClick(name_change_end, Qt.LeftButton)
 
         # Changes are saved in DB
-        method = self.database.conversionmethods_get_by_suffix("DT")
+        method = pydive_db.conversionmethods_get_by_suffix("DT")
         assert method.name == "DarkTherapee updated", "Name is updated in database"
 
         # Display is back to initial state
@@ -844,9 +703,10 @@ class TestUiSettings:
             name_change_widget == name_change_start
         ), "Save button replaced by Edit button"
 
-    def test_settings_method_edit_name_empty_error(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_edit_name_empty_error(
+        self, pydive_settings, pydive_db, qtbot
+    ):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get name-related widgets
         name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
@@ -873,12 +733,11 @@ class TestUiSettings:
         ), "Error is displayed"
 
         # Changes are not saved in DB
-        method = self.database.conversionmethods_get()[1]
+        method = pydive_db.conversionmethods_get()[1]
         assert method.name != "", "Name is not modified to empty"
 
-    def test_settings_method_edit_suffix(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_edit_suffix(self, pydive_settings, pydive_db, qtbot):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get suffix-related widgets
         suffix_wrapper = methodList.ui["layout"].itemAtPosition(1, 2).widget()
@@ -915,7 +774,7 @@ class TestUiSettings:
             qtbot.mouseClick(suffix_change_end, Qt.LeftButton)
 
         # Changes are saved in DB
-        method = self.database.conversionmethods_get_by_name("DarkTherapee")
+        method = pydive_db.conversionmethods_get_by_name("DarkTherapee")
         assert method.suffix == "DTU", "Suffix is updated in database"
 
         # Display is back to initial state
@@ -928,9 +787,8 @@ class TestUiSettings:
             suffix_change_widget == suffix_change_start
         ), "Save button replaced by Edit button"
 
-    def test_settings_method_edit_command(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_edit_command(self, pydive_settings, pydive_db, qtbot):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get command-related widgets
         command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
@@ -967,7 +825,7 @@ class TestUiSettings:
             qtbot.mouseClick(command_change_end, Qt.LeftButton)
 
         # Changes are saved in DB
-        method = self.database.conversionmethods_get_by_name("DarkTherapee")
+        method = pydive_db.conversionmethods_get_by_name("DarkTherapee")
         assert (
             method.command == "../conversion.py -type DT"
         ), "Command is updated in database"
@@ -984,9 +842,10 @@ class TestUiSettings:
             command_change_widget == command_change_start
         ), "Save button replaced by Edit button"
 
-    def test_settings_method_edit_command_empty_error(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_edit_command_empty_error(
+        self, pydive_settings, pydive_db, qtbot
+    ):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get command-related widgets
         command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
@@ -1015,12 +874,13 @@ class TestUiSettings:
         ), "Error is displayed"
 
         # Changes are not saved in DB
-        method = self.database.conversionmethods_get()[1]
+        method = pydive_db.conversionmethods_get()[1]
         assert method.command != "", "Command is not modified to empty"
 
-    def test_settings_method_delete_cancel(self, qtbot, monkeypatch):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_delete_cancel(
+        self, pydive_settings, pydive_db, qtbot, monkeypatch
+    ):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get delete button
         delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
@@ -1030,12 +890,13 @@ class TestUiSettings:
             QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.No
         )
         qtbot.mouseClick(delete_widget, Qt.LeftButton)
-        method = self.database.conversionmethods_get_by_name("DarkTherapee")
+        method = pydive_db.conversionmethods_get_by_name("DarkTherapee")
         assert method.name == "DarkTherapee", "Conversion method still exists"
 
-    def test_settings_method_delete_confirm(self, qtbot, monkeypatch):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_delete_confirm(
+        self, pydive_settings, pydive_db, qtbot, monkeypatch
+    ):
+        methodList = pydive_settings.conversion_methods_list
 
         # Get delete button
         delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
@@ -1046,15 +907,14 @@ class TestUiSettings:
         )
         qtbot.mouseClick(delete_widget, Qt.LeftButton)
         with pytest.raises(sqlalchemy.orm.exc.NoResultFound):
-            self.database.conversionmethods_get_by_name("DarkTherapee")
+            pydive_db.conversionmethods_get_by_name("DarkTherapee")
 
         # Location no longer visible in UI
         name = methodList.ui["layout"].itemAtPosition(1, 0)
         assert name is None, "Method is deleted from UI"
 
-    def test_settings_method_add_ok(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_add_ok(self, pydive_settings, pydive_db, qtbot):
+        methodList = pydive_settings.conversion_methods_list
 
         # Click "Add new"
         add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
@@ -1081,7 +941,7 @@ class TestUiSettings:
         qtbot.mouseClick(save_button, Qt.LeftButton)
 
         # Data is saved in DB
-        method = self.database.conversionmethods_get_by_name(fields["name"])
+        method = pydive_db.conversionmethods_get_by_name(fields["name"])
         assert method.suffix == fields["suffix"], "Suffix is saved in DB"
         assert method.command == fields["command"], "Command is saved in DB"
 
@@ -1093,9 +953,8 @@ class TestUiSettings:
             label = stack.layout().currentWidget()
             assert label.text() == fields[field], "Data is displayed properly"
 
-    def test_settings_method_add_with_errors(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_add_with_errors(self, pydive_settings, qtbot):
+        methodList = pydive_settings.conversion_methods_list
 
         # Click "Add new"
         add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
@@ -1152,9 +1011,8 @@ class TestUiSettings:
         assert name_layout.itemAt(1) is not None, "Name error is displayed"
         assert command_layout.itemAt(1) is None, "Command error is hidden"
 
-    def test_settings_method_add_new_twice(self, qtbot):
-        settingsController = self.mainwindow.controllers["Settings"]
-        methodList = settingsController.conversion_methods_list
+    def test_settings_method_add_new_twice(self, pydive_settings, qtbot):
+        methodList = pydive_settings.conversion_methods_list
 
         # Click "Add new" twice
         add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()

@@ -1,74 +1,33 @@
 import os
 import sys
 import pytest
-import logging
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-
-import models.database
-
 from models.base import ValidationException
 from models.category import Category
 
-logging.basicConfig(level=logging.WARNING)
-
-DATABASE_FILE = "test.sqlite"
-
-try:
-    os.remove(DATABASE_FILE)
-except OSError:
-    pass
-
 
 class TestCategory:
-    @pytest.fixture(scope="function", autouse=True)
-    def setup_and_teardown(self):
-        self.database = models.database.Database(DATABASE_FILE)
-        self.database.session.add_all(
-            [
-                Category(
-                    id=1,
-                    name="Vrac",
-                    path="/Vrac/",
-                    icon_path="/path/to/icon.jpg",
-                ),
-                Category(
-                    id=2,
-                    name="Great",
-                    path="/Great/",
-                    icon_path="/path/to/great/icon.jpg",
-                ),
-            ]
-        )
-        self.database.session.commit()
-
-        yield
-
-        self.database.session.close()
-        self.database.engine.dispose()
-        os.remove(DATABASE_FILE)
-
-    def test_gets(self):
+    def test_gets(self, pydive_db):
         # Get all
-        categories = self.database.categories_get()
+        categories = pydive_db.categories_get()
         assert len(categories) == 2, "There are 2 categories"
 
-        category = self.database.category_get_by_name("Vrac")
-        assert type(category) == Category, "There is a single category with name Vrac"
-
-        assert category.path == "Vrac", "The category has the right path"
-
+        # Get one and check its attributes
+        category = pydive_db.category_get_by_name("Top")
+        assert type(category) == Category, "There is a single category with name Top"
+        assert category.path == "Sélection", "The category has the right path"
         assert (
-            str(category) == "Vrac @ Vrac"
+            str(category) == "Top @ Sélection"
         ), "The category has the right string representation"
 
     def test_validations(self):
         category = Category(
-            id=1,
-            name="Vrac",
-            path="/Vrac/",
+            id=3,
+            name="New_item",
+            path="/New_item/",
             icon_path="/path/to/icon.jpg",
         )
 

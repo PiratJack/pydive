@@ -1,10 +1,7 @@
 import os
-import shutil
 import sys
 import pytest
 import datetime
-import logging
-import zipfile
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
@@ -13,22 +10,9 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 
 import models.database
-import models.repository
 
-import controllers.mainwindow
 from controllers.pictures import PictureDisplay
 from controllers.widgets.iconbutton import IconButton
-
-from models.storagelocation import StorageLocation
-from models.storagelocation import StorageLocationType
-from models.conversionmethod import ConversionMethod
-from models.category import Category
-
-logging.basicConfig(level=logging.CRITICAL)
-
-DATABASE_FILE = "test.sqlite"
-BASE_FOLDER = "./test_images" + str(int(datetime.datetime.now().timestamp())) + "/"
-PICTURE_ZIP_FILE = os.path.join(BASE_DIR, "test_photos.zip")
 
 
 class TestUiPictures:
@@ -39,148 +23,13 @@ class TestUiPictures:
         "Count columns": 7,
     }
 
-    @pytest.fixture(scope="function", autouse=True)
-    def setup_and_teardown(self, qtbot):
-        try:
-            shutil.rmtree(BASE_FOLDER)
-        except OSError:
-            pass
-        self.all_folders = [
-            os.path.join(BASE_FOLDER),
-            os.path.join(BASE_FOLDER, "DCIM", ""),
-            os.path.join(BASE_FOLDER, "DCIM", "122_12"),
-            os.path.join(BASE_FOLDER, "DCIM", "123__05"),
-            os.path.join(BASE_FOLDER, "Temporary", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Archive", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "Sélection"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "Bof"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", ""),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", ""),
-        ]
+    @pytest.fixture
+    def pydive_pictures(self, qtbot, pydive_mainwindow, pydive_real_pictures):
+        pydive_mainwindow.display_tab("Pictures")
+        pydive_mainwindow.controllers["Pictures"].on_load_pictures()
+        self.all_files = pydive_real_pictures
 
-        self.all_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "IMG050.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "122_12", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "123__05", "IMG020.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG011_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "Bof", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "Sélection", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", "IMG037.CR2"),
-        ]
-        with zipfile.ZipFile(PICTURE_ZIP_FILE, "r") as zip_ref:
-            zip_ref.extractall(".")
-            os.rename("test_photos", BASE_FOLDER)
-
-        try:
-            os.remove(DATABASE_FILE)
-        except OSError:
-            pass
-        self.database = models.database.Database(DATABASE_FILE)
-        self.database.session.add_all(
-            [
-                # Test with final "/" in path
-                StorageLocation(
-                    id=1,
-                    name="Camera",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "DCIM", ""),
-                ),
-                # Test without final "/" in path
-                StorageLocation(
-                    id=2,
-                    name="Temporary",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Temporary"),
-                ),
-                StorageLocation(
-                    id=3,
-                    name="Archive",
-                    type=StorageLocationType["picture_folder"],
-                    path=os.path.join(BASE_FOLDER, "Archive"),
-                ),
-                StorageLocation(
-                    id=4,
-                    name="Inexistant",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Inexistant"),
-                ),
-                StorageLocation(
-                    id=5,
-                    name="No picture here",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Empty"),
-                ),
-                StorageLocation(
-                    id=6,
-                    name="Dive log",
-                    type="file",
-                    path=os.path.join(BASE_FOLDER, "Archives", "test.txt"),
-                ),
-                ConversionMethod(
-                    id=1,
-                    name="DarkTherapee",
-                    suffix="DT",
-                    command="cp %SOURCE_FILE% %TARGET_FILE%",
-                ),
-                ConversionMethod(
-                    id=2,
-                    name="RawTherapee",
-                    suffix="RT",
-                    command="../../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c RT",
-                ),
-                Category(
-                    id=1,
-                    name="Top",
-                    path="Sélection",
-                ),
-                Category(
-                    id=2,
-                    name="Bof",
-                    path="Bof",
-                ),
-            ]
-        )
-        self.database.session.commit()
-        self.database.session.close()
-        self.database.engine.dispose()
-
-        self.repository = models.repository.Repository(self.database)
-        self.mainwindow = controllers.mainwindow.MainWindow(
-            self.database, self.repository
-        )
-
-        yield
-
-        self.mainwindow.database.session.close()
-        self.mainwindow.database.engine.dispose()
-        # Delete database
-        os.remove(DATABASE_FILE)
-        # Delete folders
-        shutil.rmtree(BASE_FOLDER)
+        yield pydive_mainwindow.controllers["Pictures"]
 
     def mouseWheelTurn(self, qapp, widget, pos, orientation):
         globalPos = widget.mapToGlobal(pos)
@@ -209,18 +58,28 @@ class TestUiPictures:
 
     def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
         QtCore.QThreadPool.globalInstance().waitForDone()
-        # Add "should exist" to "all_files" so they get deleted later
+        # Add "should exist" to "all_files"
         self.all_files += should_exist
         self.all_files = list(set(self.all_files))
 
         # We check all files: both existing and non-existing
         all_files_checked = set(self.all_files + should_not_exist)
-        should_exist = [f for f in self.all_files if f not in should_not_exist]
+        should_exist = [
+            f
+            for f in self.all_files
+            if f not in should_not_exist
+            and os.path.join(pytest.BASE_FOLDER, f) not in should_not_exist
+        ]
         for path in all_files_checked:
+            absolute_path = path
+            if pytest.BASE_FOLDER not in path:
+                absolute_path = os.path.join(pytest.BASE_FOLDER, path)
             if path in should_exist:
-                assert os.path.exists(path), f"{test} - File {path}"
+                assert os.path.exists(absolute_path), f"{test} - File {absolute_path}"
             else:
-                assert not os.path.exists(path), f"{test} - File {path}"
+                assert not os.path.exists(
+                    absolute_path
+                ), f"{test} - File {absolute_path}"
 
     def helper_check_picture_display(self, test, container, display_type, path=None):
         if display_type == "JPG":
@@ -254,11 +113,9 @@ class TestUiPictures:
         else:
             raise ValueError("display_type should be RAW, JPG or No image")
 
-    def _test_pictures_display_overall(self):
+    def test_pictures_display_overall(self, pydive_pictures):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        main_widget = picturesController.ui["main"]
+        main_widget = pydive_pictures.ui["main"]
 
         # Check display - Overall structure
         assert isinstance(
@@ -286,14 +143,12 @@ class TestUiPictures:
             right_column.layout().count() == 1
         ), "Pictures right column has the right number of rows"
 
-    def _test_pictures_display_folders(self):
+    def test_pictures_display_folders(self, pydive_pictures, pydive_db):
         # Setup: get display
-        folders = self.database.storagelocations_get_picture_folders()
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
+        folders = pydive_db.storagelocations_get_picture_folders()
         # Check what happens when display is refreshed twice in a row
-        picturesController.refresh_folders()
-        foldersLayout = picturesController.ui["left_grid_layout"]
+        pydive_pictures.refresh_folders()
+        foldersLayout = pydive_pictures.ui["left_grid_layout"]
 
         # Check display - Overall structure
         assert (
@@ -317,13 +172,10 @@ class TestUiPictures:
             path_label.text() == folders[0].path
         ), "Path field displays the expected data"
 
-    def _test_pictures_display_tree_load_pictures(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesController.refresh_display()
-        load_pictures_button = picturesController.ui["load_button"]
+    def test_pictures_display_tree_load_pictures(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        load_pictures_button = pydive_pictures.ui["load_button"]
         qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
         # Second time to test refresh of already-displayed data
         qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
@@ -342,16 +194,13 @@ class TestUiPictures:
         assert malta.childCount() == 2, "Malta's children count is OK"
         assert malta_children == ["IMG001", "IMG002"], "Malta's children are OK"
 
-    def _test_pictures_display_checkboxes(self, qtbot):
+    def test_pictures_display_checkboxes(self, pydive_pictures, qtbot):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        main_widget = picturesController.ui["main"]
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Check display - Tasks label & progress bar
-        left_column = main_widget.layout().itemAt(0).widget()
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         display_raw_images = left_column.layout().itemAt(3).widget()
         assert isinstance(
             display_raw_images, QtWidgets.QCheckBox
@@ -450,15 +299,13 @@ class TestUiPictures:
                 else:
                     assert not container.isHidden(), "Element is properly visible"
 
-    def _test_pictures_display_in_progress_tasks(self, qtbot):
+    def test_pictures_display_in_progress_tasks(self, pydive_pictures, qtbot):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        main_widget = picturesController.ui["main"]
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Check display - Tasks label & progress bar
-        left_column = main_widget.layout().itemAt(0).widget()
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
         assert isinstance(
             tasks_label, QtWidgets.QLabel
@@ -503,7 +350,7 @@ class TestUiPictures:
 
         # This ensures cleanup afterwards
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002_DT.jpg"),
+            os.path.join("Archive", "Malta", "IMG002_DT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
 
@@ -516,18 +363,11 @@ class TestUiPictures:
             tasks_progress_bar.text() == "100%"
         ), "Pictures: In-progress task progress bar value is correct"
 
-    def _test_pictures_process_groups_display(self, qtbot, qapp):
+    def test_pictures_process_groups_display(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        main_widget = picturesController.ui["main"]
-
-        # Get display elements
-        left_column = main_widget.layout().itemAt(0).widget()
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
         tasks_progress_bar = left_column.layout().itemAt(6).widget()
-
-        # Trigger a copy (to get proper display)
 
         def handle_dialog():
             dialog = qapp.activeWindow()
@@ -543,15 +383,12 @@ class TestUiPictures:
         QtCore.QTimer.singleShot(700, handle_dialog)
         qtbot.mouseClick(tasks_progress_bar, Qt.LeftButton)
 
-    def _test_pictures_process_groups_multiple_errors(self, qtbot, qapp):
+    def test_pictures_process_groups_multiple_errors(
+        self, pydive_pictures, qtbot, qapp
+    ):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        main_widget = picturesController.ui["main"]
-
-        # Get display elements
-        left_column = main_widget.layout().itemAt(0).widget()
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
@@ -616,20 +453,15 @@ class TestUiPictures:
 
         # Check files have been created & models updated
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002_RT.jpg"),
+            os.path.join("Archive", "Malta", "IMG001_RT.jpg"),
+            os.path.join("Archive", "Malta", "IMG002_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
 
-    def _test_pictures_process_groups_one_error(self, qtbot, qapp):
+    def test_pictures_process_groups_one_error(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        main_widget = picturesController.ui["main"]
-
-        # Get display elements
-        left_column = main_widget.layout().itemAt(0).widget()
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
@@ -676,19 +508,14 @@ class TestUiPictures:
 
         # Check files have been created & models updated
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_RT.jpg"),
+            os.path.join("Archive", "Malta", "IMG001_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
 
-    def _test_pictures_process_groups_no_error(self, qtbot, qapp):
+    def test_pictures_process_groups_no_error(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        main_widget = picturesController.ui["main"]
-
-        # Get display elements
-        left_column = main_widget.layout().itemAt(0).widget()
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
@@ -742,20 +569,15 @@ class TestUiPictures:
 
         # Check files have been created & models updated
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Malta", "IMG001_RT.jpg"),
+            os.path.join("DCIM", "Malta", "IMG001.CR2"),
+            os.path.join("DCIM", "Malta", "IMG001_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
-        self.all_folders.append(os.path.join(BASE_FOLDER, "DCIM", "Malta"))
 
-    def _test_pictures_tree_click_trip(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_click_trip(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(1)  # Georgia
@@ -772,14 +594,10 @@ class TestUiPictures:
             picturesGrid.ui["layout"].itemAtPosition(0, 0) is None
         ), "PictureGrid is empty"
 
-    def _test_pictures_tree_click_picture_group(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_click_picture_group(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -816,15 +634,11 @@ class TestUiPictures:
         container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
         self.helper_check_picture_display(test, container, "JPG", "IMG001_RT.jpg")
 
-    def _test_pictures_tree_click_picture_group_some_images_hidden(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        # #picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
-        main_widget = picturesController.ui["main"]
+    def test_pictures_tree_click_picture_group_some_images_hidden(
+        self, pydive_pictures, qtbot
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -836,7 +650,7 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Hide RAW and absent images
-        left_column = main_widget.layout().itemAt(0).widget()
+        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         display_raw_images = left_column.layout().itemAt(3).widget()
         display_absent_images = left_column.layout().itemAt(4).widget()
         qtbot.mouseClick(display_raw_images, Qt.LeftButton)
@@ -862,13 +676,11 @@ class TestUiPictures:
 
         pass
 
-    def _test_pictures_tree_remove_already_removed_picture_group(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_remove_already_removed_picture_group(
+        self, pydive_pictures, qtbot
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -879,21 +691,19 @@ class TestUiPictures:
         picturesTree.remove_picture_group(picture_item)
         picturesTree.remove_picture_group(None)
 
-    def _test_pictures_tree_picture_group_removed_before_add_again(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_picture_group_removed_before_add_again(
+        self, pydive_pictures, qtbot
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -908,27 +718,23 @@ class TestUiPictures:
         picturesTree.clear()
 
         # Check signal is emitted, file have been added & models updated
-        new_path = os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_DT.jpg")
+        new_path = os.path.join("Archive", "Malta", "IMG001_DT.jpg")
         new_files = [new_path]
         self.helper_check_paths("Generated image", new_files)
 
         qtbot.waitSignal(picture_group.pictureAdded)
 
-    def _test_pictures_grid_copy_raw_picture(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_copy_raw_picture(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(3)  # Georgia
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Georgia's IMG010
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = picturesController.repository.trips["Georgia"]["IMG010"]
+        picture_group = pydive_pictures.repository.trips["Georgia"]["IMG010"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -945,12 +751,11 @@ class TestUiPictures:
             qtbot.mouseClick(copy, Qt.LeftButton)
 
         # Check signal is emitted, files have been created & models updated
-        new_path = os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG010.CR2")
+        new_path = os.path.join("Archive", "Georgia", "IMG010.CR2")
         new_files = [new_path]
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
-        ]
-        assert blocker.args[0].path == new_path, "Added picture signal has correct path"
+        assert blocker.args[0].path == os.path.join(
+            pytest.BASE_FOLDER, new_path
+        ), "Added picture signal has correct path"
         assert blocker.args[1] == "", "Added picture signal has empty conversion method"
         self.helper_check_paths("Copy RAW image", new_files)
         assert len(picture_group.pictures[""]) == 2, "New picture in group"
@@ -973,21 +778,17 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def _test_pictures_grid_copy_jpg_picture(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_copy_jpg_picture(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(3)  # Georgia
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Georgia's IMG010
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = picturesController.repository.trips["Georgia"]["IMG010"]
+        picture_group = pydive_pictures.repository.trips["Georgia"]["IMG010"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -1004,12 +805,11 @@ class TestUiPictures:
             qtbot.mouseClick(copy, Qt.LeftButton)
 
         # Check signal is emitted, files have been created & models updated
-        new_path = os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG010_RT.jpg")
+        new_path = os.path.join("Archive", "Georgia", "IMG010_RT.jpg")
         new_files = [new_path]
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
-        ]
-        assert signal.args[0].path == new_path, "Added picture signal has correct path"
+        assert signal.args[0].path == os.path.join(
+            pytest.BASE_FOLDER, new_path
+        ), "Added picture signal has correct path"
         assert signal.args[1] == "RT", "Added picture signal has RT as conversion"
         self.helper_check_paths("Copy JPG image", new_files)
         assert len(picture_group.pictures["RT"]) == 2, "New picture in group"
@@ -1032,14 +832,10 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def _test_pictures_grid_copy_error(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_copy_error(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -1062,21 +858,19 @@ class TestUiPictures:
         error = container.layout().itemAt(2).widget()
         assert error.text() == "No source image found", "Error is displayed"
 
-    def _test_pictures_grid_delete_jpg_picture(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_delete_jpg_picture(
+        self, pydive_pictures, qtbot, monkeypatch
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -1094,7 +888,7 @@ class TestUiPictures:
             qtbot.mouseClick(delete, Qt.LeftButton)
 
         # Check signal is emitted, file have been deleted & models updated
-        deleted_path = os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg")
+        deleted_path = os.path.join("Temporary", "Malta", "IMG001_RT.jpg")
         deleted_files = [deleted_path]
         assert signal.args[0] == "RT", "Deletion signal has correct conversion type"
         assert (
@@ -1115,21 +909,19 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(1), "1 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
-    def _test_pictures_grid_delete_raw_picture(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_delete_raw_picture(
+        self, pydive_pictures, qtbot, monkeypatch
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -1149,10 +941,8 @@ class TestUiPictures:
             qtbot.mouseClick(delete, Qt.LeftButton)
 
         # Check signal is emitted, file have been deleted & models updated
-        deleted_path = os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2")
-        deleted_path2 = os.path.join(
-            BASE_FOLDER, "Archive", "Malta", "Bof", "IMG001.CR2"
-        )
+        deleted_path = os.path.join("Archive", "Malta", "IMG001.CR2")
+        deleted_path2 = os.path.join("Archive", "Malta", "Bof", "IMG001.CR2")
         deleted_files = [deleted_path, deleted_path2]
         signal = signals.all_signals_and_args[0]
         assert signal.args[0] == "", "Deletion signal has correct conversion type"
@@ -1172,21 +962,17 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def _test_pictures_grid_convert_picture(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_convert_picture(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -1199,9 +985,11 @@ class TestUiPictures:
             qtbot.mouseClick(generate, Qt.LeftButton)
 
         # Check signal is emitted, file have been added & models updated
-        new_path = os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_DT.jpg")
+        new_path = os.path.join("Archive", "Malta", "IMG001_DT.jpg")
         new_files = [new_path]
-        assert signal.args[0].path == new_path, "New picture has correct path"
+        assert signal.args[0].path == os.path.join(
+            pytest.BASE_FOLDER, new_path
+        ), "New picture has correct path"
         assert signal.args[1] == "DT", "New picture has correct conversion method"
         self.helper_check_paths("Generated image", new_files)
         assert len(picture_group.pictures["DT"]) == 1, "Picture has 1 DT image"
@@ -1219,14 +1007,12 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(3), "3 images in Archive"
 
-    def _test_pictures_grid_convert_picture_no_method_found(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_convert_picture_no_method_found(
+        self, pydive_pictures, qtbot
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(6)  # Sweden
@@ -1249,14 +1035,10 @@ class TestUiPictures:
         error = container.layout().itemAt(2).widget()
         assert error.text() == "No conversion method found", "Error is displayed"
 
-    def _test_pictures_grid_picture_zoom(self, qtbot, qapp):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_picture_zoom(self, pydive_pictures, qtbot, qapp):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(6)  # Sweden
@@ -1299,14 +1081,10 @@ class TestUiPictures:
         assert delta_zoom < 0.01, "Other pictures are zoomed in with same zoom"
         assert picture2._zoom == 0, "Other pictures' _zoom property changed"
 
-    def _test_pictures_grid_picture_move(self, qtbot, qapp):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        picturesGrid = picturesController.ui["picture_grid"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_grid_picture_move(self, pydive_pictures, qtbot, qapp):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
+        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(6)  # Sweden
@@ -1358,17 +1136,13 @@ class TestUiPictures:
             scrollbarv2.value() == scrollbarv.value()
         ), "Other pictures are moved similarly"
 
-    def _test_pictures_tree_trip_copy(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_trip_copy(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(3)  # Georgia
-        trip = picturesController.repository.trips["Georgia"]
+        trip = pydive_pictures.repository.trips["Georgia"]
         picture_group_010 = trip["IMG010"]
         picture_group_011 = trip["IMG011_convert"]
 
@@ -1385,13 +1159,10 @@ class TestUiPictures:
             action.trigger()
 
         # Check files have been created & models updated
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
-        ]
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG010_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG011_convert.jpg"),
+            os.path.join("Archive", "Georgia", "IMG010.CR2"),
+            os.path.join("Archive", "Georgia", "IMG010_RT.jpg"),
+            os.path.join("Archive", "Georgia", "IMG011_convert.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
         assert (
@@ -1414,18 +1185,14 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def _test_pictures_tree_trip_convert(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_trip_convert(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
-        picture_group1 = picturesController.repository.trips["Malta"]["IMG001"]
-        picture_group2 = picturesController.repository.trips["Malta"]["IMG002"]
+        picture_group1 = pydive_pictures.repository.trips["Malta"]["IMG001"]
+        picture_group2 = pydive_pictures.repository.trips["Malta"]["IMG002"]
 
         # Look for generate action
         picturesTree.generate_context_menu(trip_item)
@@ -1445,8 +1212,8 @@ class TestUiPictures:
 
         # Check files have been created & models updated
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002_DT.jpg"),
+            os.path.join("Archive", "Malta", "IMG001_DT.jpg"),
+            os.path.join("Archive", "Malta", "IMG002_DT.jpg"),
         ]
         self.helper_check_paths(menu_name + " " + action_name, new_files)
         assert (
@@ -1464,17 +1231,13 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(3), "3 images in Archive"
 
-    def _test_pictures_tree_trip_change_name(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_trip_change_name(self, pydive_pictures, qtbot, monkeypatch):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item & picture groups
         trip_item = picturesTree.topLevelItem(4)  # Korea
-        picture_group = picturesController.repository.trips["Korea"]["IMG030"]
+        picture_group = pydive_pictures.repository.trips["Korea"]["IMG030"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(trip_item)
@@ -1492,17 +1255,13 @@ class TestUiPictures:
             action.trigger()
 
         # Check files have been created & models updated
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Temporary", "Italy"),
-            os.path.join(BASE_FOLDER, "Archive", "Italy"),
-        ]
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Italy", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Italy", "IMG030_RT.jpg"),
+            os.path.join("Temporary", "Italy", "IMG030.CR2"),
+            os.path.join("Archive", "Italy", "IMG030_RT.jpg"),
         ]
         removed_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
+            os.path.join("Temporary", "Korea", "IMG030.CR2"),
+            os.path.join("Archive", "Korea", "IMG030_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
 
@@ -1514,17 +1273,15 @@ class TestUiPictures:
         assert "Italy" in top_level_items, "Italy added to the tree"
         assert "Korea" not in top_level_items, "Korea removed from the tree"
 
-    def _test_pictures_tree_trip_change_name_exists(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_trip_change_name_exists(
+        self, pydive_pictures, qtbot, monkeypatch
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item & picture groups
         trip_item = picturesTree.topLevelItem(4)  # Korea
-        picture_group = picturesController.repository.trips["Korea"]["IMG030"]
+        picture_group = pydive_pictures.repository.trips["Korea"]["IMG030"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(trip_item)
@@ -1542,16 +1299,13 @@ class TestUiPictures:
             action.trigger()
 
         # Check files have been created & models updated
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
-        ]
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG030_RT.jpg"),
+            os.path.join("Temporary", "Georgia", "IMG030.CR2"),
+            os.path.join("Archive", "Georgia", "IMG030_RT.jpg"),
         ]
         removed_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
+            os.path.join("Temporary", "Korea", "IMG030.CR2"),
+            os.path.join("Archive", "Korea", "IMG030_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
 
@@ -1563,13 +1317,11 @@ class TestUiPictures:
         assert "Georgia" in top_level_items, "Georgia still in the tree"
         assert "Korea" not in top_level_items, "Korea removed from the tree"
 
-    def _test_pictures_tree_trip_wrong_action_name(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_trip_wrong_action_name(
+        self, pydive_pictures, qtbot, monkeypatch
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Trigger the addition of an impossible action
         trip_item = picturesTree.topLevelItem(4)  # Korea
@@ -1578,18 +1330,14 @@ class TestUiPictures:
         with pytest.raises(ValueError):
             picturesTree.add_trip_action("", "", action_name, "", "", "")
 
-    def _test_pictures_tree_picture_group_copy(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_picture_group_copy(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(0)  # Malta's IMG001
-        picture_group = picturesController.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(picture_item)
@@ -1602,7 +1350,7 @@ class TestUiPictures:
 
         # Check files have been created & models updated
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001_RT.jpg"),
+            os.path.join("Archive", "Malta", "IMG001_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
         assert (
@@ -1614,18 +1362,14 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(3), "3 image in Archive"
 
-    def _test_pictures_tree_picture_group_convert(self, qtbot):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_picture_group_convert(self, pydive_pictures, qtbot):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(1)  # Malta's IMG002
-        picture_group = picturesController.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG002"]
 
         # Look for convert action
         picturesTree.generate_context_menu(picture_item)
@@ -1644,7 +1388,7 @@ class TestUiPictures:
 
         # Check files have been created & models updated
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002_DT.jpg"),
+            os.path.join("Archive", "Malta", "IMG002_DT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
         assert (
@@ -1656,18 +1400,16 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(3), "3 images in Archive"
 
-    def _test_pictures_tree_picture_group_change_trip(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_picture_group_change_trip(
+        self, pydive_pictures, qtbot, monkeypatch
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(1)  # Malta's IMG002
-        picture_group = picturesController.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG002"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(picture_item)
@@ -1684,24 +1426,20 @@ class TestUiPictures:
             action.trigger()
 
         # Check files have been created & models updated
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Temporary", "Italy"),
-            os.path.join(BASE_FOLDER, "Archive", "Italy"),
-        ]
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Italy", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Italy", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Italy", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Italy", "Sélection", "IMG002.CR2"),
+            os.path.join("Temporary", "Italy", "IMG002.CR2"),
+            os.path.join("Temporary", "Italy", "IMG002_RT.jpg"),
+            os.path.join("Archive", "Italy", "IMG002.CR2"),
+            os.path.join("Archive", "Italy", "Sélection", "IMG002.CR2"),
         ]
         removed_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "Sélection", "IMG002.CR2"),
+            os.path.join("Temporary", "Malta", "IMG002.CR2"),
+            os.path.join("Temporary", "Malta", "IMG002_RT.jpg"),
+            os.path.join("Archive", "Malta", "IMG002.CR2"),
+            os.path.join("Archive", "Malta", "Sélection", "IMG002.CR2"),
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
-        picture_group = picturesController.repository.trips["Italy"]["IMG002"]
+        picture_group = pydive_pictures.repository.trips["Italy"]["IMG002"]
         # Wait until the new picture group has everything
         # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
         qtbot.waitUntil(lambda: "Archive" in picture_group.locations)
@@ -1731,19 +1469,15 @@ class TestUiPictures:
         assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
     def test_pictures_tree_picture_group_change_trip_target_exists(
-        self, qtbot, monkeypatch
+        self, pydive_pictures, qtbot, monkeypatch
     ):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(1)  # Malta's IMG002
-        picture_group = picturesController.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_pictures.repository.trips["Malta"]["IMG002"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(picture_item)
@@ -1760,24 +1494,20 @@ class TestUiPictures:
             action.trigger()
 
         # Check files have been created & models updated
-        self.all_folders += [
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia"),
-            os.path.join(BASE_FOLDER, "Archive", "Georgia"),
-        ]
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Georgia", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Georgia", "Sélection", "IMG002.CR2"),
+            os.path.join("Temporary", "Georgia", "IMG002.CR2"),
+            os.path.join("Temporary", "Georgia", "IMG002_RT.jpg"),
+            os.path.join("Archive", "Georgia", "IMG002.CR2"),
+            os.path.join("Archive", "Georgia", "Sélection", "IMG002.CR2"),
         ]
         removed_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "Sélection", "IMG002.CR2"),
+            os.path.join("Temporary", "Malta", "IMG002.CR2"),
+            os.path.join("Temporary", "Malta", "IMG002_RT.jpg"),
+            os.path.join("Archive", "Malta", "IMG002.CR2"),
+            os.path.join("Archive", "Malta", "Sélection", "IMG002.CR2"),
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
-        picture_group = picturesController.repository.trips["Georgia"]["IMG002"]
+        picture_group = pydive_pictures.repository.trips["Georgia"]["IMG002"]
         # Wait until the new picture group has everything
         # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
         qtbot.waitUntil(lambda: "Archive" in picture_group.locations, timeout=1000)
@@ -1807,13 +1537,11 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
-    def _test_pictures_tree_picture_group_wrong_action_name(self, qtbot, monkeypatch):
-        # Setup: get display, load pictures
-        self.mainwindow.display_tab("Pictures")
-        picturesController = self.mainwindow.controllers["Pictures"]
-        picturesTree = picturesController.ui["picture_tree"]
-        load_pictures_button = picturesController.ui["load_button"]
-        qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
+    def test_pictures_tree_picture_group_wrong_action_name(
+        self, pydive_pictures, qtbot, monkeypatch
+    ):
+        # Setup: get display
+        picturesTree = pydive_pictures.ui["picture_tree"]
 
         # Trigger the addition of an impossible action
         trip_item = picturesTree.topLevelItem(5)  # Malta

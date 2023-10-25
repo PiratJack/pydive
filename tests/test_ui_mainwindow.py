@@ -17,26 +17,11 @@ DATABASE_FILE = "test.sqlite"
 
 
 class TestUiMainWindow:
-    @pytest.fixture(scope="function", autouse=True)
-    def setup_and_teardown(self, qtbot):
-        self.database = models.database.Database(DATABASE_FILE)
-        self.repository = models.repository.Repository(self.database)
-        self.mainwindow = controllers.mainwindow.MainWindow(
-            self.database, self.repository
-        )
-
-        yield
-
-        self.mainwindow.database.session.close()
-        self.mainwindow.database.engine.dispose()
-        # Delete database
-        os.remove(DATABASE_FILE)
-
-    def test_mainwindow_toolbar(self):
-        picturesController = self.mainwindow.controllers["Pictures"]
+    def test_mainwindow_toolbar(self, pydive_mainwindow):
+        picturesController = pydive_mainwindow.controllers["Pictures"]
         picturesController.toolbar_button.trigger()
         assert (
-            self.mainwindow.layout.currentIndex() == 1
+            pydive_mainwindow.layout.currentIndex() == 1
         ), "Pictures screen now displayed"
 
 

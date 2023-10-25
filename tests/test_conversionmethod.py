@@ -1,71 +1,33 @@
 import os
 import sys
 import pytest
-import logging
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-
-import models.database
-
 from models.base import ValidationException
 from models.conversionmethod import ConversionMethod
 
-logging.basicConfig(level=logging.WARNING)
-
-DATABASE_FILE = "test.sqlite"
-
-try:
-    os.remove(DATABASE_FILE)
-except OSError:
-    pass
-
 
 class TestStorageLocation:
-    @pytest.fixture(scope="function", autouse=True)
-    def setup_and_teardown(self):
-        self.database = models.database.Database(DATABASE_FILE)
-        self.database.session.add_all(
-            [
-                ConversionMethod(
-                    id=1,
-                    name="Darktherapee",
-                    suffix="DT",
-                    command="darktherapee %SOURCE_FILE% %TARGET_FILE%",
-                ),
-                ConversionMethod(
-                    id=2,
-                    name="UFRaw",
-                    suffix="ufraw",
-                    command="ufraw-cli -s %SOURCE_FILE% -t %TARGET_FILE%",
-                ),
-            ]
-        )
-        self.database.session.commit()
-
-        yield
-
-        self.database.session.close()
-        self.database.engine.dispose()
-        os.remove(DATABASE_FILE)
-
-    def test_gets(self):
+    def test_gets(self, pydive_db):
         # Get all
-        conversion_methods = self.database.conversionmethods_get()
+        conversion_methods = pydive_db.conversionmethods_get()
         assert len(conversion_methods) == 2, "There are 2 conversion methods"
 
-        conversion_method = self.database.conversionmethods_get_by_suffix("ufraw")
+        conversion_method = pydive_db.conversionmethods_get_by_suffix("RT")
         assert (
             type(conversion_method) == ConversionMethod
-        ), "There is a single conversion method with suffix ufraw"
+        ), "There is a single conversion method with suffix RT"
 
-        assert str(conversion_method) == "UFRaw", "The string representation is correct"
+        assert (
+            str(conversion_method) == "RawTherapee"
+        ), "The string representation is correct"
 
-        conversion_method = self.database.conversionmethods_get_by_name("UFRaw")
+        conversion_method = pydive_db.conversionmethods_get_by_name("RawTherapee")
         assert (
             type(conversion_method) == ConversionMethod
-        ), "There is a single conversion method with name UFRaw"
+        ), "There is a single conversion method with name RawTherapee"
 
     def test_validations(self):
         conversion_method = ConversionMethod(

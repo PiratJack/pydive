@@ -1,8 +1,6 @@
 import os
 import sys
 import pytest
-import datetime
-import logging
 from PyQt5 import QtCore, QtTest
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -19,200 +17,67 @@ from models.storagelocation import StorageLocationType
 from models.picture import Picture, StorageLocationCollision
 from models.category import Category
 
-logging.basicConfig(level=logging.WARNING)
-
-DATABASE_FILE = "test.sqlite"
-
-BASE_FOLDER = (
-    os.path.join("test_images" + str(int(datetime.datetime.now().timestamp())))
-    + os.path.sep
-)
-
 
 class TestRepository:
-    @pytest.fixture(scope="function", autouse=True)
-    def setup_and_teardown(self, qtbot):
-        try:
-            os.remove(BASE_FOLDER)
-        except OSError:
-            pass
-        self.all_folders = [
-            os.path.join(BASE_FOLDER),
-            os.path.join(BASE_FOLDER, "DCIM", ""),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Temporary", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "Sélection", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "Unknown_category", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", ""),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Archive", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Romania", ""),
-            os.path.join(BASE_FOLDER, "Archive", "Island", ""),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", ""),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", ""),
-            os.path.join(BASE_FOLDER, "Empty", ""),
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self, qtbot, pydive_fake_pictures):
+        self.all_files = pydive_fake_pictures
+
+    def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
+        QtCore.QThreadPool.globalInstance().waitForDone()
+        # Add "should exist" to "all_files" so they get deleted later
+        self.all_files += should_exist
+        self.all_files = list(set(self.all_files))
+
+        # We check all files: both existing and non-existing
+        all_files_checked = set(self.all_files + should_not_exist)
+        should_exist = [
+            f
+            for f in self.all_files
+            if f not in should_not_exist
+            and os.path.join(pytest.BASE_FOLDER, f) not in should_not_exist
         ]
-        for folder in self.all_folders:
-            os.makedirs(folder, exist_ok=True)
-        self.all_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "IMG020.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001_RT.jpg"),
-            os.path.join(
-                BASE_FOLDER, "Temporary", "Malta", "Sélection", "IMG001_RT.jpg"
-            ),
-            os.path.join(
-                BASE_FOLDER, "Temporary", "Malta", "Unknown_category", "IMG001_RT.jpg"
-            ),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG002_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG001.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Malta", "IMG002.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG010_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Georgia", "IMG011_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG030.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG030_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050_convert.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Island", "IMG050.CR2"),
-            os.path.join(BASE_FOLDER, "Archive_outside_DB", "Egypt", "IMG037.CR2"),
-        ]
-        for test_file in self.all_files:
-            open(test_file, "w").close()
+        for path in all_files_checked:
+            absolute_path = path
+            if pytest.BASE_FOLDER not in path:
+                absolute_path = os.path.join(pytest.BASE_FOLDER, path)
+            if path in should_exist:
+                assert os.path.exists(absolute_path), f"{test} - File {absolute_path}"
+            else:
+                assert not os.path.exists(
+                    absolute_path
+                ), f"{test} - File {absolute_path}"
 
-        try:
-            os.remove(DATABASE_FILE)
-        except OSError:
-            pass
-        self.database = models.database.Database(DATABASE_FILE)
-        self.database.session.add_all(
-            [
-                # Test with final "/" in path
-                StorageLocation(
-                    id=1,
-                    name="Camera",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "DCIM", ""),
-                ),
-                # Test without final "/" in path
-                StorageLocation(
-                    id=2,
-                    name="Temporary",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Temporary"),
-                ),
-                StorageLocation(
-                    id=3,
-                    name="Archive",
-                    type=StorageLocationType["picture_folder"],
-                    path=os.path.join(BASE_FOLDER, "Archive"),
-                ),
-                StorageLocation(
-                    id=4,
-                    name="Inexistant",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Inexistant"),
-                ),
-                StorageLocation(
-                    id=5,
-                    name="No picture here",
-                    type="picture_folder",
-                    path=os.path.join(BASE_FOLDER, "Empty"),
-                ),
-                StorageLocation(
-                    id=6,
-                    name="Dive log",
-                    type="file",
-                    path=os.path.join(BASE_FOLDER, "Archives", "test.txt"),
-                ),
-                ConversionMethod(
-                    id=1,
-                    name="DarkTherapee",
-                    suffix="DT",
-                    command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c DT > /dev/null",
-                ),
-                ConversionMethod(
-                    id=2,
-                    name="RawTherapee",
-                    suffix="RT",
-                    command="../pydive_generate_picture.py %SOURCE_FILE% -t %TARGET_FOLDER% -c RT > /dev/null",
-                ),
-                Category(
-                    id=1,
-                    name="Star",
-                    path="Sélection",
-                ),
-            ]
-        )
-        self.database.session.commit()
-
-        # Load the pictures
-        self.locations = self.database.storagelocations_get_picture_folders()
-        self.categories = self.database.categories_get()
-
-        self.repository = models.repository.Repository(self.database)
-        self.mainwindow = controllers.mainwindow.MainWindow(
-            self.database, self.repository
-        )
-
-        yield
-
-        self.mainwindow.database.session.close()
-        self.mainwindow.database.engine.dispose()
-        # Delete database
-        os.remove(DATABASE_FILE)
-
-        # Delete folders
-        for test_file in self.all_files:
-            if os.path.exists(test_file):
-                os.remove(test_file)
-        for folder in sorted(self.all_folders, reverse=True):
-            os.rmdir(folder)
-
-    def test_load_pictures_trip_recognition(self):
+    def test_load_pictures_trip_recognition(self, pydive_repository):
         # Check if recognition worked
         test = "Load pictures: Count trips"
-        assert len(self.repository.trips) == 8, test
+        assert len(pydive_repository.trips) == 8, test
 
         test = "Load pictures: Count pictures with no trips"
-        assert len(self.repository.trips[""]) == 4, test
+        assert len(pydive_repository.trips[""]) == 4, test
 
         test = "Load pictures: Count pictures in a given trip"
-        assert len(self.repository.trips["Malta"]) == 2, test
+        assert len(pydive_repository.trips["Malta"]) == 2, test
 
         test = "Load pictures: Check picture's trip"
-        picture_group = self.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
         picture = picture_group.categories["Temporary"][""][0]
         assert picture.trip == "Malta", test
         assert picture.category == "", test
 
         test = "Load pictures: Check picture's category"
-        picture = picture_group.categories["Temporary"]["Star"][0]
+        picture = picture_group.categories["Temporary"]["Top"][0]
         assert picture.trip == "Malta", test
-        assert picture.category.name == "Star", test
+        assert picture.category.name == "Top", test
 
         test = "Load pictures: Check unknown category"
-        picture_group = self.repository.trips["Malta/Unknown_category"]["IMG001_RT"]
+        picture_group = pydive_repository.trips["Malta/Unknown_category"]["IMG001_RT"]
         picture = picture_group.categories["Temporary"][""][0]
         assert picture.trip == "Malta/Unknown_category", test
 
-    def test_string_representation(self):
+    def test_string_representation(self, pydive_repository):
         test = "String representation: picture group"
-        picture_group = self.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
         assert str(picture_group) == "('IMG001', 'Malta', '4 pictures')", test
 
         picture = [
@@ -226,93 +91,71 @@ class TestRepository:
         assert (
             str(picture)
             == "IMG001 in Temporary during Malta - path "
-            + os.path.join(BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2")
+            + os.path.join(pytest.BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2")
             + ""
         ), test
 
         test = "String representation: picture.filename"
         assert picture.filename == "IMG001.CR2", test
 
-    def test_load_pictures_storage_location_collision(self):
+    def test_load_pictures_storage_location_collision(
+        self, pydive_repository, pydive_db
+    ):
         test = "Load pictures: storage location collision"
         with pytest.raises(StorageLocationCollision):
             new_location = StorageLocation(
                 id=999,
                 name="Used path",
                 type="picture_folder",
-                path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
+                path=os.path.join(pytest.BASE_FOLDER, "Temporary", "Malta"),
             )
-            self.database.session.add(new_location)
-            self.database.session.commit()
-            logger = logging.getLogger("models.picture")
-            logger.setLevel(logging.CRITICAL)
-            self.repository.load_pictures()
-            logger.setLevel(logging.WARNING)
+            pydive_db.session.add(new_location)
+            pydive_db.session.commit()
+            pydive_repository.load_pictures()
             pytest.fail(test)
 
-    def test_storage_location_add(self):
+    def test_storage_location_add(self, pydive_repository, pydive_db):
         test = "Add a storage location: Count trips"
-        nb_trips_before = len(self.repository.trips)
+        nb_trips_before = len(pydive_repository.trips)
         new_location = StorageLocation(
             id=999,
             name="Outside_DB",
             type="picture_folder",
-            path=os.path.join(BASE_FOLDER, "Archive_outside_DB"),
+            path=os.path.join(pytest.BASE_FOLDER, "Archive_outside_DB"),
         )
-        self.database.session.add(new_location)
-        self.database.session.commit()
-        self.repository.load_pictures()
-        assert len(self.repository.trips) == nb_trips_before + 1, test
+        pydive_db.session.add(new_location)
+        pydive_db.session.commit()
+        pydive_repository.load_pictures()
+        assert len(pydive_repository.trips) == nb_trips_before + 1, test
 
-    def test_storage_location_add_with_collision(self):
+    def test_storage_location_add_with_collision(self, pydive_repository, pydive_db):
         test = "Add a storage location: subfolder of existing folder"
         new_location = StorageLocation(
             id=999,
             name="Used path",
             type="picture_folder",
-            path=os.path.join(BASE_FOLDER, "Temporary", "Malta"),
+            path=os.path.join(pytest.BASE_FOLDER, "Temporary", "Malta"),
         )
-        self.database.session.add(new_location)
-        self.database.session.commit()
+        pydive_db.session.add(new_location)
+        pydive_db.session.commit()
         with pytest.raises(StorageLocationCollision) as cm:
-            logger = logging.getLogger("models.picture")
-            logger.setLevel(logging.CRITICAL)
-            self.repository.load_pictures()
-            logger.setLevel(logging.WARNING)
+            pydive_repository.load_pictures()
             pytest.fail(test)
         assert cm.value.args[0] == "recognition failed", test
 
-    def test_recognition_with_category_collision(self):
+    def test_recognition_with_category_collision(self, pydive_repository, pydive_db):
         test = "Add a storage location: subfolder of existing folder"
         new_category = Category(
             id=999,
             name="Vrac",
             path="lection",
         )
-        self.database.session.add(new_category)
-        self.database.session.commit()
+        pydive_db.session.add(new_category)
+        pydive_db.session.commit()
         with pytest.raises(StorageLocationCollision) as cm:
-            logger = logging.getLogger("models.picture")
-            logger.setLevel(logging.CRITICAL)
-            self.repository.load_pictures()
-            logger.setLevel(logging.WARNING)
+            pydive_repository.load_pictures()
             pytest.fail(test)
         assert cm.value.args[0] == "recognition failed", test
-
-    def helper_check_paths(self, test, should_exist=[], should_not_exist=[]):
-        QtCore.QThreadPool.globalInstance().waitForDone()
-        # Add "should exist" to "all_files" so they get deleted later
-        self.all_files += should_exist
-        self.all_files = list(set(self.all_files))
-
-        # We check all files: both existing and non-existing
-        all_files_checked = set(self.all_files + should_not_exist)
-        should_exist = [f for f in self.all_files if f not in should_not_exist]
-        for path in all_files_checked:
-            if path in should_exist:
-                assert os.path.exists(path), f"{test} - File {path}"
-            else:
-                assert not os.path.exists(path), f"{test} - File {path}"
 
     # List of Repository.copy_pictures tests - "KO" denotes when a ValueError is raised
     # source_location   trip    picture_group   conversion_method
@@ -337,15 +180,17 @@ class TestRepository:
 
     #                                                           test_repository_copy_pictures_no_parameter
 
-    def test_repository_process_group_finished_signal(self):
+    def test_repository_process_group_finished_signal(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: all parameters provided (copies 1 picture)"
-        target_location = self.database.storagelocation_get_by_name("Archive")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Archive")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
-        picture_group = self.repository.trips[trip]["IMG040"]
-        conversion_method = self.database.conversionmethods_get_by_suffix("RT")
+        picture_group = pydive_repository.trips[trip]["IMG040"]
+        conversion_method = pydive_db.conversionmethods_get_by_suffix("RT")
 
-        process = self.repository.copy_pictures(
+        process = pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -359,21 +204,23 @@ class TestRepository:
         assert expected_signal.isValid()
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("Archive", "Sweden", "IMG040_RT.jpg"),
         ]
         self.all_files += new_files
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_all_parameters(self):
+    def test_repository_copy_pictures_all_parameters(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: all parameters provided (copies 1 picture)"
-        target_location = self.database.storagelocation_get_by_name("Archive")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Archive")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
-        picture_group = self.repository.trips[trip]["IMG040"]
+        picture_group = pydive_repository.trips[trip]["IMG040"]
         conversion_method = ""
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -383,20 +230,22 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040.CR2"),
+            os.path.join("Archive", "Sweden", "IMG040.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_missing_conversion_method(self):
+    def test_repository_copy_pictures_missing_conversion_method(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: all parameters provided except conversion_method"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
-        picture_group = self.repository.trips[trip]["IMG040"]
+        picture_group = pydive_repository.trips[trip]["IMG040"]
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -406,22 +255,24 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_missing_picture_group(self):
+    def test_repository_copy_pictures_missing_picture_group(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: all parameters provided except picture_group (copies some of the trip)"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
         picture_group = None
         conversion_method = ""
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -431,21 +282,23 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG041.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_missing_source_location(self):
+    def test_repository_copy_pictures_missing_source_location(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: all parameters provided except source_location (copies 1 picture)"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = "Sweden"
-        picture_group = self.repository.trips[trip]["IMG040"]
+        picture_group = pydive_repository.trips[trip]["IMG040"]
         conversion_method = ""
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -455,21 +308,21 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_missing_trip(self):
+    def test_repository_copy_pictures_missing_trip(self, pydive_repository, pydive_db):
         # This test gives the same result as "all parameters" since trip will be ignored
         test = "Picture copy: all parameters provided except trip (copies 1 picture)"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = None
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
+        picture_group = pydive_repository.trips["Sweden"]["IMG040"]
         conversion_method = ""
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -479,20 +332,22 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_conversion_method_and_picture_group(self):
+    def test_repository_copy_pictures_conversion_method_and_picture_group(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: conversion_method and picture_group provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = None
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
+        picture_group = pydive_repository.trips["Sweden"]["IMG040"]
         conversion_method = ""
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -502,21 +357,23 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_conversion_method_and_source_location(self):
+    def test_repository_copy_pictures_conversion_method_and_source_location(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: conversion_method and source_location provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = None
         picture_group = None
         conversion_method = ""
 
         with pytest.raises(ValueError) as cm:
-            self.repository.copy_pictures(
+            pydive_repository.copy_pictures(
                 test,
                 target_location,
                 source_location,
@@ -528,15 +385,17 @@ class TestRepository:
 
         self.helper_check_paths(test)
 
-    def test_repository_copy_pictures_conversion_method_and_trip(self):
+    def test_repository_copy_pictures_conversion_method_and_trip(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: conversion_method and trip provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
         picture_group = None
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -546,23 +405,25 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG041.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_picture_group_and_source_location(self):
+    def test_repository_copy_pictures_picture_group_and_source_location(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: picture_group and source_location provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = None
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
+        picture_group = pydive_repository.trips["Sweden"]["IMG040"]
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -572,22 +433,24 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_picture_group_and_trip(self):
+    def test_repository_copy_pictures_picture_group_and_trip(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: picture_group and trip provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = "Sweden"
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
+        picture_group = pydive_repository.trips["Sweden"]["IMG040"]
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -597,23 +460,25 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_source_location_and_trip(self):
+    def test_repository_copy_pictures_source_location_and_trip(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: source_location and trip provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
         picture_group = None
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -623,24 +488,26 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG041.CR2"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_conversion_method(self):
+    def test_repository_copy_pictures_conversion_method(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: only conversion_method provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = None
         picture_group = None
         conversion_method = ""
 
         with pytest.raises(ValueError) as cm:
-            self.repository.copy_pictures(
+            pydive_repository.copy_pictures(
                 test,
                 target_location,
                 source_location,
@@ -652,15 +519,15 @@ class TestRepository:
 
         self.helper_check_paths(test)
 
-    def test_repository_copy_pictures_picture_group(self):
+    def test_repository_copy_pictures_picture_group(self, pydive_repository, pydive_db):
         test = "Picture copy: only picture_group provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = None
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
+        picture_group = pydive_repository.trips["Sweden"]["IMG040"]
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -670,24 +537,26 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_source_location(self):
+    def test_repository_copy_pictures_source_location(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: only source_location provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = None
         picture_group = None
         conversion_method = None
 
         with pytest.raises(ValueError) as cm:
-            self.repository.copy_pictures(
+            pydive_repository.copy_pictures(
                 test,
                 target_location,
                 source_location,
@@ -699,15 +568,15 @@ class TestRepository:
 
         self.helper_check_paths(test)
 
-    def test_repository_copy_pictures_trip(self):
+    def test_repository_copy_pictures_trip(self, pydive_repository, pydive_db):
         test = "Picture copy: only trip provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = "Sweden"
         picture_group = None
         conversion_method = None
 
-        self.repository.copy_pictures(
+        pydive_repository.copy_pictures(
             test,
             target_location,
             source_location,
@@ -717,25 +586,25 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "DCIM", "Sweden", "IMG040_convert.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("DCIM", "Sweden", "IMG041.CR2"),
+            os.path.join("DCIM", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files)
 
-    def test_repository_copy_pictures_no_parameter(self):
+    def test_repository_copy_pictures_no_parameter(self, pydive_repository, pydive_db):
         test = "Picture copy: no parameter provided"
-        target_location = self.database.storagelocation_get_by_name("Camera")
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
         source_location = None
         trip = None
         picture_group = None
         conversion_method = None
 
         with pytest.raises(ValueError) as cm:
-            self.repository.copy_pictures(
+            pydive_repository.copy_pictures(
                 test,
                 target_location,
                 source_location,
@@ -747,16 +616,18 @@ class TestRepository:
 
         self.helper_check_paths(test)
 
-    def test_repository_copy_pictures_picture_inexistant(self):
+    def test_repository_copy_pictures_picture_inexistant(
+        self, pydive_repository, pydive_db
+    ):
         test = "Picture copy: inexistant picture for given parameters"
-        target_location = self.database.storagelocation_get_by_name("Archive")
-        source_location = self.database.storagelocation_get_by_name("Temporary")
+        target_location = pydive_db.storagelocation_get_by_name("Archive")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
         trip = "Sweden"
-        picture_group = self.repository.trips[trip]["IMG040"]
+        picture_group = pydive_repository.trips[trip]["IMG040"]
         conversion_method = "ZZZ"
 
         with pytest.raises(FileNotFoundError) as cm:
-            self.repository.copy_pictures(
+            pydive_repository.copy_pictures(
                 test,
                 target_location,
                 source_location,
@@ -777,13 +648,13 @@ class TestRepository:
 
     #                                 test_repository_change_trip_no_parameter
 
-    def test_repository_change_trip_all_parameters(self):
+    def test_repository_change_trip_all_parameters(self, pydive_repository):
         test = "Picture change trip: all parameters provided"
         target_trip = "Korea"
         source_trip = "Sweden"
-        picture_group = self.repository.trips[source_trip]["IMG040"]
+        picture_group = pydive_repository.trips[source_trip]["IMG040"]
 
-        self.repository.change_trip_pictures(
+        pydive_repository.change_trip_pictures(
             test,
             target_trip,
             source_trip,
@@ -791,68 +662,68 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG040_convert.jpg"),
+            os.path.join("Temporary", "Korea", "IMG040.CR2"),
+            os.path.join("Temporary", "Korea", "IMG040_RT.jpg"),
+            os.path.join("Temporary", "Korea", "IMG040_DT.jpg"),
+            os.path.join("Archive", "Korea", "IMG040_convert.jpg"),
         ]
 
         should_not_exist = [
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+            os.path.join("Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join("Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("Archive", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files, should_not_exist)
 
-    def test_repository_change_trip_picture_group(self, qtbot):
+    def test_repository_change_trip_picture_group(self, pydive_repository, qtbot):
         test = "Picture change trip: only picture group provided"
         target_trip = "Korea"
         source_trip = None
-        picture_group = self.repository.trips["Sweden"]["IMG040"]
+        picture_group = pydive_repository.trips["Sweden"]["IMG040"]
 
         with qtbot.waitSignal(picture_group.pictureRemoved):
-            self.repository.change_trip_pictures(
+            pydive_repository.change_trip_pictures(
                 test,
                 target_trip,
                 source_trip,
                 picture_group,
             )
         # Make sure models have time to update
-        qtbot.waitUntil(lambda: "IMG040" not in self.repository.trips["Sweden"])
+        qtbot.waitUntil(lambda: "IMG040" not in pydive_repository.trips["Sweden"])
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG040_convert.jpg"),
+            os.path.join("Temporary", "Korea", "IMG040.CR2"),
+            os.path.join("Temporary", "Korea", "IMG040_RT.jpg"),
+            os.path.join("Temporary", "Korea", "IMG040_DT.jpg"),
+            os.path.join("Archive", "Korea", "IMG040_convert.jpg"),
         ]
 
         should_not_exist = [
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+            os.path.join("Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join("Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("Archive", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files, should_not_exist)
 
         # Check pictures are updates (only IMG040.CR2 is actually checked)
-        picture = self.repository.trips["Korea"]["IMG040"].pictures[""][0]
-        new_path = os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2")
-        assert "IMG040" not in self.repository.trips["Sweden"], test
-        assert "IMG040" in self.repository.trips["Korea"], test
-        assert picture.path == new_path, test
+        picture = pydive_repository.trips["Korea"]["IMG040"].pictures[""][0]
+        new_path = os.path.join("Temporary", "Korea", "IMG040.CR2")
+        assert "IMG040" not in pydive_repository.trips["Sweden"], test
+        assert "IMG040" in pydive_repository.trips["Korea"], test
+        assert picture.path == os.path.join(pytest.BASE_FOLDER, new_path), test
         assert picture.trip == target_trip, test
 
-    def test_repository_change_trip_source_trip(self):
+    def test_repository_change_trip_source_trip(self, pydive_repository):
         test = "Picture change trip: only trip provided"
         target_trip = "Korea"
         source_trip = "Sweden"
         picture_group = None
 
-        self.repository.change_trip_pictures(
+        pydive_repository.change_trip_pictures(
             test,
             target_trip,
             source_trip,
@@ -860,31 +731,31 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Korea", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Korea", "IMG040_convert.jpg"),
+            os.path.join("Temporary", "Korea", "IMG040.CR2"),
+            os.path.join("Temporary", "Korea", "IMG041.CR2"),
+            os.path.join("Temporary", "Korea", "IMG040_RT.jpg"),
+            os.path.join("Temporary", "Korea", "IMG040_DT.jpg"),
+            os.path.join("Archive", "Korea", "IMG040_convert.jpg"),
         ]
 
         should_not_exist = [
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG041.CR2"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_RT.jpg"),
-            os.path.join(BASE_FOLDER, "Temporary", "Sweden", "IMG040_DT.jpg"),
-            os.path.join(BASE_FOLDER, "Archive", "Sweden", "IMG040_convert.jpg"),
+            os.path.join("Temporary", "Sweden", "IMG040.CR2"),
+            os.path.join("Temporary", "Sweden", "IMG041.CR2"),
+            os.path.join("Temporary", "Sweden", "IMG040_RT.jpg"),
+            os.path.join("Temporary", "Sweden", "IMG040_DT.jpg"),
+            os.path.join("Archive", "Sweden", "IMG040_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files, should_not_exist)
 
-    def test_repository_change_trip_no_parameter(self):
+    def test_repository_change_trip_no_parameter(self, pydive_repository):
         test = "Picture change trip: no parameter provided"
         target_trip = "Korea"
         source_trip = None
         picture_group = None
 
         with pytest.raises(ValueError) as cm:
-            self.repository.change_trip_pictures(
+            pydive_repository.change_trip_pictures(
                 test,
                 target_trip,
                 source_trip,
@@ -896,15 +767,13 @@ class TestRepository:
 
         self.helper_check_paths(test)
 
-    def test_repository_change_trip_target_exists(self):
+    def test_repository_change_trip_target_exists(self, pydive_repository):
         test = "Picture change trip: target group exists"
         target_trip = "Island"
         source_trip = "Romania"
-        picture_group = self.repository.trips[source_trip]["IMG050"]
+        picture_group = pydive_repository.trips[source_trip]["IMG050"]
 
-        logger = logging.getLogger("models.repository")
-        logger.setLevel(logging.CRITICAL)
-        self.repository.change_trip_pictures(
+        pydive_repository.change_trip_pictures(
             test,
             target_trip,
             source_trip,
@@ -912,68 +781,66 @@ class TestRepository:
         )
 
         new_files = [
-            os.path.join(BASE_FOLDER, "Archive", "Island", "IMG050.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Island", "IMG050_convert.jpg"),
+            os.path.join("Archive", "Island", "IMG050.CR2"),
+            os.path.join("Archive", "Island", "IMG050_convert.jpg"),
         ]
 
         should_not_exist = [
             # This will still exist since the target file exists
-            # #os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050.CR2"),
-            os.path.join(BASE_FOLDER, "Archive", "Romania", "IMG050_convert.jpg"),
+            os.path.join("Archive", "Romania", "IMG050_convert.jpg"),
         ]
 
         self.helper_check_paths(test, new_files, should_not_exist)
-        logger.setLevel(logging.WARNING)
 
-    def test_repository_remove_pictures_1_picture(self):
+    def test_repository_remove_pictures_1_picture(self, pydive_repository):
         test = "Picture remove: actual deletion of 1 picture"
-        picture_group = self.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
         picture = picture_group.locations["Temporary"][0]
         path = picture.path
 
-        process = self.repository.remove_pictures(test, None, picture_group, picture)
+        process = pydive_repository.remove_pictures(test, None, picture_group, picture)
 
         assert str(process) == test + " (1 tasks)", test
         self.helper_check_paths(test, [], [path])
 
-    def test_repository_remove_pictures_trip(self):
+    def test_repository_remove_pictures_trip(self, pydive_repository):
         test = "Picture remove: actual deletion of a trip"
         picture_files = [
             p for p in self.all_files if os.path.sep + "Korea" + os.path.sep in p
         ]
 
-        self.repository.remove_pictures(test, trip="Korea")
+        pydive_repository.remove_pictures(test, trip="Korea")
 
         self.helper_check_paths(test, [], picture_files)
 
-    def test_repository_remove_pictures_validations(self):
+    def test_repository_remove_pictures_validations(self, pydive_repository):
         # Delete image without changing structure of .pictures and .locations
         test = "Remove picture: At least 1 trip/picture reference is required"
         with pytest.raises(ValueError) as cm:
-            self.repository.remove_pictures(test)
+            pydive_repository.remove_pictures(test)
         assert (
             cm.value.args[0] == "Either trip, picture_group or picture must be provided"
         ), test
 
         test = "Remove picture: picture_group required if picture provided"
-        picture_group = self.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
         picture = picture_group.locations["Temporary"][0]
         with pytest.raises(ValueError) as cm:
-            self.repository.remove_pictures(test, picture=picture)
+            pydive_repository.remove_pictures(test, picture=picture)
         assert (
             cm.value.args[0] == "picture_group is required if picture is provided"
         ), test
 
-    def test_repository_remove_picture_no_structure_change(self):
+    def test_repository_remove_picture_no_structure_change(self, pydive_repository):
         # Remove image without deleting the actual files
         # This allows detection by coverage
         test = "Remove picture, keep .pictures and.locations"
-        picture_group = self.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
         picture = picture_group.locations["Temporary"][0]
         location_initial_count = len(picture_group.locations["Temporary"])
         conversion_type_initial_count = len(picture_group.pictures[""])
         path = picture.path
-        self.repository.remove_picture(picture_group, picture.location, picture.path)
+        pydive_repository.remove_picture(picture_group, picture.location, picture.path)
         assert os.path.exists(path), test + ": file not deleted (on purpose)"
         assert (
             len(picture_group.locations["Temporary"]) == location_initial_count - 1
@@ -982,14 +849,14 @@ class TestRepository:
             test + ": deletion from picture_group.pictures"
         )
 
-    def test_repository_remove_picture_structure_change(self):
+    def test_repository_remove_picture_structure_change(self, pydive_repository):
         # Remove image without deleting the actual files
         # This allows detection by coverage
         test = "Remove picture, remove keys from .pictures and.locations"
-        picture_group = self.repository.trips["Korea"]["IMG030"]
+        picture_group = pydive_repository.trips["Korea"]["IMG030"]
         picture = picture_group.pictures["RT"][0]
         path = picture.path
-        self.repository.remove_picture(picture_group, picture.location, picture.path)
+        pydive_repository.remove_picture(picture_group, picture.location, picture.path)
         assert os.path.exists(path), test + ": file not deleted (on purpose)"
         assert "RT" not in picture_group.pictures, (
             test + ": .pictures no longer has RT as key"
@@ -998,12 +865,12 @@ class TestRepository:
             test + ": .locations no longer has Archive as key"
         )
 
-    def test_picture_group_add_pictures_wrong_name(self):
+    def test_picture_group_add_pictures_wrong_name(self, pydive_repository):
         test = "Add picture: wrong group name"
-        picture_group = self.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
         picture = [
             p
-            for p in self.repository.trips["Malta"]["IMG002"].pictures[""]
+            for p in pydive_repository.trips["Malta"]["IMG002"].pictures[""]
             if p.path.endswith("IMG002.CR2")
         ]
 
@@ -1014,12 +881,12 @@ class TestRepository:
             cm.value.args[0] == "Picture IMG002 does not belong to group IMG001"
         ), test
 
-    def test_picture_group_add_pictures_wrong_trip(self):
+    def test_picture_group_add_pictures_wrong_trip(self, pydive_repository):
         test = "Add picture: wrong trip"
-        picture_group = self.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
         picture = [
             p
-            for p in self.repository.trips["Georgia"]["IMG010"].pictures[""]
+            for p in pydive_repository.trips["Georgia"]["IMG010"].pictures[""]
             if p.path.endswith(os.path.join("Georgia", "IMG010.CR2"))
         ]
         picture = picture[0]
@@ -1029,38 +896,39 @@ class TestRepository:
             cm.value.args[0] == "Picture IMG010 has the wrong trip for group IMG001"
         ), test
 
-    def test_picture_group_add_pictures_ok(self):
+    def test_picture_group_add_pictures_ok(self, pydive_db, pydive_repository):
         test = "Add picture: OK in existing group"
         new_image_path = os.path.join(
-            BASE_FOLDER, "Temporary", "Malta", "IMG002_DT.jpg"
+            pytest.BASE_FOLDER, "Temporary", "Malta", "IMG002_DT.jpg"
         )
         self.all_files.append(new_image_path)
         open(new_image_path, "w").close()
 
-        picture_group = self.repository.trips["Malta"]["IMG002"]
-        location = [loc for loc in self.locations if loc.name == "Temporary"][0]
-        self.repository.add_picture(picture_group, location, new_image_path)
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
+        locations = pydive_db.storagelocations_get_picture_folders()
+        location = [loc for loc in locations if loc.name == "Temporary"][0]
+        pydive_repository.add_picture(picture_group, location, new_image_path)
 
         assert "DT" in picture_group.pictures, test
         new_picture = picture_group.pictures["DT"][0]
         assert new_picture.path == new_image_path, test
 
-    def test_picture_group_remove_picture_validations(self):
+    def test_picture_group_remove_picture_validations(self, pydive_repository):
         # Negative deletion test
         test = "Remove picture : wrong trip for group"
-        picture_group = self.repository.trips["Malta"]["IMG002"]
-        picture = self.repository.trips["Georgia"]["IMG010"].pictures[""][0]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
+        picture = pydive_repository.trips["Georgia"]["IMG010"].pictures[""][0]
         with pytest.raises(ValueError) as cm:
             picture_group.remove_picture(picture)
         assert (
             cm.value.args[0] == "Picture IMG010 has the wrong trip for group IMG002"
         ), test
 
-    def test_picture_group_deletion(self):
+    def test_picture_group_deletion(self, pydive_repository):
         # Remove image without deleting the actual files
         # This is because coverage doesn't realize it has been tested indirectly
-        picture_group = self.repository.trips["Korea"]["IMG030"]
-        nb_groups_before_deletion = len(self.repository.picture_groups)
+        picture_group = pydive_repository.trips["Korea"]["IMG030"]
+        nb_groups_before_deletion = len(pydive_repository.picture_groups)
         pictures = []
         for conversion_type in picture_group.pictures:
             for picture in picture_group.pictures[conversion_type]:
@@ -1068,19 +936,21 @@ class TestRepository:
         for picture in pictures:
             picture_group.remove_picture(picture)
         assert (
-            len(self.repository.picture_groups) == nb_groups_before_deletion - 1
+            len(pydive_repository.picture_groups) == nb_groups_before_deletion - 1
         ), "picture_group deletion when pictures are removed"
 
-    def test_picture_group_name_change(self):
+    def test_picture_group_name_change(self, pydive_repository, pydive_db):
         # Adding a picture that is more "basic" than an existing group
         # Situation: group 'IMG011_convert' exists, now we find picture IMG011.CR2
         # The group's name should be changed to IMG011
         # The conversion types should change as well
-        picture_group = self.repository.trips["Georgia"]["IMG011_convert"]
+        picture_group = pydive_repository.trips["Georgia"]["IMG011_convert"]
+        locations = pydive_db.storagelocations_get_picture_folders()
+        categories = pydive_db.categories_get()
         new_picture = Picture(
-            self.locations,
-            self.categories,
-            os.path.join(BASE_FOLDER, "DCIM", "IMG011.CR2"),
+            locations,
+            categories,
+            os.path.join(pytest.BASE_FOLDER, "DCIM", "IMG011.CR2"),
         )
         picture_group.add_picture(new_picture)
 
