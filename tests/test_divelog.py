@@ -29,6 +29,16 @@ class TestDiveLog:
         start_date = datetime.datetime.fromisoformat("2019-10-04T10:49:05")
         assert trip.start_date == start_date, "Dive start time correct"
 
+    def test_load_folder(self, pydive_divelog):
+        # This will reset the loaded dives
+        pydive_divelog.load_dives(pytest.BASE_FOLDER)
+        assert len(pydive_divelog.dives) == 0, "Dives list is reset"
+
+    def test_load_wrong_file(self, pydive_divelog):
+        # This will reset the loaded dives
+        pydive_divelog.load_dives(pytest.DIVELOG_SCAN_IMAGE)
+        assert len(pydive_divelog.dives) == 0, "Dives list is reset"
+
 
 if __name__ == "__main__":
     pytest.main(["-s", __file__])

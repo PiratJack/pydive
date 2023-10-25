@@ -131,16 +131,18 @@ class TestUiDivelogScans:
         )
         assert validate.text() == "Validate", part + "Validate text is OK"
 
-    def test_divelogscans_display_no_divelog(self, pydive_db, pydive_divelog_scans):
-        pydive_db.delete(pydive_db.storagelocations_get_divelog()[0])
-        divelogScanLayout = pydive_divelog_scans.layout()
+    def test_divelogscans_display_no_target_folder(
+        self, pydive_empty_db, pydive_mainwindow_empty_db
+    ):
+        pydive_mainwindow_empty_db.display_tab("DivelogScan")
+        divelogScanLayout = pydive_mainwindow_empty_db.layout.currentWidget().layout()
 
         # Check dive tree is empty
         part = "Middle part - Dive tree - "
         middleLayout = divelogScanLayout.itemAt(1).widget().layout()
         dive_tree = middleLayout.itemAt(1).widget()
         assert isinstance(dive_tree, QtWidgets.QTreeWidget), part + "Is QTreeWidget"
-        assert dive_tree.topLevelItemCount() == 8, part + "Count of elements OK"
+        assert dive_tree.topLevelItemCount() == 0, part + "Count of elements OK"
 
     def test_divelogscans_display_with_divelog_target_folder(
         self, pydive_db, pydive_divelog_scans
@@ -162,6 +164,8 @@ class TestUiDivelogScans:
         # Load image file
         topLayout = divelogScanLayout.itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
+        path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
+        # Force reload of the same info (to check if it handles it well)
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
 
         # Check overall display
@@ -379,13 +383,14 @@ class TestUiDivelogScans:
         ), "Dive error is OK"
 
     def test_divelogscans_validate_folder_not_selected(
-        self, qtbot, pydive_db, pydive_divelog_scans, pydive_mainwindow
+        self, qtbot, pydive_db, pydive_divelog, pydive_mainwindow_empty_db
     ):
-        divelogScanLayout = pydive_divelog_scans.layout()
+        pydive_mainwindow_empty_db.display_tab("DivelogScan")
+        divelogScanLayout = pydive_mainwindow_empty_db.layout.currentWidget().layout()
         pydive_db.session.delete(pydive_db.storagelocations_get_target_scan_folder())
         pydive_db.session.commit()
         # Force screen refresh
-        pydive_mainwindow.display_tab("DivelogScan")
+        pydive_mainwindow_empty_db.display_tab("DivelogScan")
 
         # Load image file
         topLayout = divelogScanLayout.itemAt(0).widget().layout()

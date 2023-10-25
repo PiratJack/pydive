@@ -36,13 +36,22 @@ def pytest_configure():
 
 
 @pytest.fixture
-def pydive_db():
+def pydive_empty_db():
     try:
         os.remove(pytest.DATABASE_FILE)
     except OSError:
         pass
     database = models.database.Database(pytest.DATABASE_FILE)
-    database.session.add_all(
+
+    yield database
+
+    # Delete database
+    os.remove(pytest.DATABASE_FILE)
+
+
+@pytest.fixture
+def pydive_db(pydive_empty_db):
+    pydive_empty_db.session.add_all(
         [
             # Test with final "/" in path
             StorageLocation(
@@ -112,14 +121,11 @@ def pydive_db():
             ),
         ]
     )
-    database.session.commit()
-    database.session.close()
-    database.engine.dispose()
+    pydive_empty_db.session.commit()
+    pydive_empty_db.session.close()
+    pydive_empty_db.engine.dispose()
 
-    yield database
-
-    # Delete database
-    os.remove(pytest.DATABASE_FILE)
+    yield pydive_empty_db
 
 
 @pytest.fixture
@@ -245,6 +251,18 @@ def pydive_real_pictures():
 def pydive_mainwindow(qtbot, pydive_db):
     repository = models.repository.Repository(pydive_db)
     mainwindow = controllers.mainwindow.MainWindow(pydive_db, repository)
+
+    yield mainwindow
+
+    mainwindow.database.session.close()
+    mainwindow.database.engine.dispose()
+
+
+@pytest.fixture
+# qtbot is here to make sure we have a QApplication running
+def pydive_mainwindow_empty_db(qtbot, pydive_empty_db):
+    repository = models.repository.Repository(pydive_empty_db)
+    mainwindow = controllers.mainwindow.MainWindow(pydive_empty_db, repository)
 
     yield mainwindow
 
