@@ -1,15 +1,12 @@
 import os
 import sys
 import pytest
-import datetime
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-
-import models.database
 
 from controllers.pictures import PictureDisplay
 from controllers.widgets.iconbutton import IconButton
@@ -302,7 +299,6 @@ class TestUiPictures:
     def test_pictures_display_in_progress_tasks(self, pydive_pictures, qtbot):
         # Setup: get display
         picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
 
         # Check display - Tasks label & progress bar
         left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()

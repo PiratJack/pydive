@@ -7,8 +7,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 
-import models.database
-
 # This requires actual image files, which are heavy & take time to process
 # Hence the separate test class
 class TestRepositoryGeneration:

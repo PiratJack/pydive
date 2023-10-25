@@ -3,18 +3,12 @@ import sys
 import pytest
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import Qt
-import zipfile
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import models.database
-import models.repository
 import models.divelog
-import controllers.mainwindow
 from controllers.widgets.pathselectbutton import PathSelectButton
-
-from models.storagelocation import StorageLocation
 
 
 class TestUiDivelogScans:

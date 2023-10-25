@@ -255,10 +255,6 @@ def pydive_mainwindow(qtbot, pydive_db):
 @pytest.fixture
 def pydive_divelog(qtbot, pydive_db):
     os.makedirs(pytest.BASE_FOLDER, exist_ok=True)
-    all_files = [
-        os.path.join(pytest.BASE_FOLDER, "Divelog raw image.jpg"),
-        os.path.join(pytest.BASE_FOLDER, "test_divelog.xml"),
-    ]
     with zipfile.ZipFile(pytest.DIVELOG_ZIP_FILE, "r") as zip_ref:
         zip_ref.extractall(".")
         os.rename("test_divelog", pytest.BASE_FOLDER)

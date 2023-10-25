@@ -6,8 +6,6 @@ import pytest
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-from models.divelog import DiveLog
-
 
 class TestDiveLog:
     def test_gets(self, pydive_divelog):

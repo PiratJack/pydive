@@ -6,14 +6,7 @@ from PyQt5 import QtCore, QtTest
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-
-import controllers.mainwindow
-import models.database
-import models.repository
-
-from models.conversionmethod import ConversionMethod
 from models.storagelocation import StorageLocation
-from models.storagelocation import StorageLocationType
 from models.picture import Picture, StorageLocationCollision
 from models.category import Category
 

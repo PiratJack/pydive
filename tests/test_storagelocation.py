@@ -5,11 +5,8 @@ import pytest
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import models.database
-
 from models.base import ValidationException
 from models.storagelocation import StorageLocation
-from models.storagelocation import StorageLocationType
 
 
 class TestStorageLocation:

@@ -7,15 +7,10 @@ from PyQt5.QtCore import Qt
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
-import models.database
-import models.repository
-import controllers.mainwindow
 from controllers.widgets.pathselectbutton import PathSelectButton
 from controllers.widgets.iconbutton import IconButton
 
-from models.storagelocation import StorageLocation
 from models.storagelocation import StorageLocationType
-from models.conversionmethod import ConversionMethod
 
 import sqlalchemy.orm.exc
 
