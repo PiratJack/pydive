@@ -26,7 +26,7 @@ class TestUiPictures:
         pydive_mainwindow.controllers["Pictures"].on_load_pictures()
         self.all_files = pydive_real_pictures
 
-        yield pydive_mainwindow.controllers["Pictures"]
+        yield pydive_mainwindow.layout.currentWidget()
 
     def mouseWheelTurn(self, qapp, widget, pos, orientation):
         globalPos = widget.mapToGlobal(pos)
@@ -111,19 +111,16 @@ class TestUiPictures:
             raise ValueError("display_type should be RAW, JPG or No image")
 
     def test_pictures_display_overall(self, pydive_pictures):
-        # Setup: get display
-        main_widget = pydive_pictures.ui["main"]
-
         # Check display - Overall structure
         assert isinstance(
-            main_widget.layout(), QtWidgets.QHBoxLayout
+            pydive_pictures.layout(), QtWidgets.QHBoxLayout
         ), "Pictures layout is correct"
         assert (
-            main_widget.layout().count() == 2
+            pydive_pictures.layout().count() == 2
         ), "Pictures layout has the right number of colums"
 
         # Check display - Left column
-        left_column = main_widget.layout().itemAt(0).widget()
+        left_column = pydive_pictures.layout().itemAt(0).widget()
         assert isinstance(
             left_column.layout(), QtWidgets.QVBoxLayout
         ), "Pictures left column layout is correct"
@@ -132,7 +129,7 @@ class TestUiPictures:
         ), "Pictures left column has the right number of rows"
 
         # Check display - Right column
-        right_column = main_widget.layout().itemAt(1).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
         assert isinstance(
             right_column.layout(), QtWidgets.QVBoxLayout
         ), "Pictures right column layout is correct"
@@ -140,12 +137,15 @@ class TestUiPictures:
             right_column.layout().count() == 1
         ), "Pictures right column has the right number of rows"
 
-    def test_pictures_display_folders(self, pydive_pictures, pydive_db):
+    def test_pictures_display_folders(
+        self, pydive_mainwindow, pydive_pictures, pydive_db
+    ):
         # Setup: get display
         folders = pydive_db.storagelocations_get_picture_folders()
         # Check what happens when display is refreshed twice in a row
-        pydive_pictures.refresh_folders()
-        foldersLayout = pydive_pictures.ui["left_grid_layout"]
+        pydive_mainwindow.controllers["Pictures"].refresh_display()
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        foldersLayout = left_column.layout().itemAt(0).widget().layout()
 
         # Check display - Overall structure
         assert (
@@ -171,8 +171,10 @@ class TestUiPictures:
 
     def test_pictures_display_tree_load_pictures(self, pydive_pictures, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        load_pictures_button = pydive_pictures.ui["load_button"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+
+        load_pictures_button = left_column.layout().itemAt(1).widget()
         qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
         # Second time to test refresh of already-displayed data
         qtbot.mouseClick(load_pictures_button, Qt.LeftButton)
@@ -193,11 +195,12 @@ class TestUiPictures:
 
     def test_pictures_display_checkboxes(self, pydive_pictures, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Check display - Tasks label & progress bar
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         display_raw_images = left_column.layout().itemAt(3).widget()
         assert isinstance(
             display_raw_images, QtWidgets.QCheckBox
@@ -221,6 +224,19 @@ class TestUiPictures:
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
+        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
+
+        def check_hidden(picturesGrid, hidden_rows, hidden_columns, hidden_cells={}):
+            for row in range(picturesGrid.layout().rowCount()):
+                for col in range(picturesGrid.layout().columnCount()):
+                    container = picturesGrid.layout().itemAtPosition(row, col).widget()
+                    if row in hidden_rows or col in hidden_columns:
+                        assert container.isHidden(), "Element is properly hidden"
+                    elif row in hidden_cells and col in hidden_cells[row]:
+                        assert container.isHidden(), "Element is properly hidden"
+                    else:
+                        assert not container.isHidden(), "Element is properly visible"
+
         # Check display - Correct display of columns & rows
         hidden_columns = [1, 2]  # RAW (hidden by default), DT (no image)
         hidden_rows = [
@@ -229,17 +245,9 @@ class TestUiPictures:
             3,
             4,
         ]  # Archive (only RAW image), Camera, Inexistant, No picture here (no image in any of those)
-        layout = picturesGrid.ui["layout"]
-        for row in range(layout.rowCount()):
-            for col in range(layout.columnCount()):
-                container = layout.itemAtPosition(row, col).widget()
-                if row in hidden_rows or col in hidden_columns:
-                    assert container.isHidden(), "Element is properly hidden"
-                else:
-                    assert not container.isHidden(), "Element is properly visible"
+        check_hidden(picturesGrid, hidden_rows, hidden_columns)
 
         # Display RAW images ==> 1st column should be displayed
-        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
         qtbot.mouseClick(display_raw_images, Qt.LeftButton, Qt.NoModifier, topleft)
         assert display_raw_images.isChecked(), "Checkbox is indeed checked"
         hidden_columns = [2]  # DT (no image)
@@ -252,56 +260,29 @@ class TestUiPictures:
         # Row 1: col 1 is RAW and present, 2 is hidden already, 3 is RT doesn't exist
         # Rows 2-4 are hidden already
         # Row 5: col 1 is RAW and present, 2 is hidden already, 3 is RT and exists ==> all displayed
-        layout = picturesGrid.ui["layout"]
-        for row in range(layout.rowCount()):
-            for col in range(layout.columnCount()):
-                container = layout.itemAtPosition(row, col).widget()
-                if row in hidden_rows or col in hidden_columns:
-                    assert container.isHidden(), "Element is properly hidden"
-                elif row in hidden_cells and col in hidden_cells[row]:
-                    assert container.isHidden(), "Element is properly hidden"
-                else:
-                    assert not container.isHidden(), "Element is properly visible"
+        check_hidden(picturesGrid, hidden_rows, hidden_columns, hidden_cells)
 
         # Display empty images ==> Everything should be displayed
-        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
         qtbot.mouseClick(display_absent_images, Qt.LeftButton, Qt.NoModifier, topleft)
         assert display_absent_images.isChecked(), "Checkbox is indeed checked"
         hidden_columns = []
         hidden_rows = []
         hidden_cells = {}
-        layout = picturesGrid.ui["layout"]
-        for row in range(layout.rowCount()):
-            for col in range(layout.columnCount()):
-                container = layout.itemAtPosition(row, col).widget()
-                if row in hidden_rows or col in hidden_columns:
-                    assert container.isHidden(), "Element is properly hidden"
-                elif row in hidden_cells and col in hidden_cells[row]:
-                    assert container.isHidden(), "Element is properly hidden"
-                else:
-                    assert not container.isHidden(), "Element is properly visible"
+        check_hidden(picturesGrid, hidden_rows, hidden_columns, hidden_cells)
 
         # Display empty but not RAW images ==> 1st column should be hidden
-        topleft = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
         qtbot.mouseClick(display_raw_images, Qt.LeftButton, Qt.NoModifier, topleft)
         assert not display_raw_images.isChecked(), "Checkbox is indeed u checked"
         hidden_columns = [1]  # RAW
         hidden_rows = []  # All displayed due to "display absent" being checked
-        layout = picturesGrid.ui["layout"]
-        for row in range(layout.rowCount()):
-            for col in range(layout.columnCount()):
-                container = layout.itemAtPosition(row, col).widget()
-                if row in hidden_rows or col in hidden_columns:
-                    assert container.isHidden(), "Element is properly hidden"
-                else:
-                    assert not container.isHidden(), "Element is properly visible"
+        check_hidden(picturesGrid, hidden_rows, hidden_columns)
 
     def test_pictures_display_in_progress_tasks(self, pydive_pictures, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Check display - Tasks label & progress bar
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
         assert isinstance(
             tasks_label, QtWidgets.QLabel
@@ -361,7 +342,7 @@ class TestUiPictures:
 
     def test_pictures_process_groups_display(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
+        left_column = pydive_pictures.layout().itemAt(0).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
         tasks_progress_bar = left_column.layout().itemAt(6).widget()
 
@@ -383,8 +364,8 @@ class TestUiPictures:
         self, pydive_pictures, qtbot, qapp
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
@@ -456,8 +437,8 @@ class TestUiPictures:
 
     def test_pictures_process_groups_one_error(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
@@ -510,8 +491,8 @@ class TestUiPictures:
 
     def test_pictures_process_groups_no_error(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
         tasks_label = left_column.layout().itemAt(5).widget()
 
         # Trigger a copy (to get proper display)
@@ -572,8 +553,10 @@ class TestUiPictures:
 
     def test_pictures_tree_click_trip(self, pydive_pictures, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(1)  # Georgia
@@ -583,17 +566,18 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Check display - Grid should not be displayed
-        assert picturesGrid.picture_group is None, "PictureGrid has no picture_group"
-        assert picturesGrid.ui["layout"].columnCount() == 1, "PictureGrid is empty"
-        assert picturesGrid.ui["layout"].rowCount() == 1, "PictureGrid is empty"
+        assert picturesGrid.layout().columnCount() == 1, "PictureGrid is empty"
+        assert picturesGrid.layout().rowCount() == 1, "PictureGrid is empty"
         assert (
-            picturesGrid.ui["layout"].itemAtPosition(0, 0) is None
+            picturesGrid.layout().itemAtPosition(0, 0) is None
         ), "PictureGrid is empty"
 
     def test_pictures_tree_click_picture_group(self, pydive_pictures, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -606,35 +590,35 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Check display - Overall grid structure
-        assert picturesGrid.picture_group is not None, "PictureGrid has a picture_group"
         assert (
-            picturesGrid.ui["layout"].columnCount() == 4
+            picturesGrid.layout().columnCount() == 4
         ), "PictureGrid has right number of columns"
         assert (
-            picturesGrid.ui["layout"].rowCount() == 6
+            picturesGrid.layout().rowCount() == 6
         ), "PictureGrid has right number of rows"
 
         # Check display - Correct display of different images (RAW, JPG, no image)
         # "No image"
         test = "No image"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 2).widget()
         self.helper_check_picture_display(test, container, "No image")
 
         # RAW image ==> readable
         test = "RAW image"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 1).widget()
         self.helper_check_picture_display(test, container, "RAW", "IMG001.CR2")
 
         # JPG image ==> readable
         test = "JPG image"
-        container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        container = picturesGrid.layout().itemAtPosition(5, 3).widget()
         self.helper_check_picture_display(test, container, "JPG", "IMG001_RT.jpg")
 
     def test_pictures_tree_click_picture_group_some_images_hidden(
         self, pydive_pictures, qtbot
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -646,7 +630,6 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Hide RAW and absent images
-        left_column = pydive_pictures.ui["main"].layout().itemAt(0).widget()
         display_raw_images = left_column.layout().itemAt(3).widget()
         display_absent_images = left_column.layout().itemAt(4).widget()
         qtbot.mouseClick(display_raw_images, Qt.LeftButton)
@@ -657,17 +640,17 @@ class TestUiPictures:
 
         # ## "No image"
         # #test = "No image"
-        # #container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        # #container = picturesGrid.layout().itemAtPosition(1, 2).widget()
         # #assert container.isVisible() == False, "Container is hidden"
 
         # ## RAW image ==> readable
         # #test = "RAW image"
-        # #container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        # #container = picturesGrid.layout().itemAtPosition(1, 1).widget()
         # #assert container.isVisible() == False, "Container is hidden"
 
         # ## JPG image ==> readable
         # #test = "JPG image"
-        # #container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        # #container = picturesGrid.layout().itemAtPosition(5, 3).widget()
         # #assert container.isVisible() == True, "Container is visible"
 
         pass
@@ -676,7 +659,8 @@ class TestUiPictures:
         self, pydive_pictures, qtbot
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -688,24 +672,26 @@ class TestUiPictures:
         picturesTree.remove_picture_group(None)
 
     def test_pictures_tree_picture_group_removed_before_add_again(
-        self, pydive_pictures, qtbot
+        self, pydive_pictures, pydive_repository, qtbot
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Trigger action
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 2).widget()
         buttonbox = container.layout().itemAt(1).widget()
         generate = buttonbox.layout().itemAt(1).widget()  # 0 & 3 are spacers
         qtbot.mouseClick(generate, Qt.LeftButton)
@@ -720,24 +706,28 @@ class TestUiPictures:
 
         qtbot.waitSignal(picture_group.pictureAdded)
 
-    def test_pictures_grid_copy_raw_picture(self, pydive_pictures, qtbot):
+    def test_pictures_grid_copy_raw_picture(
+        self, pydive_pictures, pydive_repository, qtbot
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(3)  # Georgia
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Georgia's IMG010
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = pydive_pictures.repository.trips["Georgia"]["IMG010"]
+        picture_group = pydive_repository.trips["Georgia"]["IMG010"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Check display - No image displayed
         test = "Before RAW copy"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 1).widget()
         self.helper_check_picture_display(test, container, "No image")
         buttonbox = container.layout().itemAt(1).widget()
         copy = buttonbox.layout().itemAt(2).widget()  # 0 & 3 are spacers
@@ -758,7 +748,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After RAW copy"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 1).widget()
         self.helper_check_picture_display(test, container, "RAW", "IMG010.CR2")
 
         # Check display - Tree has been updated
@@ -774,24 +764,28 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def test_pictures_grid_copy_jpg_picture(self, pydive_pictures, qtbot):
+    def test_pictures_grid_copy_jpg_picture(
+        self, pydive_pictures, pydive_repository, qtbot
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(3)  # Georgia
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Georgia's IMG010
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = pydive_pictures.repository.trips["Georgia"]["IMG010"]
+        picture_group = pydive_repository.trips["Georgia"]["IMG010"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Check display - No image displayed
         test = "Before JPG copy"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 3).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 3).widget()
         self.helper_check_picture_display(test, container, "No image")
         buttonbox = container.layout().itemAt(1).widget()
         copy = buttonbox.layout().itemAt(2).widget()  # 0 & 3 are spacers
@@ -812,7 +806,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After JPG copy"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 3).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 3).widget()
         self.helper_check_picture_display(test, container, "JPG", "IMG010_RT.jpg")
 
         # Check display - Tree has been updated
@@ -830,8 +824,10 @@ class TestUiPictures:
 
     def test_pictures_grid_copy_error(self, pydive_pictures, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
@@ -843,7 +839,7 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Get Copy button
-        container = picturesGrid.ui["layout"].itemAtPosition(2, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(2, 2).widget()
         buttonbox = container.layout().itemAt(1).widget()
         copy = buttonbox.layout().itemAt(2).widget()  # 0 & 3 are spacers
 
@@ -855,18 +851,20 @@ class TestUiPictures:
         assert error.text() == "No source image found", "Error is displayed"
 
     def test_pictures_grid_delete_jpg_picture(
-        self, pydive_pictures, qtbot, monkeypatch
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -877,7 +875,7 @@ class TestUiPictures:
         )
 
         # Trigger action - 1 image deleted
-        container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        container = picturesGrid.layout().itemAtPosition(5, 3).widget()
         buttonbox = container.layout().itemAt(1).widget()
         delete = buttonbox.layout().itemAt(1).widget()  # 0 & 2 are spacers
         with qtbot.waitSignal(picture_group.pictureRemoved, timeout=1000) as signal:
@@ -895,7 +893,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After picture deletion"
-        container = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        container = picturesGrid.layout().itemAtPosition(5, 3).widget()
         self.helper_check_picture_display(test, container, "No image")
 
         # Check display - Tree has been updated
@@ -906,18 +904,20 @@ class TestUiPictures:
         assert tree_group.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
     def test_pictures_grid_delete_raw_picture(
-        self, pydive_pictures, qtbot, monkeypatch
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
@@ -928,7 +928,7 @@ class TestUiPictures:
         )
 
         # Trigger action - 1 image deleted
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 1).widget()
         buttonbox = container.layout().itemAt(1).widget()
         delete = buttonbox.layout().itemAt(1).widget()  # 0 & 2 are spacers
         with qtbot.waitSignals(
@@ -948,7 +948,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After picture deletion"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 1).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 1).widget()
         self.helper_check_picture_display(test, container, "No image")
 
         # Check display - Tree has been updated
@@ -958,23 +958,27 @@ class TestUiPictures:
         assert tree_group.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group.data(3, Qt.DisplayRole) == str(0), "0 image in Archive"
 
-    def test_pictures_grid_convert_picture(self, pydive_pictures, qtbot):
+    def test_pictures_grid_convert_picture(
+        self, pydive_pictures, pydive_repository, qtbot
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         trip_item.setExpanded(True)
         picture_item = trip_item.child(0)  # Malta's IMG001
         topleft = picturesTree.visualItemRect(picture_item).topLeft()
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
 
         # Trigger display of picture grid
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Trigger action - 1 image added
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 2).widget()
         buttonbox = container.layout().itemAt(1).widget()
         generate = buttonbox.layout().itemAt(1).widget()  # 0 & 3 are spacers
         with qtbot.waitSignal(picture_group.pictureAdded) as signal:
@@ -992,7 +996,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After picture generation"
-        container = picturesGrid.ui["layout"].itemAtPosition(1, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(1, 2).widget()
         # This is called with "RAW" because the "conversion" is only a copy in this test
         self.helper_check_picture_display(test, container, "RAW", "IMG001_DT.jpg")
 
@@ -1007,8 +1011,10 @@ class TestUiPictures:
         self, pydive_pictures, qtbot
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(6)  # Sweden
@@ -1020,7 +1026,7 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Get Copy button
-        container = picturesGrid.ui["layout"].itemAtPosition(2, 4).widget()
+        container = picturesGrid.layout().itemAtPosition(2, 4).widget()
         buttonbox = container.layout().itemAt(1).widget()
         generate = buttonbox.layout().itemAt(1).widget()  # 0 & 3 are spacers
 
@@ -1033,8 +1039,10 @@ class TestUiPictures:
 
     def test_pictures_grid_picture_zoom(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(6)  # Sweden
@@ -1046,7 +1054,7 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Get one of the pictures being displayed & trigger mouse wheel
-        container = picturesGrid.ui["layout"].itemAtPosition(5, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(5, 2).widget()
         picture = container.layout().itemAt(2).widget()
         size_before = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
         with qtbot.waitSignal(picture.zoomChanged):
@@ -1056,7 +1064,7 @@ class TestUiPictures:
         size_after = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
         assert size_before < size_after, "Picture is zoomed in"
         assert picture._zoom == 1, "Picture _zoom changed"
-        container2 = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        container2 = picturesGrid.layout().itemAtPosition(5, 3).widget()
         picture2 = container2.layout().itemAt(2).widget()
         size_picture_2 = picture2.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
         delta_zoom = abs(size_after - size_picture_2) / size_after
@@ -1079,8 +1087,10 @@ class TestUiPictures:
 
     def test_pictures_grid_picture_move(self, pydive_pictures, qtbot, qapp):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
-        picturesGrid = pydive_pictures.ui["picture_grid"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
+        right_column = pydive_pictures.layout().itemAt(1).widget()
+        picturesGrid = right_column.layout().itemAt(0).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(6)  # Sweden
@@ -1092,7 +1102,7 @@ class TestUiPictures:
         qtbot.mouseClick(picturesTree.viewport(), Qt.LeftButton, Qt.NoModifier, topleft)
 
         # Get one of the pictures being displayed & trigger zoom (otherwise, no scrollbar)
-        container = picturesGrid.ui["layout"].itemAtPosition(5, 2).widget()
+        container = picturesGrid.layout().itemAtPosition(5, 2).widget()
         picture = container.layout().itemAt(2).widget()
         with qtbot.waitSignal(picture.zoomChanged):
             # This is needed to ensure horizontal scrollbar is visible
@@ -1104,7 +1114,7 @@ class TestUiPictures:
             self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
             self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
             self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
-        container2 = picturesGrid.ui["layout"].itemAtPosition(5, 3).widget()
+        container2 = picturesGrid.layout().itemAtPosition(5, 3).widget()
         picture2 = container2.layout().itemAt(2).widget()
 
         # I couldn't find how to trigger the mouse move event, so I trigger the signal directly
@@ -1132,13 +1142,14 @@ class TestUiPictures:
             scrollbarv2.value() == scrollbarv.value()
         ), "Other pictures are moved similarly"
 
-    def test_pictures_tree_trip_copy(self, pydive_pictures, qtbot):
+    def test_pictures_tree_trip_copy(self, pydive_pictures, pydive_repository, qtbot):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(3)  # Georgia
-        trip = pydive_pictures.repository.trips["Georgia"]
+        trip = pydive_repository.trips["Georgia"]
         picture_group_010 = trip["IMG010"]
         picture_group_011 = trip["IMG011_convert"]
 
@@ -1181,14 +1192,17 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(1), "1 image in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(1), "1 image in Archive"
 
-    def test_pictures_tree_trip_convert(self, pydive_pictures, qtbot):
+    def test_pictures_tree_trip_convert(
+        self, pydive_pictures, pydive_repository, qtbot
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
-        picture_group1 = pydive_pictures.repository.trips["Malta"]["IMG001"]
-        picture_group2 = pydive_pictures.repository.trips["Malta"]["IMG002"]
+        picture_group1 = pydive_repository.trips["Malta"]["IMG001"]
+        picture_group2 = pydive_repository.trips["Malta"]["IMG002"]
 
         # Look for generate action
         picturesTree.generate_context_menu(trip_item)
@@ -1227,13 +1241,16 @@ class TestUiPictures:
         assert tree_group2.data(2, Qt.DisplayRole) == str(2), "2 images in Temporary"
         assert tree_group2.data(3, Qt.DisplayRole) == str(3), "3 images in Archive"
 
-    def test_pictures_tree_trip_change_name(self, pydive_pictures, qtbot, monkeypatch):
+    def test_pictures_tree_trip_change_name(
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item & picture groups
         trip_item = picturesTree.topLevelItem(4)  # Korea
-        picture_group = pydive_pictures.repository.trips["Korea"]["IMG030"]
+        picture_group = pydive_repository.trips["Korea"]["IMG030"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(trip_item)
@@ -1270,14 +1287,15 @@ class TestUiPictures:
         assert "Korea" not in top_level_items, "Korea removed from the tree"
 
     def test_pictures_tree_trip_change_name_exists(
-        self, pydive_pictures, qtbot, monkeypatch
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item & picture groups
         trip_item = picturesTree.topLevelItem(4)  # Korea
-        picture_group = pydive_pictures.repository.trips["Korea"]["IMG030"]
+        picture_group = pydive_repository.trips["Korea"]["IMG030"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(trip_item)
@@ -1314,10 +1332,11 @@ class TestUiPictures:
         assert "Korea" not in top_level_items, "Korea removed from the tree"
 
     def test_pictures_tree_trip_wrong_action_name(
-        self, pydive_pictures, qtbot, monkeypatch
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Trigger the addition of an impossible action
         trip_item = picturesTree.topLevelItem(4)  # Korea
@@ -1326,14 +1345,17 @@ class TestUiPictures:
         with pytest.raises(ValueError):
             picturesTree.add_trip_action("", "", action_name, "", "", "")
 
-    def test_pictures_tree_picture_group_copy(self, pydive_pictures, qtbot):
+    def test_pictures_tree_picture_group_copy(
+        self, pydive_pictures, pydive_repository, qtbot
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(0)  # Malta's IMG001
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG001"]
+        picture_group = pydive_repository.trips["Malta"]["IMG001"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(picture_item)
@@ -1358,14 +1380,17 @@ class TestUiPictures:
         assert picture_item.data(2, Qt.DisplayRole) == str(2), "2 image in Temporary"
         assert picture_item.data(3, Qt.DisplayRole) == str(3), "3 image in Archive"
 
-    def test_pictures_tree_picture_group_convert(self, pydive_pictures, qtbot):
+    def test_pictures_tree_picture_group_convert(
+        self, pydive_pictures, pydive_repository, qtbot
+    ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(1)  # Malta's IMG002
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
 
         # Look for convert action
         picturesTree.generate_context_menu(picture_item)
@@ -1397,15 +1422,16 @@ class TestUiPictures:
         assert picture_item.data(3, Qt.DisplayRole) == str(3), "3 images in Archive"
 
     def test_pictures_tree_picture_group_change_trip(
-        self, pydive_pictures, qtbot, monkeypatch
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(1)  # Malta's IMG002
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(picture_item)
@@ -1435,7 +1461,7 @@ class TestUiPictures:
             os.path.join("Archive", "Malta", "Sélection", "IMG002.CR2"),
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
-        picture_group = pydive_pictures.repository.trips["Italy"]["IMG002"]
+        picture_group = pydive_repository.trips["Italy"]["IMG002"]
         # Wait until the new picture group has everything
         # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
         qtbot.waitUntil(lambda: "Archive" in picture_group.locations)
@@ -1465,15 +1491,16 @@ class TestUiPictures:
         assert picture_item.data(3, Qt.DisplayRole) == str(2), "2 images in Archive"
 
     def test_pictures_tree_picture_group_change_trip_target_exists(
-        self, pydive_pictures, qtbot, monkeypatch
+        self, pydive_pictures, pydive_repository, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Get tree item, trip & picture groups
         trip_item = picturesTree.topLevelItem(5)  # Malta
         picture_item = trip_item.child(1)  # Malta's IMG002
-        picture_group = pydive_pictures.repository.trips["Malta"]["IMG002"]
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
 
         # Look for "Change trip" action
         picturesTree.generate_context_menu(picture_item)
@@ -1503,7 +1530,7 @@ class TestUiPictures:
             os.path.join("Archive", "Malta", "Sélection", "IMG002.CR2"),
         ]
         self.helper_check_paths(action_name, new_files, removed_files)
-        picture_group = pydive_pictures.repository.trips["Georgia"]["IMG002"]
+        picture_group = pydive_repository.trips["Georgia"]["IMG002"]
         # Wait until the new picture group has everything
         # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
         qtbot.waitUntil(lambda: "Archive" in picture_group.locations, timeout=1000)
@@ -1537,7 +1564,8 @@ class TestUiPictures:
         self, pydive_pictures, qtbot, monkeypatch
     ):
         # Setup: get display
-        picturesTree = pydive_pictures.ui["picture_tree"]
+        left_column = pydive_pictures.layout().itemAt(0).widget()
+        picturesTree = left_column.layout().itemAt(2).widget()
 
         # Trigger the addition of an impossible action
         trip_item = picturesTree.topLevelItem(5)  # Malta

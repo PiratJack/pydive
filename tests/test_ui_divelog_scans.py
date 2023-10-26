@@ -16,7 +16,7 @@ class TestUiDivelogScans:
     def pydive_divelog_scans(self, qtbot, pydive_mainwindow, pydive_divelog):
         pydive_mainwindow.display_tab("DivelogScan")
 
-        yield pydive_mainwindow.layout.currentWidget().layout()
+        yield pydive_mainwindow.layout.currentWidget()
 
     def drag_drop(self, source, target):
         pos = target.pos()
@@ -32,15 +32,15 @@ class TestUiDivelogScans:
         return drop_event
 
     def test_divelogscans_display(self, pydive_divelog_scans):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Check overall structure
-        assert isinstance(divelogScanLayout, QtWidgets.QVBoxLayout), "Layout is OK"
-        assert divelogScanLayout.count() == 3, "Count of elements is OK"
+        assert isinstance(
+            pydive_divelog_scans.layout(), QtWidgets.QVBoxLayout
+        ), "Layout is OK"
+        assert pydive_divelog_scans.layout().count() == 3, "Count of elements is OK"
 
         # Check top part
         part = "Top part - "
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         assert isinstance(topLayout, QtWidgets.QHBoxLayout), part + "Layout is OK"
         assert topLayout.count() == 3, part + "Count of elements is OK"
         file_name = topLayout.itemAt(0).widget()
@@ -66,7 +66,7 @@ class TestUiDivelogScans:
 
         # Check middle part
         part = "Middle part - "
-        middleLayout = divelogScanLayout.itemAt(1).widget().layout()
+        middleLayout = pydive_divelog_scans.layout().itemAt(1).widget().layout()
         assert isinstance(middleLayout, QtWidgets.QHBoxLayout), part + "Layout is OK"
         assert middleLayout.count() == 2, part + "Count of elements is OK"
         picture_grid = middleLayout.itemAt(0).widget()
@@ -98,7 +98,7 @@ class TestUiDivelogScans:
 
         # Check bottom part
         part = "Bottom part - "
-        bottomLayout = divelogScanLayout.itemAt(2).widget().layout()
+        bottomLayout = pydive_divelog_scans.layout().itemAt(2).widget().layout()
         assert isinstance(bottomLayout, QtWidgets.QHBoxLayout), part + "Layout is OK"
         assert bottomLayout.count() == 5, part + "Count of elements is OK"
         folder_name = bottomLayout.itemAt(0).widget()
@@ -147,11 +147,9 @@ class TestUiDivelogScans:
     def test_divelogscans_display_with_divelog_target_folder(
         self, pydive_db, pydive_divelog_scans
     ):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Check folder path displays correct path
         part = "Bottom part - "
-        bottomLayout = divelogScanLayout.itemAt(2).widget().layout()
+        bottomLayout = pydive_divelog_scans.layout().itemAt(2).widget().layout()
         path_wrapper = bottomLayout.itemAt(1).widget()
         path_display = path_wrapper.layout().itemAt(0).widget()
         assert path_display.text() == os.path.join(pytest.BASE_FOLDER), (
@@ -159,17 +157,15 @@ class TestUiDivelogScans:
         )
 
     def test_divelogscans_load_picture(self, pydive_divelog_scans):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Load image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
         # Force reload of the same info (to check if it handles it well)
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
 
         # Check overall display
-        middleLayout = divelogScanLayout.itemAt(1).widget().layout()
+        middleLayout = pydive_divelog_scans.layout().itemAt(1).widget().layout()
         picture_grid = middleLayout.itemAt(0).widget()
         picture_grid_layout = picture_grid.layout()
         assert picture_grid_layout.columnCount() == 2, "Picture grid - Column count OK"
@@ -195,23 +191,21 @@ class TestUiDivelogScans:
         assert error.text() == "", part + "Error has no text"
 
     def test_divelogscans_load_picture_twice_then_error(self, pydive_divelog_scans):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Load image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
         path_change.pathSelected.emit(pytest.DIVELOG_FILE)
 
     def test_divelogscans_load_picture_error(self, pydive_divelog_scans):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Check overall structure
-        assert isinstance(divelogScanLayout, QtWidgets.QVBoxLayout), "Layout is OK"
-        assert divelogScanLayout.count() == 3, "Count of elements is OK"
+        assert isinstance(
+            pydive_divelog_scans.layout(), QtWidgets.QVBoxLayout
+        ), "Layout is OK"
+        assert pydive_divelog_scans.layout().count() == 3, "Count of elements is OK"
 
         # Load non-image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_FILE)
 
@@ -221,15 +215,13 @@ class TestUiDivelogScans:
         assert path_error.text() == "Source file could not be read", "Error text is OK"
 
     def test_divelogscans_link_picture_dive(self, pydive_divelog_scans):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Load image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
 
         # Get a dive (and select it for future use)
-        middleLayout = divelogScanLayout.itemAt(1).widget().layout()
+        middleLayout = pydive_divelog_scans.layout().itemAt(1).widget().layout()
         dive_tree = middleLayout.itemAt(1).widget()
         dive_item = dive_tree.topLevelItem(0)
         dive_tree.setCurrentItem(dive_item)
@@ -251,10 +243,8 @@ class TestUiDivelogScans:
         assert error.text() == "", "Dive error is empty"
 
     def test_divelogscans_choose_target(self, pydive_divelog_scans):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Get widgets
-        bottomLayout = divelogScanLayout.itemAt(2).widget().layout()
+        bottomLayout = pydive_divelog_scans.layout().itemAt(2).widget().layout()
         path_wrapper = bottomLayout.itemAt(1).widget()
         path_display = path_wrapper.layout().itemAt(0).widget()
         path_change = bottomLayout.itemAt(2).widget()
@@ -264,15 +254,13 @@ class TestUiDivelogScans:
         assert path_display.text() == pytest.BASE_FOLDER, "Path display updated"
 
     def test_divelogscans_validate(self, pydive_db, pydive_divelog_scans, qtbot):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Load image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
 
         # Get a dive (and select it for future use)
-        middleLayout = divelogScanLayout.itemAt(1).widget().layout()
+        middleLayout = pydive_divelog_scans.layout().itemAt(1).widget().layout()
         dive_tree = middleLayout.itemAt(1).widget()
         dive_item = dive_tree.topLevelItem(0)
         dive_tree.setCurrentItem(dive_item)
@@ -289,7 +277,7 @@ class TestUiDivelogScans:
         picture_container.dropEvent(drop_event)
 
         # Trigger the validation
-        bottomLayout = divelogScanLayout.itemAt(2).widget().layout()
+        bottomLayout = pydive_divelog_scans.layout().itemAt(2).widget().layout()
         validate = bottomLayout.itemAt(4).widget()
         qtbot.mouseClick(validate, Qt.LeftButton)
 
@@ -305,15 +293,13 @@ class TestUiDivelogScans:
     def test_divelogscans_validate_file_exists(
         self, pydive_db, pydive_divelog_scans, qtbot
     ):
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Load image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
 
         # Get a dive (and select it for future use)
-        middleLayout = divelogScanLayout.itemAt(1).widget().layout()
+        middleLayout = pydive_divelog_scans.layout().itemAt(1).widget().layout()
         dive_tree = middleLayout.itemAt(1).widget()
         dive_item = dive_tree.topLevelItem(0)
         dive_tree.setCurrentItem(dive_item)
@@ -329,7 +315,7 @@ class TestUiDivelogScans:
         picture_container.dropEvent(drop_event)
 
         # Trigger the validation twice, so that the target file already exists
-        bottomLayout = divelogScanLayout.itemAt(2).widget().layout()
+        bottomLayout = pydive_divelog_scans.layout().itemAt(2).widget().layout()
         validate = bottomLayout.itemAt(4).widget()
         qtbot.mouseClick(validate, Qt.LeftButton)
         qtbot.mouseClick(validate, Qt.LeftButton)
@@ -349,15 +335,13 @@ class TestUiDivelogScans:
         # Force screen refresh
         pydive_mainwindow.display_tab("DivelogScan")
 
-        divelogScanLayout = pydive_divelog_scans.layout()
-
         # Load image file
-        topLayout = divelogScanLayout.itemAt(0).widget().layout()
+        topLayout = pydive_divelog_scans.layout().itemAt(0).widget().layout()
         path_change = topLayout.itemAt(2).widget()
         path_change.pathSelected.emit(pytest.DIVELOG_SCAN_IMAGE)
 
         # Get a dive (and select it for future use)
-        middleLayout = divelogScanLayout.itemAt(1).widget().layout()
+        middleLayout = pydive_divelog_scans.layout().itemAt(1).widget().layout()
         dive_tree = middleLayout.itemAt(1).widget()
         dive_item = dive_tree.topLevelItem(0)
         dive_tree.setCurrentItem(dive_item)
@@ -373,7 +357,7 @@ class TestUiDivelogScans:
         picture_container.dropEvent(drop_event)
 
         # Trigger the validation
-        bottomLayout = divelogScanLayout.itemAt(2).widget().layout()
+        bottomLayout = pydive_divelog_scans.layout().itemAt(2).widget().layout()
         validate = bottomLayout.itemAt(4).widget()
         qtbot.mouseClick(validate, Qt.LeftButton)
 

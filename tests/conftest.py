@@ -248,9 +248,8 @@ def pydive_real_pictures():
 
 @pytest.fixture
 # qtbot is here to make sure we have a QApplication running
-def pydive_mainwindow(qtbot, pydive_db):
-    repository = models.repository.Repository(pydive_db)
-    mainwindow = controllers.mainwindow.MainWindow(pydive_db, repository)
+def pydive_mainwindow(qtbot, pydive_db, pydive_repository):
+    mainwindow = controllers.mainwindow.MainWindow(pydive_db, pydive_repository)
 
     yield mainwindow
 

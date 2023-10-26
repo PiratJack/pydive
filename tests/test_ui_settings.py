@@ -10,8 +10,6 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 from controllers.widgets.pathselectbutton import PathSelectButton
 from controllers.widgets.iconbutton import IconButton
 
-from models.storagelocation import StorageLocationType
-
 import sqlalchemy.orm.exc
 
 
@@ -21,27 +19,22 @@ class TestUiSettings:
         pydive_mainwindow.display_tab("Settings")
         self.all_files = pydive_fake_pictures
 
-        yield pydive_mainwindow.controllers["Settings"]
+        yield pydive_mainwindow.layout.currentWidget()
 
     def test_settings_location_list_display(self, pydive_settings, pydive_db):
         location = pydive_db.storagelocation_get_by_id(1)
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Check overall structure
         assert (
-            locationList.location_type == StorageLocationType["picture_folder"]
-        ), "Location list displays picture folders"
-        assert (
-            locationList.ui["layout"].columnCount() == 5
+            locationListLayout.columnCount() == 5
         ), "Locations have the right number of colums"
         assert (
-            locationList.ui["layout"].rowCount() == 7
+            locationListLayout.rowCount() == 7
         ), "Locations have the right number of rows"
 
         # Check name display
-        name_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        )
+        name_wrapper_layout = locationListLayout.itemAtPosition(1, 0).widget().layout()
         name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
         assert isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
@@ -50,7 +43,7 @@ class TestUiSettings:
         ), "Name field displays the expected data"
 
         # Check "change name" display
-        change_name_widget = locationList.ui["layout"].itemAtPosition(1, 1).widget()
+        change_name_widget = locationListLayout.itemAtPosition(1, 1).widget()
         change_name_button = change_name_widget.layout().currentWidget()
         assert isinstance(
             change_name_widget, QtWidgets.QWidget
@@ -60,9 +53,7 @@ class TestUiSettings:
         ), "Change name button is a IconButton"
 
         # Check path display
-        path_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        )
+        path_wrapper_layout = locationListLayout.itemAtPosition(1, 2).widget().layout()
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         assert (
@@ -70,32 +61,28 @@ class TestUiSettings:
         ), "Path field displays the expected data"
 
         # Check "change path" display
-        change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_path_widget = locationListLayout.itemAtPosition(1, 3).widget()
         assert isinstance(
             change_path_widget, PathSelectButton
         ), "Change path button is a PathSelectButton"
 
         # Check Delete display
-        delete_widget = locationList.ui["layout"].itemAtPosition(1, 4).widget()
+        delete_widget = locationListLayout.itemAtPosition(1, 4).widget()
         assert isinstance(delete_widget, IconButton), "Delete button is a IconButton"
 
         # Check "Add new" display
-        add_new_widget = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        add_new_widget = locationListLayout.itemAtPosition(6, 1).widget()
         assert isinstance(add_new_widget, IconButton), "Add new button is a IconButton"
 
     def test_settings_location_list_edit_name(self, pydive_settings, pydive_db, qtbot):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get name-related widgets
-        name_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        )
+        name_wrapper_layout = locationListLayout.itemAtPosition(1, 0).widget().layout()
         name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
 
-        name_change_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 1).widget().layout()
-        )
+        name_change_layout = locationListLayout.itemAtPosition(1, 1).widget().layout()
         name_change_start = name_change_layout.currentWidget()
 
         # Display edit fields
@@ -139,15 +126,11 @@ class TestUiSettings:
     def test_settings_location_list_edit_name_error(
         self, pydive_settings, pydive_db, qtbot
     ):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get name-related widgets
-        name_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        )
-        name_change_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 1).widget().layout()
-        )
+        name_wrapper_layout = locationListLayout.itemAtPosition(1, 0).widget().layout()
+        name_change_layout = locationListLayout.itemAtPosition(1, 1).widget().layout()
         name_change_start = name_change_layout.currentWidget()
 
         # Display edit fields
@@ -174,10 +157,10 @@ class TestUiSettings:
         assert location.name != "", "Name is not modified to empty"
 
     def test_settings_location_list_edit_path(self, pydive_settings, pydive_db):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get change path button
-        change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_path_widget = locationListLayout.itemAtPosition(1, 3).widget()
         assert (
             change_path_widget.target_type == "folder"
         ), "Path change looks for folders"
@@ -192,25 +175,21 @@ class TestUiSettings:
         ), "Path is updated in database"
 
         # New path is displayed
-        path_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        )
+        path_wrapper_layout = locationListLayout.itemAtPosition(1, 2).widget().layout()
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert path_widget.text() == "This is a new path", "Path is updated on display"
 
     def test_settings_location_list_edit_path_error(self, pydive_settings):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get change path button
-        change_path_widget = locationList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_path_widget = locationListLayout.itemAtPosition(1, 3).widget()
 
         # Simulating the actual dialog is impossible (it's OS-provided)
         change_path_widget.pathSelected.emit("")
 
         # Error message is displayed
-        path_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        )
+        path_wrapper_layout = locationListLayout.itemAtPosition(1, 2).widget().layout()
         error_widget = path_wrapper_layout.itemAt(1).widget()
         assert (
             error_widget.text() == "Missing storage location path"
@@ -219,10 +198,10 @@ class TestUiSettings:
     def test_settings_location_list_delete_cancel(
         self, pydive_settings, pydive_db, qtbot, monkeypatch
     ):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get delete button
-        delete_widget = locationList.ui["layout"].itemAtPosition(1, 4).widget()
+        delete_widget = locationListLayout.itemAtPosition(1, 4).widget()
 
         # Click delete, then "No" in the dialog
         monkeypatch.setattr(
@@ -235,10 +214,10 @@ class TestUiSettings:
     def test_settings_location_list_delete_confirm(
         self, pydive_settings, pydive_db, qtbot, monkeypatch
     ):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get delete button
-        delete_widget = locationList.ui["layout"].itemAtPosition(2, 4).widget()
+        delete_widget = locationListLayout.itemAtPosition(2, 4).widget()
 
         # Click delete, then "No" in the dialog
         monkeypatch.setattr(
@@ -249,35 +228,35 @@ class TestUiSettings:
             pydive_db.storagelocation_get_by_id(2)
 
         # Location no longer visible in UI
-        name = locationList.ui["layout"].itemAtPosition(2, 0)
+        name = locationListLayout.itemAtPosition(2, 0)
         assert name is None, "Location is deleted from UI"
 
     def test_settings_location_list_add_location_display(self, pydive_settings, qtbot):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get "add new" button
-        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        add_new = locationListLayout.itemAtPosition(6, 1).widget()
 
         # Display edit fields
         with qtbot.waitSignal(add_new.clicked, timeout=1000):
             qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # New fields are now displayed
-        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        name_wrapper = locationListLayout.itemAtPosition(6, 0).widget().layout()
         name_label = name_wrapper.itemAt(0).widget()
         assert isinstance(
             name_label, QtWidgets.QLineEdit
         ), "Add new - name is a QLineEdit"
         assert name_label.text() == "", "Add new - name field is empty"
 
-        path_wrapper = locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
+        path_wrapper = locationListLayout.itemAtPosition(6, 2).widget().layout()
         path_label = path_wrapper.itemAt(0).widget()
         assert isinstance(
             path_label, QtWidgets.QLineEdit
         ), "Add new - path is a QLineEdit"
         assert path_label.text() == "", "Add new - path field is empty"
 
-        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        path_change = locationListLayout.itemAtPosition(6, 3).widget()
         assert isinstance(
             path_change, IconButton
         ), "Add new - path change is an IconButton"
@@ -285,28 +264,28 @@ class TestUiSettings:
     def test_settings_location_list_add_location_save(
         self, pydive_settings, pydive_db, qtbot
     ):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get "add new" button
-        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        add_new = locationListLayout.itemAtPosition(6, 1).widget()
 
         # Display edit fields
         qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # Enter a new name
-        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        name_wrapper = locationListLayout.itemAtPosition(6, 0).widget().layout()
         name_label = name_wrapper.itemAt(0).widget()
 
         name_label.setText("New location")
 
         # Enter a new path
-        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        path_change = locationListLayout.itemAtPosition(6, 3).widget()
         assert path_change.target_type == "folder", "Path change looks for folders"
         # Simulating the actual dialog is impossible (it's OS-provided)
         path_change.pathSelected.emit("New path")
 
         # Save changes
-        save_button = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+        save_button = locationListLayout.itemAtPosition(6, 4).widget()
         assert isinstance(save_button, IconButton), "Save button is an IconButton"
         qtbot.mouseClick(save_button, Qt.LeftButton)
 
@@ -319,12 +298,10 @@ class TestUiSettings:
         ), "Location type is saved in database"
 
         # Display is now similar as other locations
-        assert locationList.ui["layout"].rowCount() == 8, "New line is added"
+        assert locationListLayout.rowCount() == 8, "New line is added"
 
         # Check name display
-        name_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
-        )
+        name_wrapper_layout = locationListLayout.itemAtPosition(6, 0).widget().layout()
         name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
         assert isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
@@ -333,7 +310,7 @@ class TestUiSettings:
         ), "Name field displays the expected data"
 
         # Check "change name" display
-        change_name_widget = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        change_name_widget = locationListLayout.itemAtPosition(6, 1).widget()
         assert isinstance(
             change_name_widget, QtWidgets.QWidget
         ), "Change name field is a QWidget"
@@ -343,9 +320,7 @@ class TestUiSettings:
         ), "Change name button is a IconButton"
 
         # Check path display
-        path_wrapper_layout = (
-            locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
-        )
+        path_wrapper_layout = locationListLayout.itemAtPosition(6, 2).widget().layout()
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         assert (
@@ -353,41 +328,41 @@ class TestUiSettings:
         ), "Path field displays the expected data"
 
         # Check "change path" display
-        change_path_widget = locationList.ui["layout"].itemAtPosition(6, 3).widget()
+        change_path_widget = locationListLayout.itemAtPosition(6, 3).widget()
         assert isinstance(
             change_path_widget, PathSelectButton
         ), "Change path button is a PathSelectButton"
 
         # Check Delete display
-        delete_widget = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+        delete_widget = locationListLayout.itemAtPosition(6, 4).widget()
         assert isinstance(delete_widget, IconButton), "Delete button is a IconButton"
 
     def test_settings_location_list_add_new_twice(self, pydive_settings, qtbot):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Get "add new" button
-        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        add_new = locationListLayout.itemAtPosition(6, 1).widget()
 
         # Display edit fields
         qtbot.mouseClick(add_new, Qt.LeftButton)
         qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # "New location" fields are visible only once
-        assert locationList.ui["layout"].rowCount() == 8, "Only 1 line is added"
+        assert locationListLayout.rowCount() == 8, "Only 1 line is added"
 
     def test_settings_location_list_add_with_errors(self, pydive_settings, qtbot):
-        locationList = pydive_settings.locations_list
+        locationListLayout = pydive_settings.layout().itemAt(1).widget().layout()
 
         # Click "Add new"
-        add_new = locationList.ui["layout"].itemAtPosition(6, 1).widget()
+        add_new = locationListLayout.itemAtPosition(6, 1).widget()
         qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # New fields are displayed
-        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
+        name_wrapper = locationListLayout.itemAtPosition(6, 0).widget().layout()
         name_label = name_wrapper.itemAt(0).widget()
-        path_wrapper = locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
-        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
-        save_button = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+        path_wrapper = locationListLayout.itemAtPosition(6, 2).widget().layout()
+        path_change = locationListLayout.itemAtPosition(6, 3).widget()
+        save_button = locationListLayout.itemAtPosition(6, 4).widget()
 
         # Save with blank fields & check errors
         qtbot.mouseClick(save_button, Qt.LeftButton)
@@ -406,10 +381,10 @@ class TestUiSettings:
 
         # Click "Add new", all errors should be hidden
         qtbot.mouseClick(add_new, Qt.LeftButton)
-        name_wrapper = locationList.ui["layout"].itemAtPosition(6, 0).widget().layout()
-        path_wrapper = locationList.ui["layout"].itemAtPosition(6, 2).widget().layout()
-        path_change = locationList.ui["layout"].itemAtPosition(6, 3).widget()
-        save_button = locationList.ui["layout"].itemAtPosition(6, 4).widget()
+        name_wrapper = locationListLayout.itemAtPosition(6, 0).widget().layout()
+        path_wrapper = locationListLayout.itemAtPosition(6, 2).widget().layout()
+        path_change = locationListLayout.itemAtPosition(6, 3).widget()
+        save_button = locationListLayout.itemAtPosition(6, 4).widget()
 
         assert name_wrapper.itemAt(1) is None, "Name error is hidden"
         assert path_wrapper.itemAt(1) is None, "Path error is hidden"
@@ -441,23 +416,18 @@ class TestUiSettings:
 
     def test_settings_divelog_display(self, pydive_settings, pydive_db):
         divelog = pydive_db.storagelocation_get_by_id(6)
-        divelogList = pydive_settings.divelog_list
+        divelogListLayout = pydive_settings.layout().itemAt(4).widget().layout()
 
         # Check overall structure
         assert (
-            divelogList.location_type == StorageLocationType["file"]
-        ), "Dive log list displays files"
-        assert (
-            divelogList.ui["layout"].columnCount() == 5
+            divelogListLayout.columnCount() == 5
         ), "Dive log display has the right number of colums"
         assert (
-            divelogList.ui["layout"].rowCount() == 2
+            divelogListLayout.rowCount() == 2
         ), "Dive log display has the right number of rows"
 
         # Check name display
-        name_wrapper_layout = (
-            divelogList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        )
+        name_wrapper_layout = divelogListLayout.itemAtPosition(1, 0).widget().layout()
         name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
         assert isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
@@ -466,7 +436,7 @@ class TestUiSettings:
         ), "Name field displays the expected data"
 
         # Check "change name" display
-        change_name_widget = divelogList.ui["layout"].itemAtPosition(1, 1).widget()
+        change_name_widget = divelogListLayout.itemAtPosition(1, 1).widget()
         assert isinstance(
             change_name_widget, QtWidgets.QWidget
         ), "Change name field is a QWidget"
@@ -476,9 +446,7 @@ class TestUiSettings:
         ), "Change name button is a IconButton"
 
         # Check path display
-        path_wrapper_layout = (
-            divelogList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        )
+        path_wrapper_layout = divelogListLayout.itemAtPosition(1, 2).widget().layout()
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert isinstance(path_widget, QtWidgets.QLineEdit), "Path field is a QLineEdit"
         assert (
@@ -486,28 +454,24 @@ class TestUiSettings:
         ), "Path field displays the expected data"
 
         # Check "change path" display
-        change_path_widget = divelogList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_path_widget = divelogListLayout.itemAtPosition(1, 3).widget()
         assert isinstance(
             change_path_widget, PathSelectButton
         ), "Change path button is a PathSelectButton"
 
         # Check Delete display
-        delete_widget = divelogList.ui["layout"].itemAtPosition(1, 4)
+        delete_widget = divelogListLayout.itemAtPosition(1, 4)
         assert delete_widget == None, "Impossible to delete divelog file"
 
     def test_settings_divelog_edit_name(self, pydive_settings, pydive_db, qtbot):
-        divelogList = pydive_settings.divelog_list
+        divelogListLayout = pydive_settings.layout().itemAt(4).widget().layout()
 
         # Get name-related widgets
-        name_wrapper_layout = (
-            divelogList.ui["layout"].itemAtPosition(1, 0).widget().layout()
-        )
+        name_wrapper_layout = divelogListLayout.itemAtPosition(1, 0).widget().layout()
         name_layout = name_wrapper_layout.itemAt(0).widget().layout()
         name_label = name_layout.currentWidget()
 
-        name_change_layout = (
-            divelogList.ui["layout"].itemAtPosition(1, 1).widget().layout()
-        )
+        name_change_layout = divelogListLayout.itemAtPosition(1, 1).widget().layout()
         name_change_start = name_change_layout.currentWidget()
         assert isinstance(
             name_change_start, IconButton
@@ -552,10 +516,10 @@ class TestUiSettings:
         ), "Save button replaced by Edit button"
 
     def test_settings_divelog_edit_path(self, pydive_settings, pydive_db):
-        divelogList = pydive_settings.divelog_list
+        divelogListLayout = pydive_settings.layout().itemAt(4).widget().layout()
 
         # Get change path button
-        change_path_widget = divelogList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_path_widget = divelogListLayout.itemAtPosition(1, 3).widget()
         assert change_path_widget.target_type == "file"
 
         # Simulating the actual dialog is impossible (it's OS-provided)
@@ -566,33 +530,31 @@ class TestUiSettings:
         assert divelog.path == "This is a new path", "Path is updated in database"
 
         # New path is displayed
-        path_wrapper_layout = (
-            divelogList.ui["layout"].itemAtPosition(1, 2).widget().layout()
-        )
+        path_wrapper_layout = divelogListLayout.itemAtPosition(1, 2).widget().layout()
         path_widget = path_wrapper_layout.itemAt(0).widget()
         assert path_widget.text() == "This is a new path", "Path is updated on display"
 
     def test_settings_method_display(self, pydive_settings, pydive_db):
         method = pydive_db.conversionmethods_get_by_name("DarkTherapee")
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Check overall structure
         assert (
-            methodList.ui["layout"].columnCount() == 7
+            methodListLayout.columnCount() == 7
         ), "Conversion method display has the right number of colums"
         assert (
-            methodList.ui["layout"].rowCount() == 4
+            methodListLayout.rowCount() == 4
         ), "Conversion method display has the right number of rows"
 
         # Check name display
-        name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
+        name_wrapper = methodListLayout.itemAtPosition(1, 0).widget()
         name_stack = name_wrapper.layout().itemAt(0).widget()
         name_label = name_stack.layout().currentWidget()
         assert isinstance(name_label, QtWidgets.QLabel), "Name field is a QLabel"
         assert name_label.text() == method.name, "Name field displays the expected data"
 
         # Check "change name" display
-        change_name_widget = methodList.ui["layout"].itemAtPosition(1, 1).widget()
+        change_name_widget = methodListLayout.itemAtPosition(1, 1).widget()
         assert isinstance(
             change_name_widget, QtWidgets.QWidget
         ), "Change name field is a QWidget"
@@ -602,7 +564,7 @@ class TestUiSettings:
         ), "Change name button is a IconButton"
 
         # Check suffix display
-        suffix_wrapper = methodList.ui["layout"].itemAtPosition(1, 2).widget()
+        suffix_wrapper = methodListLayout.itemAtPosition(1, 2).widget()
         suffix_stack = suffix_wrapper.layout().itemAt(0).widget()
         suffix_label = suffix_stack.layout().currentWidget()
         assert isinstance(suffix_label, QtWidgets.QLabel), "Suffix field is a QLabel"
@@ -611,7 +573,7 @@ class TestUiSettings:
         ), "Suffix field displays the expected data"
 
         # Check "change suffix" display
-        change_suffix_widget = methodList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_suffix_widget = methodListLayout.itemAtPosition(1, 3).widget()
         assert isinstance(
             change_suffix_widget, QtWidgets.QWidget
         ), "Change suffix field is a QWidget"
@@ -621,7 +583,7 @@ class TestUiSettings:
         ), "Change suffix button is a IconButton"
 
         # Check command display
-        command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
+        command_wrapper = methodListLayout.itemAtPosition(1, 4).widget()
         command_stack = command_wrapper.layout().itemAt(0).widget()
         command_label = command_stack.layout().currentWidget()
         assert isinstance(command_label, QtWidgets.QLabel), "Command field is a QLabel"
@@ -630,7 +592,7 @@ class TestUiSettings:
         ), "Command field displays the expected data"
 
         # Check "change command" display
-        change_command_widget = methodList.ui["layout"].itemAtPosition(1, 3).widget()
+        change_command_widget = methodListLayout.itemAtPosition(1, 3).widget()
         assert isinstance(
             change_command_widget, QtWidgets.QWidget
         ), "Change command field is a QWidget"
@@ -640,24 +602,22 @@ class TestUiSettings:
         ), "Change command button is a IconButton"
 
         # Check Delete display
-        delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
+        delete_widget = methodListLayout.itemAtPosition(1, 6).widget()
         assert isinstance(delete_widget, IconButton), "Delete button is a IconButton"
 
         # Check "Add new" display
-        add_new_widget = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        add_new_widget = methodListLayout.itemAtPosition(3, 1).widget()
         assert isinstance(add_new_widget, IconButton), "Add new button is a IconButton"
 
     def test_settings_method_edit_name(self, pydive_settings, pydive_db, qtbot):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get name-related widgets
-        name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
+        name_wrapper = methodListLayout.itemAtPosition(1, 0).widget()
         name_stack = name_wrapper.layout().itemAt(0).widget()
         name_label = name_stack.layout().currentWidget()
 
-        name_change_layout = (
-            methodList.ui["layout"].itemAtPosition(1, 1).widget().layout()
-        )
+        name_change_layout = methodListLayout.itemAtPosition(1, 1).widget().layout()
         name_change_start = name_change_layout.currentWidget()
 
         # Display edit fields
@@ -701,15 +661,13 @@ class TestUiSettings:
     def test_settings_method_edit_name_empty_error(
         self, pydive_settings, pydive_db, qtbot
     ):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get name-related widgets
-        name_wrapper = methodList.ui["layout"].itemAtPosition(1, 0).widget()
+        name_wrapper = methodListLayout.itemAtPosition(1, 0).widget()
         name_stack = name_wrapper.layout().itemAt(0).widget()
 
-        name_change_layout = (
-            methodList.ui["layout"].itemAtPosition(1, 1).widget().layout()
-        )
+        name_change_layout = methodListLayout.itemAtPosition(1, 1).widget().layout()
         name_change_start = name_change_layout.currentWidget()
 
         # Display edit fields
@@ -732,16 +690,14 @@ class TestUiSettings:
         assert method.name != "", "Name is not modified to empty"
 
     def test_settings_method_edit_suffix(self, pydive_settings, pydive_db, qtbot):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get suffix-related widgets
-        suffix_wrapper = methodList.ui["layout"].itemAtPosition(1, 2).widget()
+        suffix_wrapper = methodListLayout.itemAtPosition(1, 2).widget()
         suffix_stack = suffix_wrapper.layout().itemAt(0).widget()
         suffix_label = suffix_stack.layout().currentWidget()
 
-        suffix_change_layout = (
-            methodList.ui["layout"].itemAtPosition(1, 3).widget().layout()
-        )
+        suffix_change_layout = methodListLayout.itemAtPosition(1, 3).widget().layout()
         suffix_change_start = suffix_change_layout.currentWidget()
 
         # Display edit fields
@@ -783,16 +739,14 @@ class TestUiSettings:
         ), "Save button replaced by Edit button"
 
     def test_settings_method_edit_command(self, pydive_settings, pydive_db, qtbot):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get command-related widgets
-        command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
+        command_wrapper = methodListLayout.itemAtPosition(1, 4).widget()
         command_stack = command_wrapper.layout().itemAt(0).widget()
         command_label = command_stack.layout().currentWidget()
 
-        command_change_layout = (
-            methodList.ui["layout"].itemAtPosition(1, 5).widget().layout()
-        )
+        command_change_layout = methodListLayout.itemAtPosition(1, 5).widget().layout()
         command_change_start = command_change_layout.currentWidget()
 
         # Display edit fields
@@ -840,15 +794,13 @@ class TestUiSettings:
     def test_settings_method_edit_command_empty_error(
         self, pydive_settings, pydive_db, qtbot
     ):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get command-related widgets
-        command_wrapper = methodList.ui["layout"].itemAtPosition(1, 4).widget()
+        command_wrapper = methodListLayout.itemAtPosition(1, 4).widget()
         command_stack = command_wrapper.layout().itemAt(0).widget()
 
-        command_change_layout = (
-            methodList.ui["layout"].itemAtPosition(1, 5).widget().layout()
-        )
+        command_change_layout = methodListLayout.itemAtPosition(1, 5).widget().layout()
         command_change_start = command_change_layout.currentWidget()
 
         # Display edit fields
@@ -875,10 +827,10 @@ class TestUiSettings:
     def test_settings_method_delete_cancel(
         self, pydive_settings, pydive_db, qtbot, monkeypatch
     ):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get delete button
-        delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
+        delete_widget = methodListLayout.itemAtPosition(1, 6).widget()
 
         # Click delete, then "No" in the dialog
         monkeypatch.setattr(
@@ -891,10 +843,10 @@ class TestUiSettings:
     def test_settings_method_delete_confirm(
         self, pydive_settings, pydive_db, qtbot, monkeypatch
     ):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Get delete button
-        delete_widget = methodList.ui["layout"].itemAtPosition(1, 6).widget()
+        delete_widget = methodListLayout.itemAtPosition(1, 6).widget()
 
         # Click delete, then "No" in the dialog
         monkeypatch.setattr(
@@ -905,22 +857,22 @@ class TestUiSettings:
             pydive_db.conversionmethods_get_by_name("DarkTherapee")
 
         # Location no longer visible in UI
-        name = methodList.ui["layout"].itemAtPosition(1, 0)
+        name = methodListLayout.itemAtPosition(1, 0)
         assert name is None, "Method is deleted from UI"
 
     def test_settings_method_add_ok(self, pydive_settings, pydive_db, qtbot):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Click "Add new"
-        add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        add_new = methodListLayout.itemAtPosition(3, 1).widget()
         qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # New fields are displayed
-        name_wrapper = methodList.ui["layout"].itemAtPosition(3, 0).widget()
+        name_wrapper = methodListLayout.itemAtPosition(3, 0).widget()
         name_edit = name_wrapper.layout().itemAt(0).widget()
-        suffix_wrapper = methodList.ui["layout"].itemAtPosition(3, 2).widget()
+        suffix_wrapper = methodListLayout.itemAtPosition(3, 2).widget()
         suffix_edit = suffix_wrapper.layout().itemAt(0).widget()
-        command_wrapper = methodList.ui["layout"].itemAtPosition(3, 4).widget()
+        command_wrapper = methodListLayout.itemAtPosition(3, 4).widget()
         command_edit = command_wrapper.layout().itemAt(0).widget()
 
         # Input some data and save
@@ -932,7 +884,7 @@ class TestUiSettings:
         name_edit.setText(fields["name"])
         suffix_edit.setText(fields["suffix"])
         command_edit.setText(fields["command"])
-        save_button = methodList.ui["layout"].itemAtPosition(3, 6).widget()
+        save_button = methodListLayout.itemAtPosition(3, 6).widget()
         qtbot.mouseClick(save_button, Qt.LeftButton)
 
         # Data is saved in DB
@@ -941,28 +893,28 @@ class TestUiSettings:
         assert method.command == fields["command"], "Command is saved in DB"
 
         # Check display of the new command
-        assert methodList.ui["layout"].rowCount() == 5, "Row count is correct"
+        assert methodListLayout.rowCount() == 5, "Row count is correct"
         for column, field in enumerate(fields.keys()):
-            wrapper = methodList.ui["layout"].itemAtPosition(3, column * 2).widget()
+            wrapper = methodListLayout.itemAtPosition(3, column * 2).widget()
             stack = wrapper.layout().itemAt(0).widget()
             label = stack.layout().currentWidget()
             assert label.text() == fields[field], "Data is displayed properly"
 
     def test_settings_method_add_with_errors(self, pydive_settings, qtbot):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Click "Add new"
-        add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        add_new = methodListLayout.itemAtPosition(3, 1).widget()
         qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # New fields are displayed
-        name_wrapper = methodList.ui["layout"].itemAtPosition(3, 0).widget()
+        name_wrapper = methodListLayout.itemAtPosition(3, 0).widget()
         name_edit = name_wrapper.layout().itemAt(0).widget()
-        command_wrapper = methodList.ui["layout"].itemAtPosition(3, 4).widget()
+        command_wrapper = methodListLayout.itemAtPosition(3, 4).widget()
         command_edit = command_wrapper.layout().itemAt(0).widget()
 
         # Save with blank fields & check errors
-        save_button = methodList.ui["layout"].itemAtPosition(3, 6).widget()
+        save_button = methodListLayout.itemAtPosition(3, 6).widget()
         qtbot.mouseClick(save_button, Qt.LeftButton)
 
         assert name_wrapper.layout().itemAt(1) is not None, "Name error is displayed"
@@ -981,10 +933,10 @@ class TestUiSettings:
 
         # Click "Add new", all errors should be hidden
         qtbot.mouseClick(add_new, Qt.LeftButton)
-        name_wrapper = methodList.ui["layout"].itemAtPosition(3, 0).widget()
+        name_wrapper = methodListLayout.itemAtPosition(3, 0).widget()
         name_layout = name_wrapper.layout()
         name_edit = name_layout.itemAt(0).widget()
-        command_wrapper = methodList.ui["layout"].itemAtPosition(3, 4).widget()
+        command_wrapper = methodListLayout.itemAtPosition(3, 4).widget()
         command_layout = command_wrapper.layout()
         command_edit = command_layout.itemAt(0).widget()
 
@@ -1007,15 +959,15 @@ class TestUiSettings:
         assert command_layout.itemAt(1) is None, "Command error is hidden"
 
     def test_settings_method_add_new_twice(self, pydive_settings, qtbot):
-        methodList = pydive_settings.conversion_methods_list
+        methodListLayout = pydive_settings.layout().itemAt(7).widget().layout()
 
         # Click "Add new" twice
-        add_new = methodList.ui["layout"].itemAtPosition(3, 1).widget()
+        add_new = methodListLayout.itemAtPosition(3, 1).widget()
         qtbot.mouseClick(add_new, Qt.LeftButton)
         qtbot.mouseClick(add_new, Qt.LeftButton)
 
         # "New location" fields are visible only once
-        assert methodList.ui["layout"].rowCount() == 5, "Only 1 line is added"
+        assert methodListLayout.rowCount() == 5, "Only 1 line is added"
 
 
 if __name__ == "__main__":
