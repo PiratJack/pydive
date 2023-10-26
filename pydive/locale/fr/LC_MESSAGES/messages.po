@@ -197,6 +197,9 @@ msgstr "Veuillez choisir un dossier cible"
 msgid "Please confirm"
 msgstr "Veuillez confirmer"
 
+msgid "Please select a divelog file in the settings screen"
+msgstr "Veuillez choisir un fichier d'historique de plongées dans l'écran de paramètres"
+
 msgid "Progress"
 msgstr "Avancement"
 
@@ -245,6 +248,12 @@ msgstr "Tâche annulée {short_path} - {target_file}"
 
 msgid "Tasks"
 msgstr "Tâches"
+
+msgid "The divelog file could not be read"
+msgstr "Le fichier d'historique de plongée n'a pu être lu"
+
+msgid "The divelog is not a file"
+msgstr "Le fichier d'historique de plongée n'est pas un fichier"
 
 msgid "The element to delete is not a file"
 msgstr "L'élément à supprimer n'est pas un fichier"

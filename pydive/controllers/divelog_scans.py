@@ -721,10 +721,12 @@ class DivelogScanController:
 
         # Reload divelog data
         divelog = self.database.storagelocations_get_divelog()
-        self.divelog_path = divelog[0].path
-        self.divelog.load_dives(self.divelog_path)
-
-        self.dive_tree.fill_tree()
+        self.divelog_path = divelog[0].path if divelog[0].path != " " else None
+        try:
+            self.divelog.load_dives(self.divelog_path)
+            self.dive_tree.fill_tree()
+        except (IOError, ValueError) as e:
+            self.display_scan_file_error(e.args[0])
 
         # Reload divelog scan target folder
         target_folder = self.database.storagelocations_get_target_scan_folder()

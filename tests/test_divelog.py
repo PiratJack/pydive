@@ -30,14 +30,25 @@ class TestDiveLog:
         assert trip.start_date == start_date, "Dive start time correct"
 
     def test_load_folder(self, pydive_divelog):
-        # This will reset the loaded dives
-        pydive_divelog.load_dives(pytest.BASE_FOLDER)
-        assert len(pydive_divelog.dives) == 0, "Dives list is reset"
+        with pytest.raises(IOError) as cm:
+            pydive_divelog.load_dives(pytest.BASE_FOLDER)
+        assert cm.value.args[0] == "The divelog is not a file", "Exception is raised"
 
     def test_load_wrong_file(self, pydive_divelog):
-        # This will reset the loaded dives
-        pydive_divelog.load_dives(pytest.DIVELOG_SCAN_IMAGE)
-        assert len(pydive_divelog.dives) == 0, "Dives list is reset"
+        with pytest.raises(ValueError) as cm:
+            pydive_divelog.load_dives(pytest.DIVELOG_SCAN_IMAGE)
+        assert (
+            cm.value.args[0] == "The divelog file could not be read"
+        ), "Exception is raised"
+
+    def test_load_empty_file(self, pydive_divelog):
+        # Resetting it, as it exists in the DB
+        pydive_divelog.file_path = None
+        with pytest.raises(ValueError) as cm:
+            pydive_divelog.load_dives("")
+        assert (
+            cm.value.args[0] == "Please select a divelog file in the settings screen"
+        ), "Exception is raised"
 
 
 if __name__ == "__main__":

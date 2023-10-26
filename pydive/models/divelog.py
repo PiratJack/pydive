@@ -42,19 +42,20 @@ class DiveLog:
         logger.debug("DiveLog.init")
         self.file_path = divelog_file
         self.dives = []
-        self.load_dives()
+        if self.file_path:
+            self.load_dives()
 
     def load_dives(self, path=None):
         """Loads all dives from the stored divelog file"""
         # Find all pictures
-        logger.info("DiveLog.load_dives")
+        logger.info(f"DiveLog.load_dives {path}")
         self.dives = []
         if path:
             self.file_path = path
         if not self.file_path:
-            return
+            raise ValueError(_("Please select a divelog file in the settings screen"))
         if not os.path.isfile(self.file_path):
-            return
+            raise IOError(_("The divelog is not a file"))
         try:
             xml_tree = xml.etree.ElementTree.parse(self.file_path)
             xml_root = xml_tree.getroot()
@@ -66,7 +67,7 @@ class DiveLog:
                 elif child.tag == "trip":
                     self.dives.append(DiveTrip(child))
         except:
-            pass
+            raise ValueError(_("The divelog file could not be read"))
 
 
 class DiveTrip:

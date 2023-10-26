@@ -180,6 +180,9 @@ msgstr ""
 msgid "Please confirm"
 msgstr ""
 
+msgid "Please select a divelog file in the settings screen"
+msgstr ""
+
 msgid "Progress"
 msgstr ""
 
@@ -227,6 +230,12 @@ msgid "Task cancelled {short_path} - {target_file}"
 msgstr ""
 
 msgid "Tasks"
+msgstr ""
+
+msgid "The divelog file could not be read"
+msgstr ""
+
+msgid "The divelog is not a file"
 msgstr ""
 
 msgid "The element to delete is not a file"
