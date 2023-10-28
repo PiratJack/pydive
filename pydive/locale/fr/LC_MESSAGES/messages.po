@@ -14,6 +14,9 @@ msgstr ""
 msgid "Cancel"
 msgstr "Annuler"
 
+msgid "Categories"
+msgstr "Catégories"
+
 msgid "Change name to ..."
 msgstr "Renommer ..."
 
@@ -122,6 +125,9 @@ msgstr "Survoler pour le détail des erreurs"
 
 msgid "ID"
 msgstr "ID"
+
+msgid "Icon"
+msgstr "Icône"
 
 msgid "Image folders"
 msgstr "Dossiers d'image"
@@ -268,6 +274,9 @@ msgstr "Le fichier à supprimer n'existe pas"
 #, python-brace-format
 msgid "The file to delete does not exist: {short_path} - {path}"
 msgstr "Le fichier à supprimer n'existe pas: {short_path} - {path}"
+
+msgid "The selected icon is invalid"
+msgstr "L'icône est invalide"
 
 msgid "Total"
 msgstr "Total"
