@@ -25,7 +25,7 @@ class Category(Base):
         Unique ID
     name : str
         The name that should be displayed in the screens
-    path : str
+    relative_path : str
         The relative path of the category
     icon_path : str
         The icon path to display for this category
@@ -42,7 +42,7 @@ class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
-    path = Column(String(250), nullable=False)
+    relative_path = Column(String(250), nullable=False)
     icon_path = Column(String(250), nullable=True)
 
     @sqlalchemy.orm.validates("name")
@@ -59,7 +59,7 @@ class Category(Base):
             )
         return value
 
-    @sqlalchemy.orm.validates("path")
+    @sqlalchemy.orm.validates("relative_path")
     def validate_type(self, key, value):
         self.validate_missing_field(key, value)
         value = value.strip(os.path.sep)
@@ -76,7 +76,7 @@ class Category(Base):
 
     @sqlalchemy.orm.validates("icon_path")
     def validate_path(self, key, value):
-        if len(value) > 250:
+        if value and len(value) > 250:
             raise ValidationException(
                 _("Max length for category {field} is 250 characters").format(
                     field=key
@@ -94,4 +94,4 @@ class Category(Base):
         return value
 
     def __repr__(self):
-        return f"{self.name} @ {self.path}"
+        return f"{self.name} @ {self.relative_path}"

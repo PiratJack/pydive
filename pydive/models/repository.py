@@ -1130,7 +1130,7 @@ class ChangeTripProcess(QtCore.QRunnable, ProcessScaffold):
         self.target_folder = os.path.join(
             picture.location.path,
             target_trip,
-            picture.category.path if picture.category else "",
+            picture.category.relative_path if picture.category else "",
         )
         self.target_file = os.path.join(self.target_folder, picture.filename)
 

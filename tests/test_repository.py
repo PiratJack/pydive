@@ -137,11 +137,11 @@ class TestRepository:
         assert cm.value.args[0] == "recognition failed", test
 
     def test_recognition_with_category_collision(self, pydive_repository, pydive_db):
-        test = "Add a storage location: subfolder of existing folder"
+        test = "Add a category: subfolder of existing folder"
         new_category = Category(
             id=999,
             name="Vrac",
-            path="lection",
+            relative_path="lection",
         )
         pydive_db.session.add(new_category)
         pydive_db.session.commit()

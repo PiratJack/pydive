@@ -593,7 +593,7 @@ class PicturesTree(BaseTreeWidget):
             pictures = picture_group.locations.get(column["name"], [])
             if pictures:
                 labels = [
-                    os.path.join(p.category.path, p.filename)
+                    os.path.join(p.category.relative_path, p.filename)
                     if p.category
                     else p.filename
                     for p in pictures

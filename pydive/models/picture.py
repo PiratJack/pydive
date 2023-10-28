@@ -82,7 +82,9 @@ class Picture:
             location = storage_location[0]
             self.trip = os.path.dirname(path)[len(location.path) :].strip(os.path.sep)
             self.category = ""
-            matching_categories = [c for c in categories if self.trip.endswith(c.path)]
+            matching_categories = [
+                c for c in categories if self.trip.endswith(c.relative_path)
+            ]
             if matching_categories:
                 if len(matching_categories) != 1:
                     logger.warning(
@@ -90,7 +92,7 @@ class Picture:
                     )
                     raise StorageLocationCollision("recognition failed", path)
                 self.category = matching_categories[0]
-                self.trip = self.trip.removesuffix(self.category.path).strip(
+                self.trip = self.trip.removesuffix(self.category.relative_path).strip(
                     os.path.sep
                 )
             self.location = location

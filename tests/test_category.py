@@ -18,7 +18,7 @@ class TestCategory:
         # Get one and check its attributes
         category = pydive_db.category_get_by_name("Top")
         assert type(category) == Category, "There is a single category with name Top"
-        assert category.path == "Sélection", "The category has the right path"
+        assert category.relative_path == "Sélection", "The category has the right path"
         assert (
             str(category) == "Top @ Sélection"
         ), "The category has the right string representation"
@@ -27,14 +27,14 @@ class TestCategory:
         category = Category(
             id=3,
             name="New_item",
-            path="/New_item/",
+            relative_path="/New_item/",
             icon_path="/path/to/icon.jpg",
         )
 
         # Test forbidden values
         forbidden_values = {
             "name": ["", None, "a" * 251],
-            "path": ["", None, "a" * 251],
+            "relative_path": ["", None, "a" * 251],
             "icon_path": ["a" * 251],
         }
 

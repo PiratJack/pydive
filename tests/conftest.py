@@ -112,12 +112,12 @@ def pydive_db(pydive_empty_db):
             Category(
                 id=1,
                 name="Top",
-                path="Sélection",
+                relative_path="Sélection",
             ),
             Category(
                 id=2,
                 name="Bof",
-                path="Bof",
+                relative_path="Bof",
             ),
         ]
     )
