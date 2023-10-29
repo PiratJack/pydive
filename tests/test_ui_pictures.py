@@ -21,7 +21,7 @@ class TestUiPictures:
     }
 
     @pytest.fixture
-    def pydive_pictures(self, qtbot, pydive_mainwindow, pydive_real_pictures):
+    def pydive_pictures(self, pydive_mainwindow, pydive_real_pictures):
         pydive_mainwindow.display_tab("Pictures")
         pydive_mainwindow.controllers["Pictures"].on_load_pictures()
         self.all_files = pydive_real_pictures

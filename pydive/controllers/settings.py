@@ -1273,15 +1273,16 @@ class CategoriesList:
         self.ui["layout"].addWidget(category["icon_wrapper"], row, 4)
 
         category["icon_change"] = PathSelectButton(
-            QtGui.QIcon(category["model"].icon_path),
+            QtGui.QIcon(category["model"].icon),
             self.ui["main"],
             "file",
         )
         category["icon_change"].pathSelected.connect(
-            lambda icon_path, category=category: self.on_validate_icon_change(
-                category["model"].id, icon_path
+            lambda icon, category=category: self.on_validate_icon_change(
+                category["model"].id, icon
             )
         )
+        category["icon_change"].target = category["model"].icon
         category["icon_wrapper_layout"].addWidget(category["icon_change"])
 
         # Delete category
@@ -1372,10 +1373,10 @@ class CategoriesList:
                 )
                 return
             if category_id:
-                category["model"].icon_path = icon
+                category["model"].icon = icon
                 self.database.session.add(category["model"])
                 self.database.session.commit()
-            self.clear_error(category_id, "icon_path")
+            self.clear_error(category_id, "icon")
         except ValidationException as error:
             self.display_error(category_id, "icon", error.message)
             return
@@ -1461,7 +1462,7 @@ class CategoriesList:
             except ValidationException as error:
                 self.display_error(0, field, error.message)
         # Apply value for icon path (slightly different usage)
-        self.new_category.icon_path = category["icon_change"].target
+        self.new_category.icon = category["icon_change"].target
         self.clear_error(0, "icon")
 
         if category["error"]:
@@ -1588,8 +1589,8 @@ class CategoriesList:
             category["name_edit"].setText(category["model"].name)
             category["relative_path_label"].setText(category["model"].relative_path)
             category["relative_path_edit"].setText(category["model"].relative_path)
-            category["icon_change"].target = category["model"].icon_path
-            category["icon_change"].setIcon(QtGui.QIcon(category["model"].icon_path))
+            category["icon_change"].target = category["model"].icon
+            category["icon_change"].setIcon(QtGui.QIcon(category["model"].icon))
 
 
 class SettingsController:

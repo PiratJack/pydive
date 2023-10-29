@@ -36,14 +36,14 @@ class TestCategory:
             id=3,
             name="New_item",
             relative_path="/New_item/",
-            icon_path="/path/to/icon.jpg",
+            icon="/path/to/icon.jpg",
         )
 
         # Test forbidden values
         forbidden_values = {
             "name": ["", None, "a" * 251],
             "relative_path": ["", None, "a" * 251],
-            "icon_path": ["a" * 251],
+            "icon": ["a" * 251],
         }
 
         for field in forbidden_values:

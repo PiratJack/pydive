@@ -13,7 +13,7 @@ from controllers.widgets.pathselectbutton import PathSelectButton
 
 class TestUiDivelogScans:
     @pytest.fixture
-    def pydive_divelog_scans(self, qtbot, pydive_mainwindow, pydive_divelog):
+    def pydive_divelog_scans(self, pydive_mainwindow, pydive_divelog):
         pydive_mainwindow.display_tab("DivelogScan")
 
         yield pydive_mainwindow.layout.currentWidget()

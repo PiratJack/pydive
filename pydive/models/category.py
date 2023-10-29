@@ -27,8 +27,8 @@ class Category(Base):
         The name that should be displayed in the screens
     relative_path : str
         The relative path of the category
-    icon_path : str
-        The icon path to display for this category
+    icon : str
+        The icon to display for this category
 
     Methods
     -------
@@ -43,7 +43,7 @@ class Category(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
     relative_path = Column(String(250), nullable=False)
-    icon_path = Column(String(250), nullable=True)
+    icon = Column(String(250), nullable=True)
 
     @sqlalchemy.orm.validates("name")
     def validate_name(self, key, value):
@@ -74,7 +74,7 @@ class Category(Base):
             )
         return value
 
-    @sqlalchemy.orm.validates("icon_path")
+    @sqlalchemy.orm.validates("icon")
     def validate_path(self, key, value):
         if value and len(value) > 250:
             raise ValidationException(
