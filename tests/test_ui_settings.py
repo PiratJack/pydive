@@ -61,8 +61,51 @@ class TestUiSettings:
     @pytest.fixture
     def pydive_ui(self, pydive_settings):
         def get_ui(element):
+            # Where each element is in the grid
             if element.startswith("new_"):
                 row = get_ui("list_layout").rowCount() - 2
+            else:
+                row = 1
+            columns = {
+                "name_wrapper_layout": {
+                    "Location": 0,
+                    "Divelog": 0,
+                    "Method": 0,
+                    "Category": 0,
+                },
+                "name_change": {
+                    "Location": 1,
+                    "Divelog": 1,
+                    "Method": 1,
+                    "Category": 1,
+                },
+                "path_wrapper_layout": {
+                    "Location": 2,
+                    "Divelog": 2,
+                },
+                "suffix_wrapper_layout": {
+                    "Method": 2,
+                },
+                "suffix_change": {
+                    "Method": 3,
+                },
+                "command_wrapper_layout": {
+                    "Method": 4,
+                },
+                "command_change": {
+                    "Method": 5,
+                },
+                "icon_button": {
+                    "Category": 5,
+                },
+                "relative_path_wrapper_layout": {
+                    "Category": 2,
+                },
+                "icon_wrapper_layout": {
+                    "Category": 4,
+                },
+            }
+
             # Overall elements
             if element == "title":
                 rows = {"Location": 0, "Divelog": 3, "Method": 6, "Category": 9}
@@ -73,103 +116,60 @@ class TestUiSettings:
                 row = rows[self.tested_section]
                 return pydive_settings.layout().itemAt(row).widget().layout()
 
-            # Name-related fields
-            elif element == "name_wrapper_layout":
-                return get_ui("list_layout").itemAtPosition(1, 0).widget().layout()
-            elif element == "name_layout":
-                return get_ui("name_wrapper_layout").itemAt(0).widget().layout()
-            elif element == "name_field":
-                return get_ui("name_layout").currentWidget()
-            elif element == "name_change_wrapper":
-                return get_ui("list_layout").itemAtPosition(1, 1).widget()
-            elif element == "name_change":
-                return get_ui("name_change_wrapper").layout().currentWidget()
-            elif element == "name_error":
-                return get_ui("name_wrapper_layout").itemAt(1).widget()
+            # Field wrapper layout
+            elif element.endswith("_wrapper_layout"):
+                element_key = element[4:] if element.startswith("new_") else element
+                if self.tested_section not in columns[element_key]:
+                    raise ValueError(f"{self.tested_section} have no {element}")
+                column = columns[element_key][self.tested_section]
+                return (
+                    get_ui("list_layout").itemAtPosition(row, column).widget().layout()
+                )
+
+            # Text fields - everything except paths
+            elif element.endswith("_field") and element != "path_field":
+                field = element[: len(element) - 6]
+                layout = get_ui(field + "_wrapper_layout").itemAt(0).widget().layout()
+                return layout.currentWidget()
+
+            # Text fields change - everything except paths
+            elif element.endswith("_change"):
+                element_key = element[4:] if element.startswith("new_") else element
+                if self.tested_section not in columns[element_key]:
+                    raise ValueError(f"{self.tested_section} have no {element}")
+                column = columns[element_key][self.tested_section]
+                wrapper = get_ui("list_layout").itemAtPosition(row, column).widget()
+                return wrapper.layout().currentWidget()
+
+            # Error fields
+            elif element.endswith("_error"):
+                layout = element.replace("_error", "_wrapper_layout")
+                return get_ui(layout).itemAt(1).widget()
 
             # Path-related fields
-            elif element == "path_wrapper_layout":
-                if self.tested_section in ["Method", "Category"]:
-                    raise ValueError(f"{self.tested_section} have no path field")
-                return get_ui("list_layout").itemAtPosition(1, 2).widget().layout()
             elif element == "path_field":
                 return get_ui("path_wrapper_layout").itemAt(0).widget()
-            elif element == "path_change":
+            elif element == "path_button":
                 if self.tested_section in ["Method", "Category"]:
                     raise ValueError(f"{self.tested_section} have no path field")
                 return get_ui("list_layout").itemAtPosition(1, 3).widget()
-            elif element == "path_error":
-                return get_ui("path_wrapper_layout").itemAt(1).widget()
-
-            # Suffix-related fields
-            elif element in "suffix_wrapper_layout":
-                if self.tested_section not in ["Method", "Category"]:
-                    raise ValueError(f"{self.tested_section} have no suffix field")
-                return get_ui("list_layout").itemAtPosition(1, 2).widget().layout()
-            elif element == "suffix_layout":
-                return get_ui("suffix_wrapper_layout").itemAt(0).widget().layout()
-            elif element == "suffix_field":
-                return get_ui("suffix_layout").currentWidget()
-            elif element == "suffix_change_wrapper":
-                if self.tested_section != "Method":
-                    raise ValueError(f"{self.tested_section} have no suffix field")
-                return get_ui("list_layout").itemAtPosition(1, 3).widget()
-            elif element == "suffix_change":
-                return get_ui("suffix_change_wrapper").layout().currentWidget()
-            elif element == "suffix_error":
-                return get_ui("suffix_wrapper_layout").itemAt(1).widget()
-
-            # Command-related fields
-            elif element == "command_wrapper_layout":
-                if self.tested_section != "Method":
-                    raise ValueError(f"{self.tested_section} have no command field")
-                return get_ui("list_layout").itemAtPosition(1, 4).widget().layout()
-            elif element == "command_layout":
-                return get_ui("command_wrapper_layout").itemAt(0).widget().layout()
-            elif element == "command_field":
-                return get_ui("command_layout").currentWidget()
-            elif element == "command_change_wrapper":
-                if self.tested_section != "Method":
-                    raise ValueError(f"{self.tested_section} have no command field")
-                return get_ui("list_layout").itemAtPosition(1, 5).widget()
-            elif element == "command_change":
-                return get_ui("command_change_wrapper").layout().currentWidget()
-            elif element == "command_error":
-                return get_ui("command_wrapper_layout").itemAt(1).widget()
-
-            # Relative path-related fields
-            elif element in "relative_path_wrapper_layout":
-                if self.tested_section != "Category":
-                    raise ValueError(
-                        f"{self.tested_section} have no relative_path field"
-                    )
-                return get_ui("list_layout").itemAtPosition(1, 2).widget().layout()
-            elif element == "relative_path_layout":
-                return (
-                    get_ui("relative_path_wrapper_layout").itemAt(0).widget().layout()
-                )
-            elif element == "relative_path_field":
-                return get_ui("relative_path_layout").currentWidget()
-            elif element == "relative_path_change_wrapper":
-                if self.tested_section != "Category":
-                    raise ValueError(
-                        f"{self.tested_section} have no relative path field"
-                    )
-                return get_ui("list_layout").itemAtPosition(1, 3).widget()
-            elif element == "relative_path_change":
-                return get_ui("relative_path_change_wrapper").layout().currentWidget()
-            elif element == "relative_path_error":
-                return get_ui("relative_path_wrapper_layout").itemAt(1).widget()
+            elif element == "new_path_button":
+                return get_ui("list_layout").itemAtPosition(row, 3).widget()
 
             # Icon-related fields
-            elif element == "icon_wrapper_layout":
-                if self.tested_section != "Category":
-                    raise ValueError(f"{self.tested_section} have no icon field")
-                return get_ui("list_layout").itemAtPosition(1, 4).widget().layout()
-            elif element == "icon_change":
+            elif element == "icon_button":
                 return get_ui("icon_wrapper_layout").itemAt(0).widget()
-            elif element == "icon_error":
-                return get_ui("icon_wrapper_layout").itemAt(1).widget()
+
+            # Elements for new items
+            elif element in [
+                "new_name",
+                "new_path",
+                "new_suffix",
+                "new_command",
+                "new_relative_path",
+                "new_icon",
+            ]:
+                return get_ui(element + "_wrapper_layout").itemAt(0).widget()
 
             # Delete
             elif element == "delete":
@@ -183,62 +183,6 @@ class TestUiSettings:
             elif element == "add_new":
                 row = get_ui("list_layout").rowCount() - 1
                 return get_ui("list_layout").itemAtPosition(row, 1).widget()
-            elif element == "new_name_wrapper":
-                return get_ui("list_layout").itemAtPosition(row, 0).widget()
-            elif element == "new_name":
-                return get_ui("new_name_wrapper").layout().itemAt(0).widget()
-            elif element == "new_name_error":
-                return get_ui("new_name_wrapper").layout().itemAt(1).widget()
-
-            # Add new - Path-related fields
-            elif element == "new_path_wrapper":
-                return get_ui("list_layout").itemAtPosition(row, 2).widget()
-            elif element == "new_path":
-                return get_ui("new_path_wrapper").layout().itemAt(0).widget()
-            elif element == "new_path_error":
-                return get_ui("new_path_wrapper").layout().itemAt(1).widget()
-            elif element == "new_path_change":
-                return get_ui("list_layout").itemAtPosition(row, 3).widget()
-
-            # Add new - Suffix-related fields
-            elif element == "new_suffix_wrapper":
-                if self.tested_section != "Method":
-                    raise ValueError(f"{self.tested_section} have no suffix field")
-                return get_ui("list_layout").itemAtPosition(row, 2).widget()
-            elif element == "new_suffix":
-                return get_ui("new_suffix_wrapper").layout().itemAt(0).widget()
-
-            # Add new - Command-related fields
-            elif element == "new_command_wrapper":
-                if self.tested_section != "Method":
-                    raise ValueError(f"{self.tested_section} have no command field")
-                return get_ui("list_layout").itemAtPosition(row, 4).widget()
-            elif element == "new_command":
-                return get_ui("new_command_wrapper").layout().itemAt(0).widget()
-            elif element == "new_command_error":
-                return get_ui("new_command_wrapper").layout().itemAt(1).widget()
-
-            # Add new - Relative path-related fields
-            elif element == "new_relative_path_wrapper":
-                if self.tested_section != "Category":
-                    raise ValueError(
-                        f"{self.tested_section} have no relative_path field"
-                    )
-                return get_ui("list_layout").itemAtPosition(row, 2).widget()
-            elif element == "new_relative_path":
-                return get_ui("new_relative_path_wrapper").layout().itemAt(0).widget()
-            elif element == "new_relative_path_error":
-                return get_ui("new_relative_path_wrapper").layout().itemAt(1).widget()
-
-            # Add new - Icon-related fields
-            elif element == "new_icon_wrapper_layout":
-                if self.tested_section != "Category":
-                    raise ValueError(f"{self.tested_section} have no icon field")
-                return get_ui("list_layout").itemAtPosition(row, 4).widget().layout()
-            elif element == "new_icon_change":
-                return get_ui("new_icon_wrapper_layout").itemAt(0).widget()
-            elif element == "new_icon_error":
-                return get_ui("new_icon_wrapper_layout").itemAt(1).widget()
 
             # Add new - Save
             elif element == "new_save":
@@ -247,6 +191,9 @@ class TestUiSettings:
                 columns = {"Location": 4, "Method": 6, "Category": 5}
                 column = columns[self.tested_section]
                 return get_ui("list_layout").itemAtPosition(row, column).widget()
+
+            else:
+                raise ValueError("Field cound not be found")
 
         return get_ui
 
@@ -298,13 +245,13 @@ class TestUiSettings:
                 pydive_ui("path_field").text() == item.path
             ), f"{section} - Path field data"
             assert isinstance(
-                pydive_ui("path_change"), PathSelectButton
+                pydive_ui("path_button"), PathSelectButton
             ), f"{section} - Path field change button type"
             assert (
-                pydive_ui("path_change").target_type == target_type
+                pydive_ui("path_button").target_type == target_type
             ), f"{section} - Path field change target type"
             assert (
-                pydive_ui("path_change").target == item.path
+                pydive_ui("path_button").target == item.path
             ), f"{section} - Path field change target"
 
         # Check suffix & command display
@@ -323,13 +270,13 @@ class TestUiSettings:
         # Check icon display
         if section == "Category":
             assert isinstance(
-                pydive_ui("icon_change"), PathSelectButton
+                pydive_ui("icon_button"), PathSelectButton
             ), f"{section} - Icon field type"
             assert (
-                pydive_ui("icon_change").target_type == target_type
+                pydive_ui("icon_button").target_type == target_type
             ), f"{section} - Icon field target type"
             assert (
-                pydive_ui("icon_change").target == item.icon
+                pydive_ui("icon_button").target == item.icon
             ), f"{section} - Icon field target"
 
         # Check delete & add new display
@@ -442,12 +389,12 @@ class TestUiSettings:
 
         # Get change path button
         assert (
-            pydive_ui(field + "_change").target_type == target_type
+            pydive_ui(field + "_button").target_type == target_type
         ), f"{section} - {field} change looks for {target_type}"
 
         # Simulating the actual dialog is impossible (it's OS-provided)
         path = os.path.join(BASE_DIR, "pydive", "assets", "images", "add.png")
-        pydive_ui(field + "_change").pathSelected.emit(path)
+        pydive_ui(field + "_button").pathSelected.emit(path)
 
         # Changes are saved in DB & displayed on screen
         if target_type == "folder":
@@ -469,7 +416,7 @@ class TestUiSettings:
         field = "path" if section in ["Location", "Divelog"] else "icon"
         error_label = self.missing_data_error_label[section]
         # Change path to empty value
-        pydive_ui(field + "_change").pathSelected.emit("")
+        pydive_ui(field + "_button").pathSelected.emit("")
 
         # Error message is displayed
         assert (
@@ -543,13 +490,13 @@ class TestUiSettings:
             ), f"{section} - Path field type"
             assert pydive_ui("new_path").text() == "", f"{section} - Path field data"
             assert isinstance(
-                pydive_ui("new_path_change"), PathSelectButton
+                pydive_ui("new_path_button"), PathSelectButton
             ), f"{section} - Path field change button type"
             assert (
-                pydive_ui("new_path_change").target_type == target_type
+                pydive_ui("new_path_button").target_type == target_type
             ), f"{section} - Path field change target type"
             assert (
-                pydive_ui("new_path_change").target == None
+                pydive_ui("new_path_button").target == None
             ), f"{section} - Path field change target"
 
         # Check suffix & command display
@@ -565,13 +512,13 @@ class TestUiSettings:
         # Check icon display
         elif section == "Category":
             assert isinstance(
-                pydive_ui("new_icon_change"), PathSelectButton
+                pydive_ui("new_icon"), PathSelectButton
             ), f"{section} - Icon field type"
             assert (
-                pydive_ui("new_icon_change").target_type == target_type
+                pydive_ui("new_icon").target_type == target_type
             ), f"{section} - Icon field target type"
             assert (
-                pydive_ui("new_icon_change").target == None
+                pydive_ui("new_icon").target == None
             ), f"{section} - Icon field target"
 
         # Check save new display
@@ -602,18 +549,18 @@ class TestUiSettings:
         }
         pydive_ui("new_name").setText(fields["name"]["val"])
         if section == "Location":
-            pydive_ui("new_path_change").pathSelected.emit(fields["path"]["val"])
+            pydive_ui("new_path_button").pathSelected.emit(fields["path"]["val"])
         if section == "Method":
             for field in ["suffix", "command"]:
                 pydive_ui("new_" + field).setText(fields[field]["val"])
         elif section == "Category":
             pydive_ui("new_relative_path").setText(fields["relative_path"]["val"])
-            pydive_ui("new_icon_change").pathSelected.emit(fields["icon"]["val"])
+            pydive_ui("new_icon").pathSelected.emit(fields["icon"]["val"])
             # Since the button is not actually used, it doesn't update the .target
             # The "save_new" code will use the .target, and thus fail
             # In the location UI, the save part uses the QLineEdit field (updated at the same time)
             #   Hence it's not needed there
-            pydive_ui("new_icon_change").target = fields["icon"]["val"]
+            pydive_ui("new_icon").target = fields["icon"]["val"]
 
         # Save all of that
         qtbot.mouseClick(pydive_ui("new_save"), Qt.LeftButton)
@@ -759,7 +706,7 @@ class TestUiSettings:
             # Empty all fields
             for any_field in mandatory_fields:
                 if any_field == "path":
-                    pydive_ui("new_path_change").pathSelected.emit("")
+                    pydive_ui("new_path_button").pathSelected.emit("")
                 else:
                     pydive_ui("new_" + any_field).setText("")
             # Enter just the one we want
@@ -767,7 +714,7 @@ class TestUiSettings:
                 icon_path = os.path.join(
                     BASE_DIR, "pydive", "assets", "images", "add.png"
                 )
-                pydive_ui("new_path_change").pathSelected.emit(icon_path)
+                pydive_ui("new_path_button").pathSelected.emit(icon_path)
             else:
                 pydive_ui("new_" + field).setText("New value")
             qtbot.mouseClick(pydive_ui("new_save"), Qt.LeftButton)
@@ -793,7 +740,7 @@ class TestUiSettings:
             os.path.join(BASE_DIR, "pydive", "assets", "style", "app.css"),
         ]
         for path in paths:
-            pydive_ui("icon_change").pathSelected.emit(path)
+            pydive_ui("icon_button").pathSelected.emit(path)
             # Empty path ==> error
             assert (
                 pydive_ui("icon_error").text() == "The selected icon is invalid"
@@ -802,7 +749,7 @@ class TestUiSettings:
         # Path too long ==> error in DB only
         long_path = [BASE_DIR, "pydive", "assets", "images"] + ["."] * 200 + ["add.png"]
         long_path = os.path.join(*long_path)
-        pydive_ui("icon_change").pathSelected.emit(long_path)
+        pydive_ui("icon_button").pathSelected.emit(long_path)
         assert (
             pydive_ui("icon_error").text()
             == "Max length for category icon is 250 characters"
