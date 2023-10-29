@@ -209,6 +209,7 @@ class Repository:
         trip=None,
         picture_group=None,
         conversion_method=None,
+        target_category=None,
     ):
         """Copies pictures between folders
 
@@ -235,6 +236,8 @@ class Repository:
             Either trip or picture_group must be provided
         conversion_method : str or ConversionMethod
             Copy only pictures with a specific conversion method. If blank, copies all pictures.
+        target_category : models.category.Category
+            Copy in this category. If None, copies in the base folder of the trip
 
         Returns
         ----------
@@ -259,30 +262,41 @@ class Repository:
         # Determine the source: if same image exists, then it'll be a copy
         process_group = ProcessGroup(label)
         for picture_group in picture_groups:
-            source_pictures = []
+            # Assumption: 2 pictures with the same method and location are identical
+            source_pictures = {}
+            for method, pictures in picture_group.pictures.items():
+                for picture in pictures:
+                    source_pictures[(method, picture.location.name)] = picture
+
+            # Filter based on conversion method
             if conversion_method is not None:
                 # If a conversion method is preferred: take the first available picture
                 suffix = conversion_method
                 if not isinstance(suffix, str):
                     suffix = conversion_method.suffix
-                if suffix not in picture_group.pictures:
-                    raise FileNotFoundError(_("No source image found"))
 
-                source_pictures += picture_group.pictures[suffix]
-            else:
-                # Otherwise, just take all pictures
-                for method in picture_group.pictures:
-                    source_pictures += picture_group.pictures[method]
+                source_pictures = {
+                    k: v for k, v in source_pictures.items() if k[0] == suffix
+                }
+
+            # Filter based on source location
+            if source_location is not None:
+                source_pictures = {
+                    k: v
+                    for k, v in source_pictures.items()
+                    if k[1] == source_location.name
+                }
 
             # Generate tasks for each copy
-            for source_picture in source_pictures:
-                if (
-                    source_location
-                    and source_picture.location.name != source_location.name
-                ):
-                    continue
+            if not source_pictures:
+                raise FileNotFoundError(_("No source image found"))
+            for source_picture in source_pictures.values():
                 process = process_group.add_process(
-                    "copy", picture_group, source_picture, target_location
+                    "copy",
+                    picture_group=picture_group,
+                    picture=source_picture,
+                    target_location=target_location,
+                    target_category=target_category,
                 )
                 process.signals.taskFinished.connect(self.add_picture)
 
@@ -415,10 +429,10 @@ class Repository:
             for conversion_method in actual_methods:
                 process = process_group.add_process(
                     "generate",
-                    picture_group,
-                    source_picture,
-                    target_location,
-                    conversion_method,
+                    picture_group=picture_group,
+                    picture=source_picture,
+                    target_location=target_location,
+                    conversion_method=conversion_method,
                 )
                 process.signals.taskFinished.connect(self.add_picture)
 
@@ -488,7 +502,9 @@ class Repository:
                     pictures += picture_group.pictures[conversion_type]
             for picture in pictures:
                 # Generate tasks for each deletion
-                process = process_group.add_process("remove", picture_group, picture)
+                process = process_group.add_process(
+                    "remove", picture_group=picture_group, picture=picture
+                )
                 process.signals.taskFinished.connect(self.remove_picture)
 
         process_group.run()
@@ -561,8 +577,8 @@ class Repository:
                 for source_picture in source_picture_group.pictures[conversion_type]:
                     process = process_group.add_process(
                         "change_trip",
-                        source_picture_group,
-                        source_picture,
+                        picture_group=source_picture_group,
+                        picture=source_picture,
                         target_trip=target_trip,
                     )
                     target_picture_group.add_process(process)
@@ -632,7 +648,7 @@ class ProcessGroup(QtCore.QObject):
     -------
     __init__ (label)
         Stores basic information about the task group
-    add_process (process, picture_group, picture, target_location, conversion_method, target_trip)
+    add_process (process, picture_group, picture, target_location, conversion_method, target_trip, target_category)
         Adds a new task to the group
     task_done (task, path)
         Marks a single task as in done & stopped. Triggers self.update_progress
@@ -669,21 +685,36 @@ class ProcessGroup(QtCore.QObject):
         target_location=None,
         conversion_method=None,
         target_trip=None,
+        target_category=None,
     ):
         """Adds a new task to the group
 
         Parameters
         ----------
-        process : *Process
-            The process to add
+        task_type : either "copy", "generate", "remove" or "change_trip"
+            The type of process to add
+        picture_group : models.picture_group.PictureGroup
+            The picture group to modify
+        picture : models.picture.Picture
+            The picture to handle (if none, will take all)
+        target_location : models.storage_location.StorageLocation
+            [Copy or Generate] In which location to copy or generate the picture
+        conversion_method :
+            [Generate] The conversion method to use
+        target_trip : str
+            [Change trip] The conversion method to use
+        target_category : models.category.Category
+            [Copy] In which category to copy the image
         """
-        logger.debug(
+        logger.info(
             f"ProcessGroup.add_task {self.label} - {task_type} for {picture_group}"
         )
 
         # Create the background processes
         if task_type == "copy":
-            process = CopyProcess(picture_group, picture, target_location)
+            process = CopyProcess(
+                picture_group, picture, target_location, target_category
+            )
         elif task_type == "generate":
             process = GenerateProcess(
                 target_location, picture_group, picture, conversion_method
@@ -809,7 +840,9 @@ class CopyProcess(QtCore.QRunnable, ProcessScaffold):
         Runs the copy, after making sure it won't create issues
     """
 
-    def __init__(self, picture_group, source_picture, target_location):
+    def __init__(
+        self, picture_group, source_picture, target_location, target_category=None
+    ):
         """Stores the required parameters for the copy
 
         Parameters
@@ -820,9 +853,11 @@ class CopyProcess(QtCore.QRunnable, ProcessScaffold):
             The source picture to copy
         target_location : StorageLocation
             The location where to copy the picture
+        target_category : models.category.Category
+            The category in which to copy the picture
         """
         logger.debug(
-            f"CopyProcess.init {picture_group.trip}/{picture_group.name}/{source_picture.filename} to {target_location.name}"
+            f"CopyProcess.init {picture_group.trip}/{picture_group.name}/{target_category.relative_path+'/' if target_category else ''}{source_picture.filename} to {target_location.name}"
         )
         super().__init__()
         self.status = "Queued"
@@ -830,14 +865,23 @@ class CopyProcess(QtCore.QRunnable, ProcessScaffold):
         self.picture_group = picture_group
         self.source_picture = source_picture
         self.target_location = target_location
+        self.target_category = target_category
 
         self.source_file = source_picture.path
         # Determine picture's target path
-        self.target_file = os.path.join(
-            target_location.path,
-            source_picture.trip,
-            source_picture.filename,
-        )
+        if self.target_category:
+            self.target_file = os.path.join(
+                target_location.path,
+                source_picture.trip,
+                self.target_category.relative_path,
+                source_picture.filename,
+            )
+        else:
+            self.target_file = os.path.join(
+                target_location.path,
+                source_picture.trip,
+                source_picture.filename,
+            )
 
         self.short_path = self.target_file.replace(
             target_location.path, "[" + target_location.name + "]" + os.path.sep

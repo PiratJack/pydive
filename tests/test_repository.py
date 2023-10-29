@@ -151,8 +151,11 @@ class TestRepository:
         assert cm.value.args[0] == "recognition failed", test
 
     # List of Repository.copy_pictures tests - "KO" denotes when a ValueError is raised
+    # The copy with category is tested only in test_repository_copy_pictures_all_parameters
+    # Since that parameter intervenes only at the end, it's not really useful to test all cases
     # source_location   trip    picture_group   conversion_method
     #       X             X             X               X       test_repository_copy_pictures_all_parameters
+    #       X             X             X               X       test_repository_copy_pictures_missing_category
 
     #       X             X             X                       test_repository_copy_pictures_missing_conversion_method
     #       X             X                             X       test_repository_copy_pictures_missing_picture_group
@@ -212,6 +215,33 @@ class TestRepository:
         trip = "Sweden"
         picture_group = pydive_repository.trips[trip]["IMG040"]
         conversion_method = ""
+        target_category = pydive_db.category_get_by_name("Top")
+
+        pydive_repository.copy_pictures(
+            test,
+            target_location,
+            source_location,
+            trip,
+            picture_group,
+            conversion_method,
+            target_category,
+        )
+
+        new_files = [
+            os.path.join("Archive", "Sweden", "Sélection", "IMG040.CR2"),
+        ]
+
+        self.helper_check_paths(test, new_files)
+
+    def test_repository_copy_pictures_missing_category(
+        self, pydive_repository, pydive_db
+    ):
+        test = "Picture copy: all parameters provided (copies 1 picture)"
+        target_location = pydive_db.storagelocation_get_by_name("Archive")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = pydive_repository.trips[trip]["IMG040"]
+        conversion_method = ""
 
         pydive_repository.copy_pictures(
             test,
@@ -251,6 +281,35 @@ class TestRepository:
             os.path.join("DCIM", "Sweden", "IMG040.CR2"),
             os.path.join("DCIM", "Sweden", "IMG040_RT.jpg"),
             os.path.join("DCIM", "Sweden", "IMG040_DT.jpg"),
+        ]
+
+        self.helper_check_paths(test, new_files)
+
+    def test_repository_copy_pictures_missing_conversion_method_with_category(
+        self, pydive_repository, pydive_db
+    ):
+        test = "Picture copy: all parameters provided except conversion_method"
+        target_location = pydive_db.storagelocation_get_by_name("Camera")
+        source_location = pydive_db.storagelocation_get_by_name("Temporary")
+        trip = "Sweden"
+        picture_group = pydive_repository.trips[trip]["IMG040"]
+        conversion_method = None
+        target_category = pydive_db.category_get_by_name("Top")
+
+        pydive_repository.copy_pictures(
+            test,
+            target_location,
+            source_location,
+            trip,
+            picture_group,
+            conversion_method,
+            target_category,
+        )
+
+        new_files = [
+            os.path.join("DCIM", "Sweden", "Sélection", "IMG040.CR2"),
+            os.path.join("DCIM", "Sweden", "Sélection", "IMG040_RT.jpg"),
+            os.path.join("DCIM", "Sweden", "Sélection", "IMG040_DT.jpg"),
         ]
 
         self.helper_check_paths(test, new_files)
