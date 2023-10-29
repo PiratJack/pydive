@@ -77,7 +77,7 @@ class LocationsList:
     columns = [
         {
             "name": _("Name"),
-            "stretch": 10,
+            "stretch": 5,
             "alignment": Qt.AlignLeft,
         },
         {
@@ -86,7 +86,7 @@ class LocationsList:
         },
         {
             "name": _("Path"),
-            "stretch": 15,
+            "stretch": 20,
             "alignment": Qt.AlignLeft,
         },
         {
@@ -1634,51 +1634,52 @@ class SettingsController:
             The window displaying this controller
         """
         logger.debug("SettingsController.init")
-        # TODO: Reorganize display & add category management
-        # Top-left: Image folders, then dive log
-        # Top-right: Categories
-        # Bottom, wide: Conversion methods
-        #   Also update tests
         self.parent_window = parent_window
         self.database = parent_window.database
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
-        self.ui["layout"] = QtWidgets.QVBoxLayout()
+        self.ui["layout"] = QtWidgets.QGridLayout()
         self.ui["main"].setLayout(self.ui["layout"])
+        # Locations should take more space than categories
+        self.ui["layout"].setColumnStretch(0, 40)
+        self.ui["layout"].setColumnStretch(1, 1)
+        self.ui["layout"].setColumnStretch(2, 20)
+        # Only sections with fields should stretch (not the titles)
+        self.ui["layout"].setRowStretch(1, 1)
+        self.ui["layout"].setRowStretch(3, 1)
+        self.ui["layout"].setRowStretch(5, 1)
 
         self.locations_list = LocationsList(self, "picture_folder")
         self.ui["locations_list_label"] = QtWidgets.QLabel(_("Image folders"))
         self.ui["locations_list_label"].setProperty("class", "title")
-        self.ui["layout"].addWidget(self.ui["locations_list_label"])
+        self.ui["layout"].addWidget(self.ui["locations_list_label"], 0, 0, Qt.AlignTop)
         self.ui["locations_list"] = self.locations_list.display_widget
-        self.ui["layout"].addWidget(self.ui["locations_list"])
-
-        self.ui["layout"].addStretch()
+        self.ui["layout"].addWidget(self.ui["locations_list"], 1, 0, Qt.AlignTop)
 
         self.divelog_list = LocationsList(self, "file")
         self.ui["divelog_label"] = QtWidgets.QLabel(_("Dive log file"))
         self.ui["divelog_label"].setProperty("class", "title")
-        self.ui["layout"].addWidget(self.ui["divelog_label"])
+        self.ui["layout"].addWidget(self.ui["divelog_label"], 2, 0, Qt.AlignTop)
         self.ui["divelog"] = self.divelog_list.display_widget
-        self.ui["layout"].addWidget(self.ui["divelog"])
-
-        self.ui["layout"].addStretch()
+        self.ui["layout"].addWidget(self.ui["divelog"], 3, 0, Qt.AlignTop)
 
         self.conversion_methods_list = ConversionMethodsList(self)
         self.ui["methods_list_label"] = QtWidgets.QLabel(_("Conversion methods"))
         self.ui["methods_list_label"].setProperty("class", "title")
-        self.ui["layout"].addWidget(self.ui["methods_list_label"])
+        self.ui["layout"].addWidget(
+            self.ui["methods_list_label"], 4, 0, 1, 3, Qt.AlignTop
+        )
         self.ui["conversion_methods_list"] = self.conversion_methods_list.display_widget
-        self.ui["layout"].addWidget(self.ui["conversion_methods_list"])
-
-        self.ui["layout"].addStretch()
+        self.ui["layout"].addWidget(
+            self.ui["conversion_methods_list"], 5, 0, 1, 3, Qt.AlignTop
+        )
 
         self.categories_list = CategoriesList(self)
         self.ui["categories_list_label"] = QtWidgets.QLabel(_("Categories"))
         self.ui["categories_list_label"].setProperty("class", "title")
-        self.ui["layout"].addWidget(self.ui["categories_list_label"])
+        self.ui["layout"].addWidget(self.ui["categories_list_label"], 0, 2, Qt.AlignTop)
         self.ui["categories_list"] = self.categories_list.display_widget
-        self.ui["layout"].addWidget(self.ui["categories_list"])
+        self.ui["layout"].addWidget(self.ui["categories_list"], 1, 2, 3, 1, Qt.AlignTop)
 
     @property
     def display_widget(self):

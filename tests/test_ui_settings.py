@@ -108,13 +108,20 @@ class TestUiSettings:
 
             # Overall elements
             if element == "title":
-                rows = {"Location": 0, "Divelog": 3, "Method": 6, "Category": 9}
+                rows = {"Location": 0, "Divelog": 2, "Method": 4, "Category": 0}
                 row = rows[self.tested_section]
-                return pydive_settings.layout().itemAt(row).widget()
+                column = 2 if self.tested_section == "Category" else 0
+                return pydive_settings.layout().itemAtPosition(row, column).widget()
             elif element == "list_layout":
-                rows = {"Location": 1, "Divelog": 4, "Method": 7, "Category": 10}
+                rows = {"Location": 1, "Divelog": 3, "Method": 5, "Category": 1}
                 row = rows[self.tested_section]
-                return pydive_settings.layout().itemAt(row).widget().layout()
+                column = 2 if self.tested_section == "Category" else 0
+                return (
+                    pydive_settings.layout()
+                    .itemAtPosition(row, column)
+                    .widget()
+                    .layout()
+                )
 
             # Field wrapper layout
             elif element.endswith("_wrapper_layout"):
@@ -200,8 +207,11 @@ class TestUiSettings:
     def test_settings_display(self, pydive_settings):
         # Check overall structure
         assert (
-            pydive_settings.layout().count() == 11  # 2 per group + 3 stretchers
-        ), "The overall screen has the right number of items"
+            pydive_settings.layout().rowCount() == 6
+        ), "Overall screen - Number of rows"
+        assert (
+            pydive_settings.layout().columnCount() == 3
+        ), "Overall screen - Number of columns"
 
     @pytest.mark.parametrize("section", ["Location", "Divelog", "Method", "Category"])
     def test_settings_lists_display(self, pydive_db, pydive_ui, section):
