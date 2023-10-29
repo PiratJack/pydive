@@ -134,6 +134,14 @@ class Database:
         """Returns a list of all conversion methods"""
         return self.session.query(conversionmethod.ConversionMethod).all()
 
+    def conversionmethods_get_by_id(self, method_id):
+        """Returns a conversion method based on its ID"""
+        return (
+            self.session.query(conversionmethod.ConversionMethod)
+            .filter(conversionmethod.ConversionMethod.id == method_id)
+            .one()
+        )
+
     def conversionmethods_get_by_suffix(self, suffix):
         """Returns a conversion method based on its suffix"""
         return (
@@ -154,6 +162,14 @@ class Database:
     def categories_get(self):
         """Returns a list of all categories"""
         return self.session.query(category.Category).all()
+
+    def category_get_by_id(self, category_id):
+        """Returns a list of all categories"""
+        return (
+            self.session.query(category.Category)
+            .filter(category.Category.id == category_id)
+            .one()
+        )
 
     def category_get_by_name(self, name):
         """Returns a category based on its name"""

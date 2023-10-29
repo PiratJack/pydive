@@ -15,6 +15,11 @@ class TestStorageLocation:
         conversion_methods = pydive_db.conversionmethods_get()
         assert len(conversion_methods) == 2, "There are 2 conversion methods"
 
+        conversion_method = pydive_db.conversionmethods_get_by_id(1)
+        assert (
+            type(conversion_method) == ConversionMethod
+        ), "There is a single conversion method with ID 1"
+
         conversion_method = pydive_db.conversionmethods_get_by_suffix("RT")
         assert (
             type(conversion_method) == ConversionMethod

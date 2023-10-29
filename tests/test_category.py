@@ -15,7 +15,15 @@ class TestCategory:
         categories = pydive_db.categories_get()
         assert len(categories) == 2, "There are 2 categories"
 
-        # Get one and check its attributes
+        # Get one based on its ID and check its attributes
+        category = pydive_db.category_get_by_id(1)
+        assert type(category) == Category, "There is a single category with name Top"
+        assert category.relative_path == "Sélection", "The category has the right path"
+        assert (
+            str(category) == "Top @ Sélection"
+        ), "The category has the right string representation"
+
+        # Get one based on its name and check its attributes
         category = pydive_db.category_get_by_name("Top")
         assert type(category) == Category, "There is a single category with name Top"
         assert category.relative_path == "Sélection", "The category has the right path"
