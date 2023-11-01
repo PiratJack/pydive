@@ -362,7 +362,6 @@ class TestUiPictures:
     def test_pictures_display_checkboxes(self, pydive_ui, qtbot):
         # Get tree item, trip & picture group
         pydive_ui("tree_Malta").setExpanded(True)
-        picture_item = pydive_ui("tree_Malta_001")
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
 
         offset = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
@@ -828,10 +827,6 @@ class TestUiPictures:
         self.helper_check_paths(action_name, new_files, removed_files)
 
         # Check display - Tree has been updated
-        top_level_items = [
-            pydive_ui("tree").topLevelItem(i).text(0)
-            for i in range(pydive_ui("tree").topLevelItemCount())
-        ]
         assert pydive_ui("tree_Italy") is not None, "Italy added to the tree"
         with pytest.raises(IndexError):
             pydive_ui("tree_Korea")
