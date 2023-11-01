@@ -7,7 +7,10 @@ _ = gettext.gettext
 
 class IconButton(QtWidgets.QPushButton):
     def __init__(self, icon=None, label=None, parent=None):
-        super(IconButton, self).__init__(icon, label, parent)
+        if icon:
+            super(IconButton, self).__init__(icon, label, parent)
+        else:
+            super(IconButton, self).__init__(label, parent)
 
         self.pad = 8  # padding between the icon and the button frame
         self.minSize = 8  # minimum size of the icon
