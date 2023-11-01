@@ -113,6 +113,7 @@ def pydive_db(pydive_empty_db):
                 id=1,
                 name="Top",
                 relative_path="Sélection",
+                icon=os.path.join(BASE_DIR, "pydive", "assets", "images", "add.png"),
             ),
             Category(
                 id=2,

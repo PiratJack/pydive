@@ -19,6 +19,9 @@ class TestCategory:
         category = pydive_db.category_get_by_id(1)
         assert type(category) == Category, "There is a single category with name Top"
         assert category.relative_path == "Sélection", "The category has the right path"
+        assert category.icon == os.path.join(
+            BASE_DIR, "pydive", "assets", "images", "add.png"
+        ), "The category has the right icon path"
         assert (
             str(category) == "Top @ Sélection"
         ), "The category has the right string representation"
