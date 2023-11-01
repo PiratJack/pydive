@@ -31,16 +31,25 @@ class TestUiPictures:
     @pytest.fixture
     def pydive_ui(self, pydive_pictures, pydive_repository):
         def get_ui(element):
+            left_column_items = [
+                "folders",
+                "load_pictures",
+                "tree",
+                "display_raw",
+                "display_absent",
+                "sort_mode",
+                "tasks_label",
+                "tasks_bar",
+            ]
             # Overall elements
             if element == "layout":
                 return pydive_pictures.layout()
 
             elif element == "left_column":
                 return pydive_pictures.layout().itemAt(0).widget().layout()
-            elif element == "folders":
-                return get_ui("left_column").itemAt(0).widget()
-            elif element == "load_pictures":
-                return get_ui("left_column").itemAt(1).widget()
+            elif element in left_column_items:
+                position = left_column_items.index(element)
+                return get_ui("left_column").itemAt(position).widget()
 
             # Tree & tree items
             elif element == "tree":
@@ -90,18 +99,6 @@ class TestUiPictures:
                 else:
                     country, number = split[1:]
                 return pydive_repository.trips[country]["IMG" + number]
-
-            # Bottom-left checkboxes
-            elif element == "display_raw":
-                return get_ui("left_column").itemAt(3).widget()
-            elif element == "display_absent":
-                return get_ui("left_column").itemAt(4).widget()
-
-            # Bottom-left in-progress tasks
-            elif element == "tasks_label":
-                return get_ui("left_column").itemAt(5).widget()
-            elif element == "tasks_bar":
-                return get_ui("left_column").itemAt(6).widget()
 
             # Right column - with grid
             elif element == "right_column":
@@ -261,14 +258,14 @@ class TestUiPictures:
         ), "Pictures layout is correct"
         assert (
             pydive_ui("layout").count() == 2
-        ), "Pictures layout has the right number of colums"
+        ), "Pictures layout has the right number of columns"
 
         # Check display - Left column
         assert isinstance(
             pydive_ui("left_column"), QtWidgets.QVBoxLayout
         ), "Pictures left column layout is correct"
         assert (
-            pydive_ui("left_column").count() == 7
+            pydive_ui("left_column").count() == 8
         ), "Pictures left column has the right number of rows"
 
         # Check display - Left column - Checkboxes
@@ -285,6 +282,14 @@ class TestUiPictures:
         assert (
             pydive_ui("display_absent").text() == "Display absent images"
         ), "Pictures: Display absent images label is correct"
+
+        assert isinstance(
+            pydive_ui("sort_mode"), QtWidgets.QCheckBox
+        ), "Pictures: Sort mode is QCheckBox"
+        assert (
+            pydive_ui("sort_mode").text()
+            == "Sort mode: switch to next image when clicking on a category"
+        ), "Pictures: Sort mode label is correct"
 
         # Check display - Left column - Tasks label & progress bar
         assert isinstance(
@@ -1273,7 +1278,7 @@ class TestUiPictures:
         scrollbarv2 = picture2.verticalScrollBar()
         assert scrollbarv2.value() == scrollbarv.value(), "Other pictures move too"
 
-    def test_pictures_grid_add_to_category(self, pydive_ui, pydive_picture_ui, qtbot):
+    def test_pictures_grid_add_category(self, pydive_ui, pydive_picture_ui, qtbot):
         # Trigger action
         picture_group = pydive_ui("pg_Malta_001")
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
@@ -1300,9 +1305,7 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col2") == str(3), "3 in Temporary"
         assert pydive_ui("tree_Malta_001_col3") == str(2), "2 in Archive"
 
-    def test_pictures_grid_remove_from_category(
-        self, pydive_ui, pydive_picture_ui, qtbot
-    ):
+    def test_pictures_grid_remove_category(self, pydive_ui, pydive_picture_ui, qtbot):
         # Trigger action
         picture_group = pydive_ui("pg_Malta_001")
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
@@ -1327,6 +1330,55 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col1") == str(0), "0 in Camera"
         assert pydive_ui("tree_Malta_001_col2") == str(2), "2 in Temporary"
         assert pydive_ui("tree_Malta_001_col3") == str(1), "1 in Archive"
+
+    def test_pictures_grid_sort_mode_on(self, pydive_ui, pydive_picture_ui, qtbot):
+        # Display pictures & enable sort mode
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+        qtbot.mouseClick(pydive_ui("sort_mode"), Qt.LeftButton)
+        assert pydive_ui("sort_mode").isChecked(), "Sort mode enabled"
+
+        # Trigger action
+        with qtbot.waitSignal(pydive_ui("pg_Malta_001").pictureAdded):
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "categoryBof"), Qt.LeftButton)
+
+        # Check tree selection has changed
+        selection = pydive_ui("tree").selectedItems()[0]
+        assert selection == pydive_ui("tree_Malta_002"), "Selection has changed"
+
+        # Should not move when removing a category
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+        with qtbot.waitSignal(pydive_ui("pg_Malta_001").pictureRemoved, timeout=300):
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "categoryBof"), Qt.LeftButton)
+        selection = pydive_ui("tree").selectedItems()[0]
+        assert selection == pydive_ui("tree_Malta_001"), "Selection has not changed"
+
+        # Can't go to next one when we're at the end
+        self.click_tree_item(pydive_ui("tree_Malta_002"), qtbot, pydive_ui)
+        with qtbot.waitSignal(pydive_ui("pg_Malta_002").pictureAdded):
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "categoryBof"), Qt.LeftButton)
+        selection = pydive_ui("tree").selectedItems()[0]
+        assert selection == pydive_ui("tree_Malta_002"), "Selection has changed"
+
+    def test_pictures_grid_sort_mode_off(self, pydive_ui, pydive_picture_ui, qtbot):
+        # Display pictures
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+        assert not pydive_ui("sort_mode").isChecked(), "Sort mode disabled"
+
+        # Trigger action (addition of category)
+        with qtbot.waitSignal(pydive_ui("pg_Malta_001").pictureAdded):
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "categoryBof"), Qt.LeftButton)
+
+        # Check tree selection has not changed
+        selection = pydive_ui("tree").selectedItems()[0]
+        assert selection == pydive_ui("tree_Malta_001"), "Selection has not changed"
+
+        # Trigger action (deletion of category)
+        with qtbot.waitSignal(pydive_ui("pg_Malta_001").pictureRemoved):
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "categoryBof"), Qt.LeftButton)
+
+        # Check tree selection has not changed
+        selection = pydive_ui("tree").selectedItems()[0]
+        assert selection == pydive_ui("tree_Malta_001"), "Selection has not changed"
 
 
 if __name__ == "__main__":

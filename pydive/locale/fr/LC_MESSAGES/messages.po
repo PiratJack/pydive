@@ -222,6 +222,9 @@ msgstr "Renommer le voyage"
 msgid "Settings"
 msgstr "Paramètres"
 
+msgid "Sort mode: switch to next image when clicking on a category"
+msgstr "Mode tri: passe à l'image suivante lorsqu'une catégorie est choisie"
+
 msgid "Source file could not be read"
 msgstr "Le fichier source n'a pu être lu"
 

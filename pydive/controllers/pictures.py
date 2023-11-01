@@ -93,7 +93,7 @@ class PicturesTree(BaseTreeWidget):
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.repository = repository
-        self.itemClicked.connect(self.on_item_clicked)
+        self.itemSelectionChanged.connect(self.on_item_clicked)
 
     def contextMenuEvent(self, event):
         """Right-click menu: copy & generate pictures
@@ -639,7 +639,7 @@ class PicturesTree(BaseTreeWidget):
             )
             self.takeTopLevelItem(self.indexOfTopLevelItem(trip_widget))
 
-    def on_item_clicked(self, item):
+    def on_item_clicked(self):
         """Item clicked ==> display corresponding images
 
         Parameters
@@ -647,6 +647,10 @@ class PicturesTree(BaseTreeWidget):
         item : QtWidgets.QTreeWidgetItem
             The item that was clicked"""
         # Exclude clicks on trips
+        item = self.selectedItems()
+        if not item:
+            return
+        item = item[0]
         logger.info(f"PicturesTree.on_item_clicked: {item.data(0, Qt.DisplayRole)}")
         if not item.parent():
             return
@@ -657,6 +661,16 @@ class PicturesTree(BaseTreeWidget):
         picture_group = self.repository.trips[trip][picture_group_name]
 
         self.parent_controller.display_picture_group(picture_group)
+
+    def display_next_image(self):
+        """Switches to next image"""
+        logger.debug("PicturesTree.display_next_image")
+        item = self.selectedItems()[0]
+        position = item.parent().indexOfChild(item)
+        if position == item.parent().childCount() - 1:
+            return
+        item.parent().child(position + 1).setSelected(True)
+        item.setSelected(False)
 
 
 class PictureGrid:
@@ -730,6 +744,7 @@ class PictureGrid:
 
         self.display_raw_images = False
         self.display_absent_images = False
+        self.sort_mode = False
 
     def display_picture_group(self, picture_group):
         """Displays the provided picture group in the grid
@@ -1126,6 +1141,16 @@ class PictureGrid:
                     if row < len(self.grid) and column < len(self.grid[row])
                 ]
 
+    def on_click_sort_mode(self, enabled):
+        """Switches to next image when a category is selected"""
+        logger.debug(f"PictureGrid.on_click_sort_mode: {enabled}")
+        self.sort_mode = enabled
+
+    def display_next_image(self):
+        """Switches to next image"""
+        logger.debug("PictureGrid.display_next_image")
+        self.parent_controller.display_next_image()
+
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
@@ -1382,6 +1407,8 @@ class PictureContainer:
             self.parent_controller.delete_image(self.row, self.column, category)
         else:
             self.parent_controller.copy_image(self.row, self.column, category)
+            if self.parent_controller.sort_mode:
+                self.parent_controller.display_next_image()
 
     def display_error(self, message):
         """Displays the provided error message
@@ -1822,6 +1849,13 @@ class PicturesController:
         self.ui["display_absent"].clicked.connect(self.on_display_absent_images)
         self.ui["left_layout"].addWidget(self.ui["display_absent"], 0)
 
+        # Switch to next image when category selected
+        self.ui["sort_mode"] = QtWidgets.QCheckBox(
+            _("Sort mode: switch to next image when clicking on a category")
+        )
+        self.ui["sort_mode"].clicked.connect(self.on_click_sort_mode)
+        self.ui["left_layout"].addWidget(self.ui["sort_mode"], 0)
+
         # Tasks in progress
         self.ui["tasks_label"] = TasksProgressTitle(_("In-progress tasks"), self)
         self.ui["left_layout"].addWidget(self.ui["tasks_label"], 0)
@@ -1970,3 +2004,11 @@ class PicturesController:
     def on_display_absent_images(self, checked):
         """Displays or hide space for absent images"""
         self.ui["picture_grid"].on_display_absent_images(checked)
+
+    def on_click_sort_mode(self, checked):
+        """Switches to next image when a category is selected"""
+        self.ui["picture_grid"].on_click_sort_mode(checked)
+
+    def display_next_image(self):
+        """Switches to next image"""
+        self.ui["picture_tree"].display_next_image()

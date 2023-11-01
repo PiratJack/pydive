@@ -205,6 +205,9 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+msgid "Sort mode: switch to next image when clicking on a category"
+msgstr ""
+
 msgid "Source file could not be read"
 msgstr ""
 
