@@ -803,17 +803,17 @@ class PictureGrid:
                 if conversion_type not in self.picture_group.pictures:
                     picture_container.set_empty_picture()
                 else:
-                    picture = [
+                    pictures = [
                         p
                         for p in self.picture_group.pictures[conversion_type]
                         if p.location.name == location_name
                     ]
-                    if not picture:
+                    if not pictures:
                         picture_container.set_empty_picture()
                     else:
-                        # Assumption: for a given group, location and conversion type, there is a single picture
-                        picture = picture[0]
-                        picture_container.set_picture(picture)
+                        # Assumption: if the location, conversion type and file name are identical
+                        # Then, in reality, it's the same picture
+                        picture_container.set_pictures(pictures)
 
                 self.grid[row].append(picture_container.display_widget)
                 self.ui["layout"].addWidget(self.grid[row][column], row, column)
@@ -822,7 +822,9 @@ class PictureGrid:
         # The goal here is to push everything up
         for row in range(1, len(rows.keys())):
             empty_cells = [
-                p for p in self.picture_containers[row].values() if p.picture == None
+                p
+                for p in self.picture_containers[row].values()
+                if not p.picture_displayed
             ]
             if len(empty_cells) != len(columns) - 1:
                 [p.ui["layout"].addStretch() for p in empty_cells]
@@ -833,7 +835,7 @@ class PictureGrid:
                 row
                 for row in range(1, len(rows))
                 if column not in self.picture_containers[row]
-                or self.picture_containers[row][column].picture == None
+                or not self.picture_containers[row][column].picture_displayed
             ]
             if len(empty_cells) == len(rows) - 1:
                 self.ui["layout"].setColumnStretch(column, 0)
@@ -933,8 +935,8 @@ class PictureGrid:
             label, target_location, [method], picture_group=self.picture_group
         )
 
-    def copy_image(self, row, column):
-        """Copies an image to the provided row & column
+    def copy_image(self, row, column, category=None):
+        """Copies an image to the provided row & column & category
 
         Parameters
         ----------
@@ -942,9 +944,13 @@ class PictureGrid:
             The row in which to copy the image
         column : int
             The column in which to copy the image"""
-        logger.debug(f"PictureGrid.copy_image row {row}, column {column}")
+        logger.debug(
+            f"PictureGrid.copy_image row {row}, column {column}, category {category}"
+        )
 
         target_location = self.grid[row][0].model
+        # Category buttons are only displayed if there is an image already there
+        source_location = target_location if category else None
         try:
             method = self.grid[0][column].model.suffix
         except:
@@ -960,15 +966,17 @@ class PictureGrid:
             self.repository.copy_pictures(
                 label,
                 target_location,
+                source_location=source_location,
                 picture_group=self.picture_group,
                 conversion_method=method,
+                target_category=category,
             )
             # Updated data will be displayed through the signals directly
         except FileNotFoundError as e:
             self.picture_containers[row][column].display_error("".join(e.args))
 
-    def delete_image(self, row, column):
-        """Deletes an image in the provided row & column
+    def delete_image(self, row, column, category=None):
+        """Deletes an image in the provided row & column for the given category
         If the image exists in multiple categories, it'll be deleted from all of them
 
         Parameters
@@ -977,31 +985,28 @@ class PictureGrid:
             The row in which to copy the image
         column : int
             The column in which to copy the image"""
-        logger.debug(f"PictureGrid.delete_image row {row}, column {column}")
-
-        # Get all pictures from the group with the same location & conversion method
-        picture = self.picture_containers[row][column].picture
-        try:
-            method = self.grid[0][column].model.suffix
-        except AttributeError:
-            method = self.grid[0][column].text()
-        if column == 1:
-            method = ""  # RAW images, label is overridden in code
-        pictures = [
-            p
-            for p in self.picture_group.locations[picture.location.name]
-            if p in self.picture_group.pictures[method]
-        ]
-
-        label = _("Remove {nb_pictures} image in {target}").format(
-            nb_pictures=len(pictures), target=picture.location.name
+        logger.debug(
+            f"PictureGrid.delete_image row {row}, column {column}, category {category}"
         )
-        for picture in pictures:
+
+        pictures = self.picture_containers[row][column].pictures
+        delete_pictures = pictures
+        if category:
+            delete_pictures = [p for p in pictures if p.category == category]
+        label = _("Remove {nb_pictures} image in {target}").format(
+            nb_pictures=len(delete_pictures), target=delete_pictures[0].location.name
+        )
+        for picture in delete_pictures:
             logger.info(
                 f"PictureGrid.delete_image {self.picture_group.trip}/{self.picture_group.name}/{picture.filename} in {picture.location.name}"
             )
             self.repository.remove_pictures(label, None, self.picture_group, picture)
-        self.picture_containers[row][column].set_empty_picture()
+        if delete_pictures == pictures:
+            self.picture_containers[row][column].set_empty_picture()
+        else:
+            self.picture_containers[row][column].set_pictures(
+                [p for p in pictures if p not in delete_pictures]
+            )
 
     def pictures_set_scrollbar(self, row, column, horizontal, vertical):
         """Moves the displayed pictures by the provided values
@@ -1017,9 +1022,9 @@ class PictureGrid:
         vertical : int
             The position of the vertical scrollbar. Negative when position shouldn't change
         """
-        logger.debug(
-            f"PictureGrid.pictures_set_scrollbar from {row} {column} in position {horizontal} {vertical}"
-        )
+        # #logger.debug(
+        # #f"PictureGrid.pictures_set_scrollbar from {row} {column} in position {horizontal} {vertical}"
+        # #)
         for r in self.picture_containers:
             for c in self.picture_containers[r]:
                 if (r, c) != (row, column):
@@ -1071,9 +1076,6 @@ class PictureGrid:
                     cell.hide()
                 else:
                     cell.show()
-        # Everything is displayed by default
-        if self.display_absent_images:
-            return
 
         # If absent images have to be hidden, determine whether columns / rows need to be fully hidden or not
         nb_rows = self.ui["layout"].rowCount()
@@ -1093,8 +1095,20 @@ class PictureGrid:
                     filled_columns[column] += 1
                     filled_rows[row] += 1
                 else:
-                    if row < len(self.grid) and column < len(self.grid[row]):
-                        self.grid[row][column].hide()
+                    if not self.display_absent_images:
+                        if row < len(self.grid) and column < len(self.grid[row]):
+                            self.grid[row][column].hide()
+
+        # Set stretch of rows based on what's present
+        for row in filled_rows:
+            if filled_rows[row] == 0:
+                self.ui["layout"].setRowStretch(row, 0)
+            else:
+                self.ui["layout"].setRowStretch(row, 1)
+
+        # Everything is displayed by default
+        if self.display_absent_images:
+            return
 
         for column in filled_columns:
             if filled_columns[column] == 0:
@@ -1129,8 +1143,8 @@ class PictureContainer:
         The row where the picture should be displayed
     column: int
         The row where the picture should be displayed
-    picture : models.picture.Picture
-        The picture to display
+    pictures : list of models.picture.Picture
+        The pictures to display (it'll display only 1 from that list)
     ui : dict of QtWidgets.QWidget
         The different widgets displayed on the screen
 
@@ -1144,9 +1158,9 @@ class PictureContainer:
     __init__ (parent_controller, row, column)
         Stores reference to parent controller + initializes the display
     set_empty_picture
-        Defines which folders to display
-    set_picture (picture)
-        Adds all trips & pictures to the tree
+        Displays a blank picture + buttons to generate / copy
+    set_pictures (pictures)
+        Displays a given picture
     on_click_generate
         Handler for generate button: triggers parent's handler
     on_click_copy
@@ -1182,9 +1196,10 @@ class PictureContainer:
         # On click: add or remove jpg from folder
         # Update icon: should have color (or background?) when image is present in subfolder
         self.parent_controller = parent_controller
+        self.categories = parent_controller.database.categories_get()
         self.row = row
         self.column = column
-        self.picture = None
+        self.pictures = None
         self.picture_displayed = False
         self.ui = {}
         self.ui["main"] = QtWidgets.QWidget()
@@ -1198,7 +1213,7 @@ class PictureContainer:
             f"PictureContainer.set_empty_picture row {self.row}, column {self.column}"
         )
         self.clear_display()
-        self.picture = None
+        self.pictures = None
         self.picture_displayed = False
         ui_elements = self.ui["elements"]
 
@@ -1237,7 +1252,7 @@ class PictureContainer:
 
         self.ui["buttonbox_layout"].addStretch()
 
-    def set_picture(self, picture):
+    def set_pictures(self, pictures):
         """Displays the provided picture as well as action buttons
 
         Parameters
@@ -1246,16 +1261,16 @@ class PictureContainer:
             The picture to display
         """
         logger.debug(
-            f"PictureContainer.set_picture {picture.filename} in row {self.row}, column {self.column}"
+            f"PictureContainer.set_pictures {len(pictures)} pictures, {pictures[0].filename} in row {self.row}, column {self.column}"
         )
         self.clear_display()
-        self.picture = picture
+        self.pictures = pictures
+        ui_elements = self.ui["elements"]
 
-        self.ui["elements"]["filename"] = QtWidgets.QLabel(self.picture.filename)
-        self.ui["layout"].addWidget(self.ui["elements"]["filename"])
+        ui_elements["filename"] = QtWidgets.QLabel(self.pictures[0].filename)
+        self.ui["layout"].addWidget(ui_elements["filename"])
 
         # Button box - needed for vertical alignment (setting an alignment in addWidget doesn't seem to be enough)
-        ui_elements = self.ui["elements"]
         ui_elements["buttonbox"] = QtWidgets.QWidget()
         self.ui["buttonbox_layout"] = QtWidgets.QHBoxLayout()
         ui_elements["buttonbox"].setLayout(self.ui["buttonbox_layout"])
@@ -1264,27 +1279,49 @@ class PictureContainer:
         self.ui["buttonbox_layout"].addStretch()
 
         # Delete button
-        self.ui["elements"]["delete"] = IconButton(
+        ui_elements["delete"] = IconButton(
             QtGui.QIcon(
                 os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
                 + "/assets/images/delete_monochrome.png"
             )
         )
-        self.ui["elements"]["delete"].setMaximumHeight(35)
-        self.ui["elements"]["delete"].clicked.connect(lambda: self.on_click_delete())
-        self.ui["buttonbox_layout"].addWidget(
-            self.ui["elements"]["delete"], Qt.AlignHCenter
-        )
+        ui_elements["delete"].setMaximumHeight(35)
+        ui_elements["delete"].clicked.connect(lambda: self.on_click_delete())
+        self.ui["buttonbox_layout"].addWidget(ui_elements["delete"], Qt.AlignHCenter)
+
+        self.ui["buttonbox_layout"].addStretch()
+
+        # Button for categories
+        for category in self.categories:
+            if category.icon:
+                category_button = IconButton(QtGui.QIcon(category.icon))
+            else:
+                category_button = IconButton(label=category.name)
+            # #category_button = IconButton(QtGui.QIcon(category.icon))
+            ui_elements["categories##" + str(category.id)] = category_button
+            category_button.setMaximumHeight(35)
+            category_button.clicked.connect(
+                lambda _a, category=category: self.on_click_category(category)
+            )
+            category_button.setToolTip(category.name)
+            category_button.setCheckable(True)
+            if category in [p.category for p in self.pictures]:
+                category_button.setChecked(True)
+
+            self.ui["buttonbox_layout"].addWidget(
+                ui_elements["categories##" + str(category.id)], Qt.AlignHCenter
+            )
 
         self.ui["buttonbox_layout"].addStretch()
 
         self.picture_displayed = True
 
-        pixmap = QtGui.QPixmap(self.picture.path)
+        # Assumption: all pictures provided are the same
+        pixmap = QtGui.QPixmap(self.pictures[0].path)
         # Image exists and can be read by PyQt5
         if pixmap.width() > 0:
             image = PictureDisplay(self.ui["main"])
-            self.ui["elements"]["image"] = image
+            ui_elements["image"] = image
             image.set_pixmap(pixmap)
             image.horizontalScrollBar().valueChanged.connect(
                 lambda val: self.parent_controller.pictures_set_scrollbar(
@@ -1334,6 +1371,18 @@ class PictureContainer:
         # #if button == QtWidgets.QMessageBox.Yes:
         self.parent_controller.delete_image(self.row, self.column)
 
+    def on_click_category(self, category):
+        """Handler for category button: copies or deleted the image & refreshes the screen"""
+        logger.debug(
+            f"PictureContainer.on_click_category {category} in row {self.row}, column {self.column}"
+        )
+
+        picture = [p for p in self.pictures if p.category == category]
+        if picture:
+            self.parent_controller.delete_image(self.row, self.column, category)
+        else:
+            self.parent_controller.copy_image(self.row, self.column, category)
+
     def display_error(self, message):
         """Displays the provided error message
 
@@ -1370,7 +1419,7 @@ class PictureContainer:
             self.ui["layout"].removeWidget(self.ui["elements"][i])
         self.ui["elements"] = {}
 
-        self.picture = None
+        self.pictures = None
         self.picture_displayed = False
 
     def fit_picture_in_view(self):

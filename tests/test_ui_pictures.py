@@ -114,12 +114,18 @@ class TestUiPictures:
         return get_ui
 
     @pytest.fixture
-    def pydive_picture_element(self, pydive_ui):
+    def pydive_picture_ui(self, pydive_ui):
         def get_element(row, col, element):
+            # In order:
+            #  If no image: spacer, generate, copy, spacer
+            #  If image: spacer, delete, spacer, 1 button per category, spacer
             button_positions = {
                 "generate": 1,
                 "delete": 1,
                 "copy": 2,
+                "categoryTop": 3,
+                "categoryBof": 4,
+                "category3": 5,
             }
 
             container = pydive_ui("grid").itemAtPosition(row, col).widget()
@@ -128,10 +134,14 @@ class TestUiPictures:
             elif element in button_positions:
                 buttonbox = container.layout().itemAt(1).widget()
                 return buttonbox.layout().itemAt(button_positions[element]).widget()
-            elif element == "error":
+            elif element == "filename":
+                return container.layout().itemAt(0).widget()
+            elif element == "error_if_no_image":
                 return container.layout().itemAt(2).widget()
             elif element == "picture":
                 return container.layout().itemAt(2).widget()
+            elif element == "error_if_image":
+                return container.layout().itemAt(3).widget()
 
             raise ValueError(f"Field {element} could not be found")
 
@@ -214,25 +224,26 @@ class TestUiPictures:
     def helper_check_picture_display(self, test, container, display_type, path=None):
         buttonbox = container.layout().itemAt(1).widget()
 
-        if display_type == "JPG":
-            assert container.layout().count() == 3, test + " : 3 items displayed"
+        if display_type in ("JPG", "RAW"):
+            assert container.layout().count() == 3, test + " : Container display"
+            assert buttonbox.layout().count() == 6, test + " : Buttonbox display"
             filename = container.layout().itemAt(0).widget()
-            delete = buttonbox.layout().itemAt(1).widget()  # 0 & 2 are spacers
-            picture = container.layout().itemAt(2).widget()
-            assert filename.text() == path, test + " : filename display"
-            assert isinstance(picture, PictureDisplay), test + " : image display"
-            assert isinstance(delete, IconButton), test + " : delete display"
-        elif display_type == "RAW":
-            assert container.layout().count() == 3, test + " : 3 items displayed"
-            filename = container.layout().itemAt(0).widget()
-            delete = buttonbox.layout().itemAt(1).widget()  # 0 & 2 are spacers
+            delete = buttonbox.layout().itemAt(1).widget()
+            categoryTop = buttonbox.layout().itemAt(3).widget()
+            categoryBof = buttonbox.layout().itemAt(4).widget()
             assert filename.text() == path, test + " : filename display"
             assert isinstance(delete, IconButton), test + " : delete display"
+            assert isinstance(categoryTop, IconButton), test + " : categoryTop display"
+            assert categoryTop.toolTip() == "Top", test + " : categoryTop display"
+            assert isinstance(categoryBof, IconButton), test + " : categoryBof display"
+            assert categoryBof.toolTip() == "Bof", test + " : categoryBof display"
+            if display_type == "JPG":
+                picture = container.layout().itemAt(2).widget()
+                assert isinstance(picture, PictureDisplay), test + " : image display"
         elif display_type == "No image":
-            assert container.layout().count() in (2, 3), (
-                test + " : 2 or 3 items displayed"
-            )
+            assert container.layout().count() in (2, 3), test + " : Container display"
             # 2 or 3 depending on whether we have a spacer at the end
+            assert buttonbox.layout().count() == 4, test + " : Buttonbox display"
             label = container.layout().itemAt(0).widget()
             generate = buttonbox.layout().itemAt(1).widget()  # 0 & 3 are spacers
             copy = buttonbox.layout().itemAt(2).widget()  # 0 & 3 are spacers
@@ -441,6 +452,43 @@ class TestUiPictures:
         ]
         self.helper_check_paths(action_name, new_files)
 
+    def test_pictures_display_grid(self, pydive_ui, pydive_picture_ui, qtbot):
+        # Trigger display of picture grid (twice to check if it handles it well)
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+
+        # Check display - Overall grid structure
+        assert (
+            pydive_ui("grid").columnCount() == 4
+        ), "PictureGrid has right number of columns"
+        assert pydive_ui("grid").rowCount() == 6, "PictureGrid has right number of rows"
+
+        # Check display - Correct display of different images (RAW, JPG, no image)
+        # "No image"
+        test = "No image"
+        container = pydive_ui("grid").itemAtPosition(1, 2).widget()
+        self.helper_check_picture_display(test, container, "No image")
+
+        # RAW image ==> readable
+        test = "RAW image"
+        container = pydive_ui("grid").itemAtPosition(1, 1).widget()
+        self.helper_check_picture_display(test, container, "RAW", "IMG001.CR2")
+        assert not pydive_picture_ui(
+            1, 1, "categoryTop"
+        ).isChecked(), "Image not in Top"
+        assert pydive_picture_ui(1, 1, "categoryBof").isChecked(), "Image in Bof"
+
+        # JPG image ==> readable
+        test = "JPG image"
+        container = pydive_ui("grid").itemAtPosition(5, 3).widget()
+        self.helper_check_picture_display(test, container, "JPG", "IMG001_RT.jpg")
+        assert not pydive_picture_ui(
+            5, 3, "categoryTop"
+        ).isChecked(), "Image not in Top"
+        assert not pydive_picture_ui(
+            5, 3, "categoryBof"
+        ).isChecked(), "Image not in Bof"
+
     ########## Check process group modal screen ########
     def test_pictures_process_groups_display(self, pydive_ui, qtbot, qapp):
         def handle_dialog():
@@ -630,33 +678,6 @@ class TestUiPictures:
         assert pydive_ui("grid").rowCount() == 1, "PictureGrid is empty"
         assert pydive_ui("grid").itemAtPosition(0, 0) is None, "PictureGrid is empty"
 
-    def test_pictures_tree_click_picture_group(self, pydive_ui, qtbot):
-        # Trigger display of picture grid (twice to check if it handles it well)
-        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
-        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
-
-        # Check display - Overall grid structure
-        assert (
-            pydive_ui("grid").columnCount() == 4
-        ), "PictureGrid has right number of columns"
-        assert pydive_ui("grid").rowCount() == 6, "PictureGrid has right number of rows"
-
-        # Check display - Correct display of different images (RAW, JPG, no image)
-        # "No image"
-        test = "No image"
-        container = pydive_ui("grid").itemAtPosition(1, 2).widget()
-        self.helper_check_picture_display(test, container, "No image")
-
-        # RAW image ==> readable
-        test = "RAW image"
-        container = pydive_ui("grid").itemAtPosition(1, 1).widget()
-        self.helper_check_picture_display(test, container, "RAW", "IMG001.CR2")
-
-        # JPG image ==> readable
-        test = "JPG image"
-        container = pydive_ui("grid").itemAtPosition(5, 3).widget()
-        self.helper_check_picture_display(test, container, "JPG", "IMG001_RT.jpg")
-
     def test_pictures_tree_click_picture_group_some_are_hidden(self, pydive_ui, qtbot):
         # Get tree item, trip & picture groups
         pydive_ui("tree_Malta").setExpanded(True)
@@ -701,11 +722,11 @@ class TestUiPictures:
         pydive_ui("tree").remove_picture_group(None)
 
     def test_pictures_tree_picture_group_removed_before_add_again(
-        self, pydive_ui, pydive_picture_element, qtbot
+        self, pydive_ui, pydive_picture_ui, qtbot
     ):
         # Trigger action
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
-        qtbot.mouseClick(pydive_picture_element(1, 2, "generate"), Qt.LeftButton)
+        qtbot.mouseClick(pydive_picture_ui(1, 2, "generate"), Qt.LeftButton)
 
         # Empty tree to force a RuntimeError
         pydive_ui("tree").clear()
@@ -760,7 +781,7 @@ class TestUiPictures:
         menu_name = "Convert images in Archive"
         action_name = "Using DarkTherapee"
 
-        # Trigger action - 2 images converted
+        # Trigger action
         signals = [picture_group1.pictureAdded, picture_group2.pictureAdded]
         with qtbot.waitSignals(signals, timeout=2000):
             self.trigger_action(pydive_ui, trip_item, menu_name, action_name)
@@ -855,7 +876,7 @@ class TestUiPictures:
 
     ########## Check actions on tree items - Picture group-related menu actions ########
     def test_pictures_tree_picture_group_copy(self, pydive_ui, qtbot):
-        # Trigger action - 1 image copied
+        # Trigger action
         picture_item = pydive_ui("tree_Malta_001")
         action_name = "Copy all images from Temporary to Archive"
         with qtbot.waitSignal(pydive_ui("pg_Malta_001").pictureAdded, timeout=2000):
@@ -876,7 +897,7 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col3") == str(3), "3 in Archive"
 
     def test_pictures_tree_picture_group_convert(self, pydive_ui, qtbot):
-        # Trigger action - 1 image added
+        # Trigger action
         picture_item = pydive_ui("tree_Malta_002")  # Malta's IMG002
         picture_group = pydive_ui("pg_Malta_002")
         menu_name = "Convert images in Archive"
@@ -901,7 +922,7 @@ class TestUiPictures:
     def test_pictures_tree_picture_group_change_trip(
         self, pydive_ui, qtbot, monkeypatch
     ):
-        # Trigger action - 1 image added
+        # Trigger action
         action_name = "Change trip to ..."
         monkeypatch.setattr(
             QtWidgets.QInputDialog, "getText", lambda *args: ("Italy", True)
@@ -986,9 +1007,7 @@ class TestUiPictures:
             pydive_ui("tree").add_picture_group_action("", "", action_name, "", "", "")
 
     ########## Check actions in the picture grid ########
-    def test_pictures_grid_copy_raw_picture(
-        self, pydive_ui, pydive_picture_element, qtbot
-    ):
+    def test_pictures_grid_copy_raw_picture(self, pydive_ui, pydive_picture_ui, qtbot):
         # Trigger display of grid
         picture_group = pydive_ui("pg_Georgia_010")
         self.click_tree_item(pydive_ui("tree_Georgia_010"), qtbot, pydive_ui)
@@ -1000,7 +1019,7 @@ class TestUiPictures:
 
         # Trigger action
         with qtbot.waitSignal(picture_group.pictureAdded) as blocker:
-            qtbot.mouseClick(pydive_picture_element(1, 1, "copy"), Qt.LeftButton)
+            qtbot.mouseClick(pydive_picture_ui(1, 1, "copy"), Qt.LeftButton)
 
         # Check signal is emitted, files have been created & models updated
         new_path = os.path.join("Archive", "Georgia", "IMG010.CR2")
@@ -1014,7 +1033,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After RAW copy"
-        container = pydive_picture_element(1, 1, "container")
+        container = pydive_picture_ui(1, 1, "container")
         self.helper_check_picture_display(test, container, "RAW", "IMG010.CR2")
 
         # Check display - Tree has been updated
@@ -1025,21 +1044,19 @@ class TestUiPictures:
         assert pydive_ui("tree_Georgia_011_convert_col2") == str(1), "1 in Temporary"
         assert pydive_ui("tree_Georgia_011_convert_col3") == str(0), "0 in Archive"
 
-    def test_pictures_grid_copy_jpg_picture(
-        self, pydive_ui, pydive_picture_element, qtbot
-    ):
+    def test_pictures_grid_copy_jpg_picture(self, pydive_ui, pydive_picture_ui, qtbot):
         # Trigger display of picture grid
         picture_group = pydive_ui("pg_Georgia_010")
         self.click_tree_item(pydive_ui("tree_Georgia_010"), qtbot, pydive_ui)
 
         # Check display - No image displayed
         test = "Before JPG copy"
-        container = pydive_picture_element(1, 3, "container")
+        container = pydive_picture_ui(1, 3, "container")
         self.helper_check_picture_display(test, container, "No image")
 
-        # Trigger action - 1 image copied
+        # Trigger action
         with qtbot.waitSignal(picture_group.pictureAdded) as signal:
-            qtbot.mouseClick(pydive_picture_element(1, 3, "copy"), Qt.LeftButton)
+            qtbot.mouseClick(pydive_picture_ui(1, 3, "copy"), Qt.LeftButton)
 
         # Check signal is emitted, files have been created & models updated
         new_path = os.path.join("Archive", "Georgia", "IMG010_RT.jpg")
@@ -1048,12 +1065,12 @@ class TestUiPictures:
         assert signal.args[0].path == os.path.join(
             pytest.BASE_FOLDER, new_path
         ), "Added picture signal has correct path"
-        assert signal.args[1] == "RT", "Added picture signal has RT as conversion"
+        assert signal.args[1] == "RT", "Addition signal has RT as conversion"
         assert len(picture_group.pictures["RT"]) == 2, "New picture in group"
 
         # Check display - New image is displayed
         test = "After JPG copy"
-        container = pydive_picture_element(1, 3, "container")
+        container = pydive_picture_ui(1, 3, "container")
         self.helper_check_picture_display(test, container, "JPG", "IMG010_RT.jpg")
 
         # Check display - Tree has been updated
@@ -1064,28 +1081,28 @@ class TestUiPictures:
         assert pydive_ui("tree_Georgia_011_convert_col2") == str(1), "1 in Temporary"
         assert pydive_ui("tree_Georgia_011_convert_col3") == str(0), "0 in Archive"
 
-    def test_pictures_grid_copy_error(self, pydive_ui, pydive_picture_element, qtbot):
+    def test_pictures_grid_copy_error(self, pydive_ui, pydive_picture_ui, qtbot):
         # Trigger action - Should raise (caught) exception
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
-        qtbot.mouseClick(pydive_picture_element(2, 2, "copy"), Qt.LeftButton)
+        qtbot.mouseClick(pydive_picture_ui(2, 2, "copy"), Qt.LeftButton)
 
         # Check display - Error is displayed
-        error = pydive_picture_element(2, 2, "error")
+        error = pydive_picture_ui(2, 2, "error_if_no_image")
         assert error.text() == "No source image found", "Error is displayed"
 
     def test_pictures_grid_delete_jpg_picture(
-        self, pydive_ui, pydive_picture_element, qtbot, monkeypatch
+        self, pydive_ui, pydive_picture_ui, qtbot, monkeypatch
     ):
         # Trigger display of picture grid
         picture_group = pydive_ui("pg_Malta_001")
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
 
-        # Trigger action - 1 image deleted
+        # Trigger action
         monkeypatch.setattr(
             QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.Yes
         )
         with qtbot.waitSignal(picture_group.pictureRemoved, timeout=1000) as signal:
-            qtbot.mouseClick(pydive_picture_element(5, 3, "delete"), Qt.LeftButton)
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "delete"), Qt.LeftButton)
 
         # Check signal is emitted, file have been deleted & models updated
         deleted_path = os.path.join("Temporary", "Malta", "IMG001_RT.jpg")
@@ -1099,7 +1116,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After picture deletion"
-        container = pydive_picture_element(5, 3, "container")
+        container = pydive_picture_ui(5, 3, "container")
         self.helper_check_picture_display(test, container, "No image")
 
         # Check display - Tree has been updated
@@ -1108,20 +1125,20 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col3") == str(2), "2 in Archive"
 
     def test_pictures_grid_delete_raw_picture(
-        self, pydive_ui, pydive_picture_element, qtbot, monkeypatch
+        self, pydive_ui, pydive_picture_ui, qtbot, monkeypatch
     ):
         # Trigger display of picture grid
         picture_group = pydive_ui("pg_Malta_001")
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
 
-        # Trigger action - 1 image deleted
+        # Trigger action
         monkeypatch.setattr(
             QtWidgets.QMessageBox, "exec", lambda *args: QtWidgets.QMessageBox.Yes
         )
         with qtbot.waitSignals(
             [picture_group.pictureRemoved] * 2, timeout=1000
         ) as signals:
-            qtbot.mouseClick(pydive_picture_element(1, 1, "delete"), Qt.LeftButton)
+            qtbot.mouseClick(pydive_picture_ui(1, 1, "delete"), Qt.LeftButton)
 
         # Check signal is emitted, file have been deleted & models updated
         deleted_path = os.path.join("Archive", "Malta", "IMG001.CR2")
@@ -1135,7 +1152,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After picture deletion"
-        container = pydive_picture_element(1, 1, "container")
+        container = pydive_picture_ui(1, 1, "container")
         self.helper_check_picture_display(test, container, "No image")
 
         # Check display - Tree has been updated
@@ -1143,14 +1160,12 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col2") == str(2), "2 in Temporary"
         assert pydive_ui("tree_Malta_001_col3") == str(0), "0 in Archive"
 
-    def test_pictures_grid_convert_picture(
-        self, pydive_ui, pydive_picture_element, qtbot
-    ):
-        # Trigger action - 1 image added
+    def test_pictures_grid_convert_picture(self, pydive_ui, pydive_picture_ui, qtbot):
+        # Trigger action
         picture_group = pydive_ui("pg_Malta_001")
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
         with qtbot.waitSignal(picture_group.pictureAdded) as signal:
-            qtbot.mouseClick(pydive_picture_element(1, 2, "generate"), Qt.LeftButton)
+            qtbot.mouseClick(pydive_picture_ui(1, 2, "generate"), Qt.LeftButton)
 
         # Check signal is emitted, file have been added & models updated
         new_path = os.path.join("Archive", "Malta", "IMG001_DT.jpg")
@@ -1164,7 +1179,7 @@ class TestUiPictures:
 
         # Check display - New image is displayed
         test = "After picture generation"
-        container = pydive_picture_element(1, 2, "container")
+        container = pydive_picture_ui(1, 2, "container")
         # This is called with "RAW" because the "conversion" is only a copy in this test
         self.helper_check_picture_display(test, container, "RAW", "IMG001_DT.jpg")
 
@@ -1174,31 +1189,31 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col3") == str(3), "3 in Archive"
 
     def test_pictures_grid_convert_picture_no_method_found(
-        self, pydive_ui, pydive_picture_element, qtbot
+        self, pydive_ui, pydive_picture_ui, qtbot
     ):
         # Trigger action - Should raise (caught) exception
         self.click_tree_item(pydive_ui("tree_Sweden_040"), qtbot, pydive_ui)
-        qtbot.mouseClick(pydive_picture_element(2, 4, "generate"), Qt.LeftButton)
+        qtbot.mouseClick(pydive_picture_ui(2, 4, "generate"), Qt.LeftButton)
 
         # Check display - Error is displayed
-        error = pydive_picture_element(2, 4, "error")
+        error = pydive_picture_ui(2, 4, "error_if_no_image")
         assert error.text() == "No conversion method found", "Error is displayed"
 
     def test_pictures_grid_picture_zoom(
-        self, pydive_ui, pydive_picture_element, qtbot, qapp
+        self, pydive_ui, pydive_picture_ui, qtbot, qapp
     ):
         # Trigger display of picture grid
         self.click_tree_item(pydive_ui("tree_Sweden_040"), qtbot, pydive_ui)
 
         # Trigger mouse wheel
-        picture = pydive_picture_element(5, 2, "picture")
+        picture = pydive_picture_ui(5, 2, "picture")
         size_before = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
         with qtbot.waitSignal(picture.zoomChanged):
             self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
 
         # Check results
         size_after = picture.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
-        picture2 = pydive_picture_element(5, 3, "picture")
+        picture2 = pydive_picture_ui(5, 3, "picture")
         size_picture_2 = picture2.transform().mapRect(QtCore.QRectF(0, 0, 1, 1)).width()
         delta_zoom = abs(size_after - size_picture_2) / size_after
         assert size_before < size_after, "Picture is zoomed in"
@@ -1221,14 +1236,14 @@ class TestUiPictures:
         assert picture2._zoom == 0, "Other pictures' _zoom property changed"
 
     def test_pictures_grid_picture_move(
-        self, pydive_ui, pydive_picture_element, qtbot, qapp
+        self, pydive_ui, pydive_picture_ui, qtbot, qapp
     ):
         # Trigger display of picture grid
         self.click_tree_item(pydive_ui("tree_Sweden_040"), qtbot, pydive_ui)
 
         # Trigger mouse wheel
-        picture = pydive_picture_element(5, 2, "picture")
-        picture2 = pydive_picture_element(5, 3, "picture")
+        picture = pydive_picture_ui(5, 2, "picture")
+        picture2 = pydive_picture_ui(5, 3, "picture")
         with qtbot.waitSignal(picture.zoomChanged):
             # This is needed to ensure horizontal scrollbar is visible
             self.mouseWheelTurn(qapp, picture, picture.pos(), 1)
@@ -1262,6 +1277,61 @@ class TestUiPictures:
         # Check results
         scrollbarv2 = picture2.verticalScrollBar()
         assert scrollbarv2.value() == scrollbarv.value(), "Other pictures move too"
+
+    def test_pictures_grid_add_to_category(self, pydive_ui, pydive_picture_ui, qtbot):
+        # Trigger action
+        picture_group = pydive_ui("pg_Malta_001")
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+
+        with qtbot.waitSignal(picture_group.pictureAdded) as signal:
+            qtbot.mouseClick(pydive_picture_ui(5, 3, "categoryBof"), Qt.LeftButton)
+
+        # Check signal is emitted, file have been added & models updated
+        new_path = os.path.join("Temporary", "Malta", "Bof", "IMG001_RT.jpg")
+        new_files = [new_path]
+        self.helper_check_paths("Add to category", new_files)
+        assert signal.args[0].path == os.path.join(
+            pytest.BASE_FOLDER, new_path
+        ), "New picture has correct path"
+        assert signal.args[1] == "RT", "New picture has correct conversion method"
+        assert len(picture_group.pictures["RT"]) == 2, "Picture has 2 RT images"
+
+        # Check display - Category button is now checked
+        assert pydive_picture_ui(5, 3, "categoryBof").isChecked(), "In Bof"
+        assert not pydive_picture_ui(5, 3, "categoryTop").isChecked(), "Not in Top"
+
+        # Check display - Tree has been updated
+        assert pydive_ui("tree_Malta_001_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Malta_001_col2") == str(3), "3 in Temporary"
+        assert pydive_ui("tree_Malta_001_col3") == str(2), "2 in Archive"
+
+    def test_pictures_grid_remove_from_category(
+        self, pydive_ui, pydive_picture_ui, qtbot
+    ):
+        # Trigger action
+        picture_group = pydive_ui("pg_Malta_001")
+        self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
+
+        with qtbot.waitSignal(picture_group.pictureRemoved) as signal:
+            qtbot.mouseClick(pydive_picture_ui(1, 1, "categoryBof"), Qt.LeftButton)
+
+        # Check signal is emitted, file have been added & models updated
+        removed_files = [
+            os.path.join("Archive", "Malta", "Bof", "IMG001.CR2"),
+        ]
+        self.helper_check_paths("Delete from category", [], removed_files)
+        assert signal.args[0] == "", "Deletion signal has correct conversion type"
+        assert signal.args[1].name == "Archive", "Deletion signal has correct location"
+        assert len(picture_group.pictures[""]) == 2, "Picture has 2 RAW images"
+
+        # Check display - Category button is now checked
+        assert not pydive_picture_ui(1, 1, "categoryBof").isChecked(), "In Bof"
+        assert not pydive_picture_ui(1, 1, "categoryTop").isChecked(), "Not in Top"
+
+        # Check display - Tree has been updated
+        assert pydive_ui("tree_Malta_001_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Malta_001_col2") == str(2), "2 in Temporary"
+        assert pydive_ui("tree_Malta_001_col3") == str(1), "1 in Archive"
 
 
 if __name__ == "__main__":
