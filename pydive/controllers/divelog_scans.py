@@ -6,6 +6,10 @@ DiveTree
     The tree displaying the dives
 PictureGrid
     Displays the split pictures from the dive log scan
+PictureContainer
+    Displays an image with the dive reference below
+PictureDisplay
+    Displays a single image while preserving aspect ratio when resizing
 DivelogScanController
     Divelog scan split, organization & link to trips
 """
