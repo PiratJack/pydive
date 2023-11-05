@@ -93,7 +93,7 @@ class PicturesTree(BaseTreeWidget):
         self.parent_controller = parent_controller
         self.database = parent_controller.database
         self.repository = repository
-        self.itemSelectionChanged.connect(self.on_item_clicked)
+        self.itemSelectionChanged.connect(self.on_item_selected)
 
     def contextMenuEvent(self, event):
         """Right-click menu: copy & generate pictures
@@ -639,19 +639,14 @@ class PicturesTree(BaseTreeWidget):
             )
             self.takeTopLevelItem(self.indexOfTopLevelItem(trip_widget))
 
-    def on_item_clicked(self):
-        """Item clicked ==> display corresponding images
-
-        Parameters
-        ----------
-        item : QtWidgets.QTreeWidgetItem
-            The item that was clicked"""
-        # Exclude clicks on trips
+    def on_item_selected(self):
+        """Item selected ==> display corresponding images"""
         item = self.selectedItems()
         if not item:
             return
         item = item[0]
-        logger.info(f"PicturesTree.on_item_clicked: {item.data(0, Qt.DisplayRole)}")
+        logger.info(f"PicturesTree.on_item_selected: {item.data(0, Qt.DisplayRole)}")
+        # Exclude clicks on trips
         if not item.parent():
             return
 
