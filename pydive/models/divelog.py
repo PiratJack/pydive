@@ -167,13 +167,23 @@ class Dive:
         duration = xml_data.attrib.get("duration", 0)
         if duration:
             duration = duration.replace(" min", "")
-            hours = 0
             minutes, seconds = map(int, duration.split(":"))
             hours = minutes // 60
             minutes %= 60
             self.duration = datetime.timedelta(
                 hours=hours, minutes=minutes, seconds=seconds
             )
+
+        # Parse depth/time
+        self.depths = {}
+        samples = xml_data.findall("divecomputer/sample")
+        if samples:
+            for sample in samples:
+                sample_time = sample.attrib.get("time", 0).replace(" min", "")
+                minutes, seconds = map(int, sample_time.split(":"))
+                sample_time = minutes * 60 + seconds
+                sample_depth = float(sample.attrib.get("depth", 0).replace(" m", ""))
+                self.depths[sample_time] = sample_depth
 
         # Parse date/time
         self.start_date = None

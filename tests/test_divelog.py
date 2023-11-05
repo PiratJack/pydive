@@ -20,6 +20,8 @@ class TestDiveLog:
         start_date = datetime.datetime.fromisoformat("2002-07-24T14:00:06")
         assert dive.start_date == start_date, "Dive start time correct"
         assert dive.number == 0, "Dive number correct"
+        assert len(dive.depths) == 4, "Dive points length correct"
+        assert dive.depths[860] == 6, "Dive point at 14:20 correct"
 
         # Check a given trip
         trip = pydive_divelog.dives[2]
