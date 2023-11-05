@@ -14,6 +14,7 @@ import controllers.settings
 import controllers.pictures
 import controllers.process_groups
 import controllers.divelog_scans
+import controllers.diveanalysis
 
 _ = gettext.gettext
 logger = logging.getLogger(__name__)
@@ -48,10 +49,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.controllers = {
             "Settings": controllers.settings.SettingsController(self),
             "Pictures": controllers.pictures.PicturesController(self),
-            # Uncommenting the below leads to the same widget displayed twice
-            # This creates all sorts of issues, so this controller is displayed only as a dialog from the Pictures screen
-            # #"ProcessGroups": controllers.process_groups.ProcessGroupsController(self),
             "DivelogScan": controllers.divelog_scans.DivelogScanController(self),
+            "DiveAnalysis": controllers.diveanalysis.DiveAnalysisController(self),
         }
 
         # Define UI elements

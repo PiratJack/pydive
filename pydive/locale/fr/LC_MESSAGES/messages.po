@@ -81,6 +81,9 @@ msgstr "Afficher les images brutes"
 msgid "Display absent images"
 msgstr "Afficher les cases sans images"
 
+msgid "Dive analysis"
+msgstr ""
+
 msgid "Dive log file"
 msgstr "Historique des plongées"
 
@@ -112,6 +115,9 @@ msgstr ""
 
 msgid "Errors"
 msgstr "Erreurs"
+
+msgid "Export"
+msgstr "Export"
 
 msgid "File name suffix"
 msgstr "Suffixe de nom de fichier"

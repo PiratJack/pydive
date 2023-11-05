@@ -68,6 +68,9 @@ msgstr ""
 msgid "Display absent images"
 msgstr ""
 
+msgid "Dive analysis"
+msgstr ""
+
 msgid "Dive log file"
 msgstr ""
 
@@ -94,6 +97,9 @@ msgid ""
 msgstr ""
 
 msgid "Errors"
+msgstr ""
+
+msgid "Export"
 msgstr ""
 
 msgid "File name suffix"
