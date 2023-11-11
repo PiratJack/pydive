@@ -211,14 +211,64 @@ class DiveAnalysisGraph:
         self.dive = dive
 
         self.clear_plots()
-        x_values = list(map(lambda a: a / 60, dive.depths.keys()))
-        y_values = list(dive.depths.values())
-        line = pyqtgraph.mkPen("k", width=1)
-        self.plots["dive"] = self.ui["main"].plot(
-            x=x_values,
-            y=y_values,
-            pen=line,
-        )
+
+        # Calculate vertical speed (in m/minute)
+        x_values = list(dive.depths.keys())
+        # speeds has format x:speed after x
+        speeds = {
+            x: (dive.depths[x_values[idx + 1]] - dive.depths[x])
+            / (x_values[idx + 1] - x)
+            * 60
+            for idx, x in enumerate(x_values[:-1])
+        }
+
+        # Group speed in categories
+        # This is based on recommendations from FFESSM & usual computer speeds
+        # Below 10m/min: OK (grey)
+        # 10 to 15m/min: risky (orange)
+        # Above 15m/min: very risky (red)
+        def speed_color(speed):
+            if speed < -15:
+                return "r"
+            elif speed < -10:
+                return (255, 165, 0)
+            return (119, 136, 153)
+
+        colors = {x: speed_color(speeds[x]) for x in speeds}
+
+        # Plot the graphs
+        plots = {}
+        for color in [(119, 136, 153), (255, 165, 0), "r"]:
+            # Lines are drawn if they the 2 dots are included and have finite value in the values
+            # We need to color each line depending on the speed
+            # The "speeds" variable indicates the speed after the dot
+            # Therefore, if speeds[x] is red, both x and the value right after x need to be included
+            # Hence the check on x_values[idx-1]
+
+            # This will generate shared segments
+            # Because we plot in order grey, then orange, then red, the last color will take precedence
+            # In other words, we plot the worst (most risky) color possible
+            plots[color] = [
+                dive.depths[x]
+                if colors[x] == color
+                or (x_values[idx - 1] in colors and colors[x_values[idx - 1]] == color)
+                else float("inf")
+                for idx, x in enumerate(x_values[:-1])
+            ]
+            # The computer keeps recording on the surface, so the last dot is most likely with null speed
+            if color == "b":
+                plots[color].append(dive.depths[x_values[-1]])
+            else:
+                plots[color].append(float("inf"))
+
+            line = pyqtgraph.mkPen(color, width=2)
+
+            self.plots[color] = self.ui["main"].plot(
+                x=x_values,
+                y=plots[color],
+                pen=line,
+                connect="finite",
+            )
 
         return self.ui["main"]
 
@@ -291,6 +341,7 @@ class DiveAnalysisController:
         """
         logger.debug("DiveAnalysisController.init")
         self.parent_window = parent_window
+        self.database = parent_window.database
         self.divelog_path = None
         self.divelog = DiveLog()
         self.dive_tree = DiveTree(self)
