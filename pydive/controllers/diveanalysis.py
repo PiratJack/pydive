@@ -197,6 +197,7 @@ class DiveAnalysisGraph:
         self.ui["main"].setBackground(background)
         self.ui["main"].getAxis("left").setTextPen("k")
         self.ui["main"].getAxis("bottom").setTextPen("k")
+        self.ui["main"].addLegend()
 
     def display_dive(self, dive):
         """Reads a Dive and displays it in the graph
@@ -227,18 +228,24 @@ class DiveAnalysisGraph:
         # Below 10m/min: OK (grey)
         # 10 to 15m/min: risky (orange)
         # Above 15m/min: very risky (red)
-        def speed_color(speed):
-            if speed < -15:
+        def speed_to_color(speed):
+            if speed <= -15:
                 return "r"
             elif speed < -10:
                 return (255, 165, 0)
             return (119, 136, 153)
 
-        colors = {x: speed_color(speeds[x]) for x in speeds}
+        color_to_name = {
+            "r": _("&gt;= 15 m/min (dangerous)"),
+            (255, 165, 0): _("10-15 m/min (risky)"),
+            (119, 136, 153): _("&lt;= 10 m/min (OK)"),
+        }
+
+        colors = {x: speed_to_color(speeds[x]) for x in speeds}
 
         # Plot the graphs
         plots = {}
-        for color in [(119, 136, 153), (255, 165, 0), "r"]:
+        for color, plot_name in color_to_name.items():
             # Lines are drawn if they the 2 dots are included and have finite value in the values
             # We need to color each line depending on the speed
             # The "speeds" variable indicates the speed after the dot
@@ -261,13 +268,14 @@ class DiveAnalysisGraph:
             else:
                 plots[color].append(float("inf"))
 
-            line = pyqtgraph.mkPen(color, width=2)
+            line = pyqtgraph.mkPen(color, width=3)
 
             self.plots[color] = self.ui["main"].plot(
                 x=x_values,
                 y=plots[color],
                 pen=line,
                 connect="finite",
+                name=plot_name,
             )
 
         return self.ui["main"]
