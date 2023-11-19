@@ -24,6 +24,17 @@ _ = gettext.gettext
 logger = logging.getLogger(__name__)
 
 
+class TimeAxisItem(pyqtgraph.AxisItem):
+    def tickStrings(self, values, scale, spacing):
+        labels = [
+            f"{int(x//3600)}:{int(x//60)%60:02}:{int(x%60):02}"
+            if x > 3600
+            else f"{int(x//60):02}:{int(x%60):02}"
+            for x in values
+        ]
+        return labels
+
+
 class DiveTree(BaseTreeWidget):
     """The tree displaying the dives
 
@@ -191,7 +202,7 @@ class DiveAnalysisGraph:
         self.ui = {}
         self.ui["main"] = pyqtgraph.PlotWidget()
         self.ui["main"].showGrid(x=True, y=True)
-        # #self.ui['main'].setAxisItems({"bottom": pyqtgraph.DateAxisItem()})
+        self.ui["main"].setAxisItems({"bottom": TimeAxisItem("bottom")})
         self.ui["main"].getViewBox().invertY(True)
         background = (230, 230, 230)
         self.ui["main"].setBackground(background)
@@ -311,6 +322,7 @@ class DiveAnalysisGraph:
         if not self.plots:
             return
 
+        # Get position of mouse in graph values
         plot = next(iter(self.plots.values()))
         mousePoint = plot.getViewBox().mapSceneToView(position)
         point_time = int(mousePoint.x())
@@ -323,9 +335,17 @@ class DiveAnalysisGraph:
         legend = self.ui["main"].getPlotItem().legend
         if self.ui["tooltip"]:
             legend.removeItem(self.ui["tooltip"])
+
+        if closest > 3600:
+            time_label = (
+                f"{int(closest//3600)}:{int(closest//60)%60:02}:{int(closest%60):02}"
+            )
+        else:
+            time_label = f"{int(closest//60):02}:{int(closest%60):02}"
+
         self.ui[
             "tooltip"
-        ] = f"Time: {closest:0.1f}<br />Depth: {self.dive.depths[closest]:0.1f}"
+        ] = f"Time: {time_label}<br />Depth: {self.dive.depths[closest]:0.1f} m"
         legend.addItem(self.ui["tooltip_plot"], self.ui["tooltip"])
 
         # Update vertical line
@@ -342,6 +362,9 @@ class DiveAnalysisGraph:
         for plot_id, plot in self.plots.items():
             self.ui["main"].removeItem(plot)
         self.plots = {}
+
+        if self.ui["tooltip"]:
+            self.ui["main"].getPlotItem().legend.removeItem(self.ui["tooltip"])
 
         self.ui["main"].getPlotItem().enableAutoRange()
 
