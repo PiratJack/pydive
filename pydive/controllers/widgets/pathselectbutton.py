@@ -11,7 +11,7 @@ class PathSelectButton(IconButton):
 
     def __init__(self, image, parent=None, target_type="folder"):
         super().__init__(image, "", parent)
-        self.target_type = "folder" if target_type == "folder" else "file"
+        self.target_type = target_type
         self.setIcon(image)
         self.clicked.connect(self.choose_path)
 
@@ -22,8 +22,12 @@ class PathSelectButton(IconButton):
     def choose_path(self):
         if self.target_type == "folder":
             self.target = self.dialog.getExistingDirectory(self, _("Choose Directory"))
-        else:
+        elif self.target_type == "file":
             self.target, _a = self.dialog.getOpenFileName(None, _("Choose File"))
+        elif self.target_type == "new_file":
+            self.target, _a = self.dialog.getSaveFileName(None, _("Choose File"))
+        else:
+            raise ValueError(f"Unknown type for PathSelectButton: {self.target_type}")
         if self.target:
             self.pathSelected.emit(self.target)
             return self.target
