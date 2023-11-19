@@ -197,7 +197,21 @@ class DiveAnalysisGraph:
         self.ui["main"].setBackground(background)
         self.ui["main"].getAxis("left").setTextPen("k")
         self.ui["main"].getAxis("bottom").setTextPen("k")
+        self.ui["main"].scene().sigMouseMoved.connect(self.display_tooltip)
+
+        # Legend with colors
         self.ui["main"].addLegend()
+        self.ui["main"].getPlotItem().legend.anchor((0, -0.3), (0.3, 0))
+
+        # Vertical line at mouse position
+        self.ui["vertical_line"] = pyqtgraph.InfiniteLine(angle=90, movable=False)
+        self.ui["main"].addItem(self.ui["vertical_line"])
+
+        # "Tooltip" with data - added in the legend automatically (it's a fake plot)
+        self.ui["tooltip"] = None
+        self.ui["tooltip_plot"] = self.ui["main"].plot(
+            x=[0], y=[0], pen=pyqtgraph.mkPen(background, width=0), name=None
+        )
 
     def display_dive(self, dive):
         """Reads a Dive and displays it in the graph
@@ -280,6 +294,43 @@ class DiveAnalysisGraph:
 
         return self.ui["main"]
 
+    def display_tooltip(self, position):
+        """Reads a Dive and displays it in the graph
+
+        Parameters
+        ----------
+        position : models.divelog.Dive
+            A dive from the divelog
+        """
+        logger.debug(f"DiveAnalysisGraph.display_tooltip {position}")
+
+        if not self.ui["main"].sceneBoundingRect().contains(position):
+            return
+        if not self.ui["main"].isVisible():
+            return None
+        if not self.plots:
+            return
+
+        plot = next(iter(self.plots.values()))
+        mousePoint = plot.getViewBox().mapSceneToView(position)
+        point_time = int(mousePoint.x())
+
+        # Find closest sample time
+        points = [(abs(x - point_time), x) for x in self.dive.depths]
+        closest = sorted(points)[0][1]
+
+        # Add info in legend
+        legend = self.ui["main"].getPlotItem().legend
+        if self.ui["tooltip"]:
+            legend.removeItem(self.ui["tooltip"])
+        self.ui[
+            "tooltip"
+        ] = f"Time: {closest:0.1f}<br />Depth: {self.dive.depths[closest]:0.1f}"
+        legend.addItem(self.ui["tooltip_plot"], self.ui["tooltip"])
+
+        # Update vertical line
+        self.ui["vertical_line"].setPos(closest)
+
     @property
     def display_widget(self):
         """Returns the QtWidgets.QWidget for display of this screen"""
@@ -290,8 +341,9 @@ class DiveAnalysisGraph:
         """Clears all plots"""
         for plot_id, plot in self.plots.items():
             self.ui["main"].removeItem(plot)
-            self.ui["main"].clear()
         self.plots = {}
+
+        self.ui["main"].getPlotItem().enableAutoRange()
 
 
 class DiveAnalysisController:
