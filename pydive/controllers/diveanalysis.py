@@ -13,11 +13,13 @@ import os
 import gettext
 import logging
 import pyqtgraph
+import pyqtgraph.exporters
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 from controllers.widgets.basetreewidget import BaseTreeWidget
+from controllers.widgets.pathselectbutton import PathSelectButton
 from controllers.widgets.iconbutton import IconButton
 from models.divelog import DiveLog
 
@@ -426,6 +428,27 @@ class DiveAnalysisGraph:
 
         self.ui["main"].removeItem(self.regions.pop())
 
+    def on_export(self, path):
+        """Triggers an export of the graph. Hides unneeded elements before exporting
+
+        Parameters
+        ----------
+        path : str
+            The path selected by the user
+        """
+        logger.info("DiveAnalysisGraph.on_export")
+
+        # Hide the legend & vertical mouse position line
+        self.ui["vertical_line"].hide()
+        if self.ui["tooltip"]:
+            self.ui["main"].getPlotItem().legend.removeItem(self.ui["tooltip"])
+
+        exporter = pyqtgraph.exporters.ImageExporter(self.ui["main"].plotItem)
+
+        exporter.export(path)
+
+        self.ui["vertical_line"].show()
+
 
 class DiveAnalysisController:
     """Analysis & comments of a given dive
@@ -542,9 +565,18 @@ class DiveAnalysisController:
         self.ui["remove_region"].clicked.connect(self.on_remove_region)
         self.ui["buttonbox_layout"].addWidget(self.ui["remove_region"])
 
+        self.ui["buttonbox_layout"].addStretch()
+
         # Validate button
-        self.ui["export"] = QtWidgets.QPushButton(_("Export"))
-        self.ui["export"].clicked.connect(self.on_export)
+        self.ui["export"] = PathSelectButton(
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/save.png"
+            ),
+            self.ui["main"],
+            target_type="new_file",
+        )
+        self.ui["export"].pathSelected.connect(self.on_export)
         self.ui["buttonbox_layout"].addWidget(self.ui["export"])
 
     @property
@@ -568,10 +600,15 @@ class DiveAnalysisController:
         button.triggered.connect(lambda: self.parent_window.display_tab(self.code))
         return button
 
-    def on_export(self):
-        """Exports the graph with the comments added"""
-        # TODO: implement picture export
-        pass
+    def on_export(self, path):
+        """Exports the graph with the comments added
+
+        Parameters
+        ----------
+        path : str
+            The path selected by the user
+        """
+        self.graph.on_export(path)
 
     def on_add_region(self):
         """Click on + ==> adds a region in the graph"""
