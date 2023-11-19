@@ -19,9 +19,9 @@ What is done:
 - Display / copy / conversion of image, individually or in batches (background processing)
 - Display of in-progress background processing
 - Display & split of paper dive log scans
+- Display of dive details, with ability to comment on them
 
-What is remaining:
-- Views: home, dive analysis/comments
+At this point, I consider the project as complete. Until I actually use it and find new, interesting elements to add.
 
 ## What else should you know?
 
