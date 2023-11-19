@@ -18,6 +18,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 
 from controllers.widgets.basetreewidget import BaseTreeWidget
+from controllers.widgets.iconbutton import IconButton
 from models.divelog import DiveLog
 
 _ = gettext.gettext
@@ -185,6 +186,15 @@ class DiveAnalysisGraph:
         Clears all plot
     """
 
+    region_background_colors = [
+        (200, 230, 255, 150),
+        (200, 255, 230, 150),
+        (230, 200, 255, 150),
+        (230, 255, 200, 150),
+        (255, 200, 230, 150),
+        (255, 230, 200, 150),
+    ]
+
     def __init__(self, parent_controller):
         """Stores reference to parent controller
 
@@ -198,6 +208,7 @@ class DiveAnalysisGraph:
         self.divelog = parent_controller.divelog
         self.dive = None
         self.plots = {}
+        self.regions = []
 
         self.ui = {}
         self.ui["main"] = pyqtgraph.PlotWidget()
@@ -363,10 +374,57 @@ class DiveAnalysisGraph:
             self.ui["main"].removeItem(plot)
         self.plots = {}
 
+        for region in self.regions:
+            self.ui["main"].removeItem(region)
+        self.regions = []
+
         if self.ui["tooltip"]:
             self.ui["main"].getPlotItem().legend.removeItem(self.ui["tooltip"])
 
         self.ui["main"].getPlotItem().enableAutoRange()
+
+    def on_add_region(self):
+        """Adds a new region in the graph for comments"""
+        logger.info("DiveAnalysisGraph.on_add_region")
+        if not self.plots:
+            return
+
+        # Ask for region name
+        region_name, confirmed = QtWidgets.QInputDialog.getText(
+            self.parent_controller.parent_window,
+            _("Add time period"),
+            _("Name:"),
+            QtWidgets.QLineEdit.Normal,
+        )
+        if confirmed:
+            # Add region in the graph (in the left part)
+            max_value = max(self.dive.depths.keys()) // 10
+            color = self.region_background_colors[
+                len(self.regions) % len(self.region_background_colors)
+            ]
+            region_zone = pyqtgraph.LinearRegionItem(values=(0, max_value), brush=color)
+            region_zone.setZValue(-10)
+
+            # Add label
+            pyqtgraph.InfLineLabel(
+                region_zone.lines[0],
+                region_name,
+                color="k",
+                position=0.95,
+                anchor=(1, 1),
+            )
+
+            # Add to graph
+            self.regions.append(region_zone)
+            self.ui["main"].addItem(region_zone)
+
+    def on_remove_region(self):
+        """Removed the most recently added region from the graph"""
+        logger.info("DiveAnalysisGraph.on_remove_region")
+        if not self.regions:
+            return
+
+        self.ui["main"].removeItem(self.regions.pop())
 
 
 class DiveAnalysisController:
@@ -458,10 +516,36 @@ class DiveAnalysisController:
         self.ui["graph"] = self.graph.display_widget
         self.ui["right_layout"].addWidget(self.ui["graph"])
 
+        # Buttons for interaction
+        self.ui["buttonbox"] = QtWidgets.QWidget()
+        self.ui["buttonbox_layout"] = QtWidgets.QHBoxLayout()
+        self.ui["buttonbox"].setLayout(self.ui["buttonbox_layout"])
+        self.ui["right_layout"].addWidget(self.ui["buttonbox"])
+
+        # Add graph region
+        self.ui["add_region"] = IconButton(
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/add.png"
+            )
+        )
+        self.ui["add_region"].clicked.connect(self.on_add_region)
+        self.ui["buttonbox_layout"].addWidget(self.ui["add_region"])
+
+        # Remove graph region
+        self.ui["remove_region"] = IconButton(
+            QtGui.QIcon(
+                os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+                + "/assets/images/delete.png"
+            )
+        )
+        self.ui["remove_region"].clicked.connect(self.on_remove_region)
+        self.ui["buttonbox_layout"].addWidget(self.ui["remove_region"])
+
         # Validate button
         self.ui["export"] = QtWidgets.QPushButton(_("Export"))
         self.ui["export"].clicked.connect(self.on_export)
-        self.ui["right_layout"].addWidget(self.ui["export"])
+        self.ui["buttonbox_layout"].addWidget(self.ui["export"])
 
     @property
     def display_widget(self):
@@ -486,7 +570,16 @@ class DiveAnalysisController:
 
     def on_export(self):
         """Exports the graph with the comments added"""
+        # TODO: implement picture export
         pass
+
+    def on_add_region(self):
+        """Click on + ==> adds a region in the graph"""
+        self.graph.on_add_region()
+
+    def on_remove_region(self):
+        """Click on delete ==> removed a region in the graph"""
+        self.graph.on_remove_region()
 
     def display_dive(self, dive):
         """Displays the graph of a given dive
