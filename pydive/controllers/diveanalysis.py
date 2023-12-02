@@ -392,11 +392,10 @@ class DiveAnalysisGraph:
             return
 
         # Ask for region name
-        region_name, confirmed = QtWidgets.QInputDialog.getText(
+        region_name, confirmed = QtWidgets.QInputDialog.getMultiLineText(
             self.parent_controller.parent_window,
             _("Add time period"),
             _("Name:"),
-            QtWidgets.QLineEdit.Normal,
         )
         if confirmed:
             # Add region in the graph (in the left part)
