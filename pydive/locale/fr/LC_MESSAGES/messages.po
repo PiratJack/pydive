@@ -9,7 +9,19 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.4\n"
+"X-Generator: Poedit 3.4.1\n"
+
+msgid "&gt;= 15 m/min (dangerous)"
+msgstr "&gt;= 15 m/min (dangereux)"
+
+msgid "&lt;= 10 m/min (OK)"
+msgstr "&lt;= 10 m/min (OK)"
+
+msgid "10-15 m/min (risky)"
+msgstr "10-15 m/min (risqué)"
+
+msgid "Add time period"
+msgstr "Ajouter un intervalle"
 
 msgid "Cancel"
 msgstr "Annuler"
@@ -82,7 +94,7 @@ msgid "Display absent images"
 msgstr "Afficher les cases sans images"
 
 msgid "Dive analysis"
-msgstr ""
+msgstr "Analyse de plongée"
 
 msgid "Dive log file"
 msgstr "Historique des plongées"
@@ -115,9 +127,6 @@ msgstr ""
 
 msgid "Errors"
 msgstr "Erreurs"
-
-msgid "Export"
-msgstr "Export"
 
 msgid "File name suffix"
 msgstr "Suffixe de nom de fichier"
@@ -178,6 +187,9 @@ msgstr "Champ manquant: {field} pour lieu de stockage"
 
 msgid "Name"
 msgstr "Nom"
+
+msgid "Name:"
+msgstr "Nom:"
 
 msgid "No conversion method found"
 msgstr "Pas de méthode de conversion trouvée"
@@ -316,6 +328,9 @@ msgstr "{error}: {short_path} vers {target_trip} - {source_file}"
 
 #~ msgid "Copy image here"
 #~ msgstr "Copier l'image ici"
+
+#~ msgid "Export"
+#~ msgstr "Export"
 
 #~ msgid "Generate"
 #~ msgstr "Générer"

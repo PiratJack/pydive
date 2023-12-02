@@ -1,3 +1,15 @@
+msgid "&gt;= 15 m/min (dangerous)"
+msgstr ""
+
+msgid "&lt;= 10 m/min (OK)"
+msgstr ""
+
+msgid "10-15 m/min (risky)"
+msgstr ""
+
+msgid "Add time period"
+msgstr ""
+
 msgid "Cancel"
 msgstr ""
 
@@ -99,9 +111,6 @@ msgstr ""
 msgid "Errors"
 msgstr ""
 
-msgid "Export"
-msgstr ""
-
 msgid "File name suffix"
 msgstr ""
 
@@ -160,6 +169,9 @@ msgid "Missing storage location {field}"
 msgstr ""
 
 msgid "Name"
+msgstr ""
+
+msgid "Name:"
 msgstr ""
 
 msgid "No conversion method found"
