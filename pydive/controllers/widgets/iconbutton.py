@@ -12,19 +12,19 @@ class IconButton(QtWidgets.QPushButton):
         else:
             super(IconButton, self).__init__(label, parent)
 
-        self.pad = 8  # padding between the icon and the button frame
-        self.minSize = 8  # minimum size of the icon
+        self.pad = 6  # padding between the icon and the button frame
+        self.minSize = 24  # minimum size of the icon
 
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
         )
+        self.setMinimumSize(self.pad * 2 + self.minSize, self.pad * 2 + self.minSize)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHorizontalStretch(0)
         self.setSizePolicy(sizePolicy)
         self.setSizeIncrement(0, 0)
 
     def paintEvent(self, event):
-
         qp = QtGui.QPainter()
         qp.begin(self)
 
