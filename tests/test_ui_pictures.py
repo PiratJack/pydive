@@ -369,7 +369,9 @@ class TestUiPictures:
         pydive_ui("tree_Malta").setExpanded(True)
         self.click_tree_item(pydive_ui("tree_Malta_001"), qtbot, pydive_ui)
 
-        offset = QtCore.QPoint(2, 5)  # This is just a guess to end up on the checkbox
+        offset = QtCore.QPoint(
+            2, pydive_ui("display_raw").height() // 2
+        )  # This is just a guess to end up on the checkbox
 
         def check_hidden(grid, hidden_rows, hidden_columns, hidden_cells={}):
             for row in range(grid.layout().rowCount()):
@@ -948,6 +950,7 @@ class TestUiPictures:
         # Wait until the new picture group has everything
         # This can't be done through signals because the target picture group doesn't exist yet when we trigger the action
         qtbot.waitUntil(lambda: "Archive" in picture_group.locations)
+        qtbot.waitUntil(lambda: len(picture_group.locations["Archive"]) == 2)
         assert (
             len(picture_group.locations["Archive"]) == 2
         ), "Archive has 2 IMG002 pictures"
