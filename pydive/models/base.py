@@ -5,7 +5,7 @@ Classes
 ValidationException
     The provided data doesn't match requirements (such as mandatory fields)
 """
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
