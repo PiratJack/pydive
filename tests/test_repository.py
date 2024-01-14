@@ -71,12 +71,14 @@ class TestRepository:
     def test_string_representation(self, pydive_repository):
         test = "String representation: picture group"
         picture_group = pydive_repository.trips["Malta"]["IMG001"]
-        assert str(picture_group) == "('IMG001', 'Malta', '4 pictures')", test
+        assert str(picture_group) == "('IMG001', 'Malta', '5 pictures')", test
 
         picture = [
             p
             for p in picture_group.pictures[""]
-            if p.path.endswith(os.path.join("Temporary", "Malta", "IMG001.CR2"))
+            if p.path.endswith(
+                os.path.join("Temporary", "Malta", "Sélection", "IMG001.CR2")
+            )
         ]
         picture = picture[0]
 
@@ -84,7 +86,9 @@ class TestRepository:
         assert (
             str(picture)
             == "IMG001 in Temporary during Malta - path "
-            + os.path.join(pytest.BASE_FOLDER, "Temporary", "Malta", "IMG001.CR2")
+            + os.path.join(
+                pytest.BASE_FOLDER, "Temporary", "Malta", "Sélection", "IMG001.CR2"
+            )
             + ""
         ), test
 

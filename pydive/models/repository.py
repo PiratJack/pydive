@@ -98,6 +98,7 @@ class Repository:
                     )
                     and picture.trip == group.trip
                 ]
+
                 # Group doesn't exist yet
                 if len(matching_groups) == 0:
                     group = PictureGroup(picture.name)
@@ -110,12 +111,28 @@ class Repository:
                     group.pictureGroupDeleted.connect(
                         lambda _a, _b, g=group: remove(self.picture_groups, g)
                     )
+                    group.add_picture(picture)
+                elif len(matching_groups) == 1:
+                    matching_groups[0].add_picture(picture)
                 else:
-                    # There should not be multiple matching groups
-                    # This is because groups are created in alphabetical order
-                    # Therefore groups with shorter names are processed first
+                    # If there are multiple groups, then they should be merged together
+                    # This can happen if, for example, the pictures are processed in this order:
+                    # IMG_0001_DT, then IMG_0001_RT then IMG_0001
+                    # First 2 images will generate a group, the third one will match both of them
+
+                    # We first add the new picture to the first group
+                    # This will rename the first group to "IMG_0001"
                     group = matching_groups[0]
-                group.add_picture(picture)
+                    group.add_picture(picture)
+                    # Then we merge
+                    for g in matching_groups[1:]:
+                        pictures_in_group = []
+                        for conversion_type in g.pictures:
+                            pictures_in_group += g.pictures[conversion_type]
+                        for pic in pictures_in_group:
+                            g.remove_picture(pic)
+                            group.add_picture(pic)
+
             logger.info(
                 f"Repository.load_pictures: found {len(pictures)} images in {location.name}"
             )
