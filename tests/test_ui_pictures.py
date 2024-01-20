@@ -14,6 +14,7 @@ from controllers.widgets.iconbutton import IconButton
 
 class TestUiPictures:
     progress_group_columns = {
+        "Cancel": 2,
         "Completed": 3,
         "Errors": 5,
         "Error details": 6,
@@ -504,11 +505,11 @@ class TestUiPictures:
             dialog.close()
 
         # Trigger the display of the dialog (click on label)
-        QtCore.QTimer.singleShot(700, handle_dialog)
+        QtCore.QTimer.singleShot(300, handle_dialog)
         qtbot.mouseClick(pydive_ui("tasks_label"), Qt.LeftButton)
 
         # Trigger the display of the dialog (click on label)
-        QtCore.QTimer.singleShot(700, handle_dialog)
+        QtCore.QTimer.singleShot(300, handle_dialog)
         qtbot.mouseClick(pydive_ui("tasks_bar"), Qt.LeftButton)
 
     def test_pictures_process_groups_multiple_errors(self, pydive_ui, qtbot, qapp):
@@ -566,7 +567,7 @@ class TestUiPictures:
             dialog.close()
 
         # Trigger the display of the dialog (click on label)
-        QtCore.QTimer.singleShot(700, handle_dialog)
+        QtCore.QTimer.singleShot(300, handle_dialog)
         qtbot.mouseClick(pydive_ui("tasks_label"), Qt.LeftButton)
 
         # Check files have been created & models updated
@@ -612,7 +613,7 @@ class TestUiPictures:
             dialog.close()
 
         # Trigger the display of the dialog (click on label)
-        QtCore.QTimer.singleShot(700, handle_dialog)
+        QtCore.QTimer.singleShot(300, handle_dialog)
         qtbot.mouseClick(pydive_ui("tasks_label"), Qt.LeftButton)
 
         # Check files have been created & models updated
@@ -664,7 +665,7 @@ class TestUiPictures:
             dialog.close()
 
         # Trigger the display of the dialog (click on label)
-        QtCore.QTimer.singleShot(700, handle_dialog)
+        QtCore.QTimer.singleShot(300, handle_dialog)
         qtbot.mouseClick(pydive_ui("tasks_label"), Qt.LeftButton)
 
         # Check files have been created & models updated
@@ -673,6 +674,90 @@ class TestUiPictures:
             os.path.join("DCIM", "Malta", "IMG001_RT.jpg"),
         ]
         self.helper_check_paths(action_name, new_files)
+
+    def test_pictures_process_groups_cancel(self, pydive_ui, pydive_db, qtbot, qapp):
+        # Trigger a generation (long-running task)
+        picture_item = pydive_ui("tree_Malta_001")
+        menu_name = "Convert images in Archive"
+        action_name = "Using all methods"
+
+        def handle_dialog():
+            dialog = qapp.activeWindow()
+            assert dialog is not None, "Dialog gets displayed"
+
+            # Check overall structure
+            dialog_ui = dialog.layout().itemAt(0).widget()
+            dialog_table = dialog_ui.layout().itemAt(1).widget()
+
+            # Click Cancel button
+            index = dialog_table.model.createIndex(
+                0, self.progress_group_columns["Cancel"], QtCore.QModelIndex()
+            )
+            visualRect = dialog_table.visualRect(index)
+            offset = QtCore.QPoint(visualRect.x(), visualRect.y()) + QtCore.QPoint(
+                15, 15
+            )
+            qtbot.mouseClick(
+                dialog_table.viewport(), Qt.LeftButton, Qt.NoModifier, offset
+            )
+            qtbot.mouseDClick(
+                dialog_table.viewport(), Qt.LeftButton, Qt.NoModifier, offset
+            )
+
+            # Double-click on random column (to test other cases)
+            index = dialog_table.model.createIndex(
+                0, self.progress_group_columns["Errors"], QtCore.QModelIndex()
+            )
+            visualRect = dialog_table.visualRect(index)
+            offset = QtCore.QPoint(visualRect.x(), visualRect.y()) + QtCore.QPoint(
+                15, 15
+            )
+            qtbot.mouseClick(
+                dialog_table.viewport(), Qt.LeftButton, Qt.NoModifier, offset
+            )
+            qtbot.mouseDClick(
+                dialog_table.viewport(), Qt.LeftButton, Qt.NoModifier, offset
+            )
+
+            index = dialog_table.model.createIndex(
+                0, self.progress_group_columns["Errors"], QtCore.QModelIndex()
+            )
+            cell_error_count = dialog_table.model.data(index, Qt.DisplayRole)
+            assert cell_error_count != 0, "Error is displayed for cancel"
+
+            # Check files are NOT created
+            inexistant_files = [
+                os.path.join("Archive", "Malta", "IMG001_RT.jpg"),
+            ]
+            self.helper_check_paths(action_name, [], inexistant_files)
+
+            # Wait until command is executed, otherwise it'll generate error due to pending signals
+            import time
+
+            time.sleep(1)
+
+            index = dialog_table.model.createIndex(
+                0, self.progress_group_columns["Error details"], QtCore.QModelIndex()
+            )
+            cell_error_details = dialog_table.model.data(index, Qt.DisplayRole)
+            assert cell_error_details.startswith(
+                "Task cancelled"
+            ), "ProcessGroup table displays cancel error"
+
+            dialog.close()
+
+        # Slow down the action, so that cancel can happen (simple "cp" goes too fast)
+        conversion_method = pydive_db.conversionmethods_get_by_suffix("DT")
+        conversion_method.command = "sleep 1 ; cp %SOURCE_FILE% %TARGET_FILE%"
+        pydive_db.session.add(conversion_method)
+        pydive_db.session.commit()
+
+        # Trigger action
+        self.trigger_action(pydive_ui, picture_item, menu_name, action_name)
+
+        # Trigger the display of the dialog (click on label)
+        QtCore.QTimer.singleShot(300, handle_dialog)
+        qtbot.mouseClick(pydive_ui("tasks_label"), Qt.LeftButton)
 
     ########## Check actions on tree items ########
     def test_pictures_tree_click_trip(self, pydive_ui, qtbot):
