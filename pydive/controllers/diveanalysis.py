@@ -301,7 +301,7 @@ class DiveAnalysisGraph:
                 for idx, x in enumerate(x_values[:-1])
             ]
             # The computer keeps recording on the surface, so the last dot is most likely with null speed
-            if color == "b":
+            if color == (119, 136, 153):
                 plots[color].append(dive.depths[x_values[-1]])
             else:
                 plots[color].append(float("inf"))
