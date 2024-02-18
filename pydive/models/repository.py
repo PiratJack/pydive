@@ -8,6 +8,7 @@ Repository
 ProcessGroup
     A group of background running processes
 """
+
 import os
 import gettext
 import logging
@@ -136,6 +137,20 @@ class Repository:
             logger.info(
                 f"Repository.load_pictures: found {len(pictures)} images in {location.name}"
             )
+
+        # Link picture groups to the in-progress tasks
+        tasks = []
+        for picture_group in self.picture_groups:
+            for process_group in self.process_groups:
+                tasks = [
+                    t
+                    for t in process_group.tasks
+                    if t["status"] not in ("Cancelled", "Stopped")
+                    and t["picture_group"].name == picture_group.name
+                    and t["picture_group"].trip == picture_group.trip
+                ]
+                for t in tasks:
+                    picture_group.add_process(t["process"])
 
     def read_folder(self, pictures, path):
         """Reads a given folder recursively to find pictures
