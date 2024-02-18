@@ -5,6 +5,7 @@ Classes
 PictureGroup
     A group of images that belong together, based on their file name
 """
+
 import gettext
 import logging
 from PyQt5 import QtCore
@@ -184,7 +185,7 @@ class PictureGroup(QtCore.QObject):
 
     def add_process(self, process):
         logger.debug(
-            f"PictureGroup.add_task {process} for {self.name} during {self.trip}"
+            f"PictureGroup.add_process {process} for {self.name} during {self.trip}"
         )
         self.tasks.append(process)
         self.pictureTasksStart.emit()
