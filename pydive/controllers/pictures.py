@@ -13,6 +13,7 @@ PictureDisplay
 PicturesController
     Picture organization, selection & link to trips
 """
+
 import gettext
 import logging
 import os
@@ -407,13 +408,27 @@ class PicturesTree(BaseTreeWidget):
                 )
             )
         elif type == "generate":
+
+            def generate_pictures(full_label, target, methods, picture_group, source):
+                try:
+                    self.repository.generate_pictures(
+                        full_label,
+                        target,
+                        methods,
+                        picture_group=picture_group,
+                        source_location=source,
+                    )
+                except FileNotFoundError as e:
+                    error_dialog = QtWidgets.QErrorMessage(self)
+                    error_dialog.showMessage(e.args[0])
+
             action.triggered.connect(
-                lambda: self.repository.generate_pictures(
+                lambda: generate_pictures(
                     full_label,
                     target,
                     methods,
-                    picture_group=picture_group,
-                    source_location=source,
+                    picture_group,
+                    source,
                 )
             )
         elif type == "change_trip":
@@ -593,9 +608,11 @@ class PicturesTree(BaseTreeWidget):
             pictures = picture_group.locations.get(column["name"], [])
             if pictures:
                 labels = [
-                    os.path.join(p.category.relative_path, p.filename)
-                    if p.category
-                    else p.filename
+                    (
+                        os.path.join(p.category.relative_path, p.filename)
+                        if p.category
+                        else p.filename
+                    )
                     for p in pictures
                 ]
                 picture_group_widget.setToolTip(col + 1, "\n".join(labels))
@@ -1977,9 +1994,9 @@ class PicturesController:
         """Displays the 'in-progress tasks' dialog"""
 
         if not "tasks_dialog_widget" in self.ui:
-            self.ui[
-                "tasks_dialog_widget"
-            ] = self.process_group_controller.display_widget
+            self.ui["tasks_dialog_widget"] = (
+                self.process_group_controller.display_widget
+            )
             self.ui["tasks_dialog_layout"].addWidget(self.ui["tasks_dialog_widget"])
 
         self.ui["tasks_dialog"].setMinimumSize(900, 700)
