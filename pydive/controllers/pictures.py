@@ -289,16 +289,39 @@ class PicturesTree(BaseTreeWidget):
             full_label = label
         action = QtWidgets.QAction(label)
         if type == "copy":
+
+            def copy_pictures(full_label, target, trip, source):
+                try:
+                    self.repository.copy_pictures(
+                        full_label,
+                        target,
+                        trip=trip,
+                        source_location=source,
+                    )
+                except FileNotFoundError as e:
+                    error_dialog = QtWidgets.QErrorMessage(self)
+                    error_dialog.showMessage(e.args[0])
+
             action.triggered.connect(
-                lambda: self.repository.copy_pictures(
-                    full_label, target, trip=trip, source_location=source
-                )
+                lambda: copy_pictures(full_label, target, trip, source)
             )
         elif type == "generate":
+
+            def generate_pictures(full_label, target, methods, trip, source):
+                try:
+                    self.repository.generate_pictures(
+                        full_label,
+                        target,
+                        methods,
+                        trip=trip,
+                        source_location=source,
+                    )
+                except FileNotFoundError as e:
+                    error_dialog = QtWidgets.QErrorMessage(self)
+                    error_dialog.showMessage(e.args[0])
+
             action.triggered.connect(
-                lambda: self.repository.generate_pictures(
-                    full_label, target, methods, trip=trip, source_location=source
-                )
+                lambda: generate_pictures(full_label, target, methods, trip, source)
             )
         elif type == "change_trip":
 
@@ -399,13 +422,21 @@ class PicturesTree(BaseTreeWidget):
             full_label = label
         action = QtWidgets.QAction(label)
         if type == "copy":
+
+            def copy_pictures(full_label, target, picture_group, source):
+                try:
+                    self.repository.copy_pictures(
+                        full_label,
+                        target,
+                        picture_group=picture_group,
+                        source_location=source,
+                    )
+                except FileNotFoundError as e:
+                    error_dialog = QtWidgets.QErrorMessage(self)
+                    error_dialog.showMessage(e.args[0])
+
             action.triggered.connect(
-                lambda: self.repository.copy_pictures(
-                    full_label,
-                    target,
-                    picture_group=picture_group,
-                    source_location=source,
-                )
+                lambda: copy_pictures(full_label, target, picture_group, source=source)
             )
         elif type == "generate":
 
