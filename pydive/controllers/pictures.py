@@ -916,6 +916,8 @@ class PictureGrid:
         for row in self.picture_containers:
             for column in self.picture_containers[row]:
                 self.picture_containers[row][column].clear_display()
+        for column in range(1, self.ui["layout"].columnCount()):
+            self.ui["layout"].setColumnStretch(column, 0)
         for row in self.grid:
             for element in row:
                 self.ui["layout"].removeWidget(element)
