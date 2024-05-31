@@ -10,6 +10,7 @@ sys.path.append(os.path.join(BASE_DIR, "pydive"))
 
 from controllers.pictures import PictureDisplay
 from controllers.widgets.iconbutton import IconButton
+import models.repository
 
 
 class TestUiPictures:
@@ -250,6 +251,9 @@ class TestUiPictures:
             assert isinstance(copy, IconButton), test + " : copy display"
         else:
             raise ValueError("display_type should be RAW, JPG or No image")
+
+    def raise_FileNotFoundError(*args, **kwargs):
+        raise FileNotFoundError("Fake error")
 
     ########## Check display on the screen & action of checkboxes ########
     def test_pictures_display_overall(self, pydive_ui):
@@ -864,6 +868,38 @@ class TestUiPictures:
         assert pydive_ui("tree_Georgia_011_convert_col2") == str(1), "1 in Temporary"
         assert pydive_ui("tree_Georgia_011_convert_col3") == str(1), "1 in Archive"
 
+    def test_pictures_tree_trip_copy_process_error(self, pydive_ui, qtbot, monkeypatch):
+        # Get tree item & picture groups
+        trip_item = pydive_ui("tree_Georgia")
+        picture_group_010 = pydive_ui("pg_Georgia_010")
+        picture_group_011 = pydive_ui("pg_Georgia_011_convert")
+        action_name = "Copy all images from Temporary to Archive"
+        monkeypatch.setattr(
+            models.repository.Repository, "copy_pictures", self.raise_FileNotFoundError
+        )
+        monkeypatch.setattr(QtWidgets.QErrorMessage, "showMessage", lambda *args: "")
+
+        # Trigger action
+        self.trigger_action(pydive_ui, trip_item, action_name)
+
+        # Check files have been created & models updated
+        new_files = []
+        self.helper_check_paths(action_name, new_files)
+        assert (
+            "Archive" not in picture_group_010.locations
+        ), "Location NOT added to picture_group"
+        assert (
+            "Archive" not in picture_group_011.locations
+        ), "Location NOT added to picture_group"
+
+        # Check display - Tree has been updated
+        assert pydive_ui("tree_Georgia_010_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Georgia_010_col2") == str(2), "2 in Temporary"
+        assert pydive_ui("tree_Georgia_010_col3") == str(0), "0 in Archive"
+        assert pydive_ui("tree_Georgia_011_convert_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Georgia_011_convert_col2") == str(1), "1 in Temporary"
+        assert pydive_ui("tree_Georgia_011_convert_col3") == str(0), "0 in Archive"
+
     def test_pictures_tree_trip_convert(self, pydive_ui, qtbot):
         # Get tree item & picture groups
         trip_item = pydive_ui("tree_Malta")
@@ -894,6 +930,43 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_002_col1") == str(0), "0 in Camera"
         assert pydive_ui("tree_Malta_002_col2") == str(2), "2 in Temporary"
         assert pydive_ui("tree_Malta_002_col3") == str(3), "3 in Archive"
+
+    def test_pictures_tree_trip_convert_process_error(
+        self, pydive_ui, qtbot, monkeypatch
+    ):
+        # Get tree item & picture groups
+        trip_item = pydive_ui("tree_Malta")
+        picture_group1 = pydive_ui("pg_Malta_001")
+        picture_group2 = pydive_ui("pg_Malta_002")
+        menu_name = "Convert images in Archive"
+        action_name = "Using DarkTherapee"
+        monkeypatch.setattr(
+            models.repository.Repository,
+            "generate_pictures",
+            self.raise_FileNotFoundError,
+        )
+        monkeypatch.setattr(QtWidgets.QErrorMessage, "showMessage", lambda *args: "")
+
+        # Trigger action
+        self.trigger_action(pydive_ui, trip_item, menu_name, action_name)
+
+        # Check files have been created & models updated
+        new_files = []
+        self.helper_check_paths(menu_name + " " + action_name, new_files)
+        assert (
+            len(picture_group1.locations["Archive"]) == 2
+        ), "Picture NOT added to picture group"
+        assert (
+            len(picture_group2.locations["Archive"]) == 2
+        ), "Picture NOT added to picture group"
+
+        # Check display - Tree has been updated
+        assert pydive_ui("tree_Malta_001_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Malta_001_col2") == str(2), "2 in Temporary"
+        assert pydive_ui("tree_Malta_001_col3") == str(2), "2 in Archive"
+        assert pydive_ui("tree_Malta_002_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Malta_002_col2") == str(2), "2 in Temporary"
+        assert pydive_ui("tree_Malta_002_col3") == str(2), "2 in Archive"
 
     def test_pictures_tree_trip_change_name(self, pydive_ui, qtbot, monkeypatch):
         # Trigger action
@@ -983,6 +1056,32 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_001_col2") == str(2), "2 in Temporary"
         assert pydive_ui("tree_Malta_001_col3") == str(3), "3 in Archive"
 
+    def test_pictures_tree_picture_group_copy_process_error(
+        self, pydive_ui, qtbot, monkeypatch
+    ):
+        # Get tree item & picture groups
+        picture_item = pydive_ui("tree_Malta_001")
+        action_name = "Copy all images from Temporary to Archive"
+        monkeypatch.setattr(
+            models.repository.Repository, "copy_pictures", self.raise_FileNotFoundError
+        )
+        monkeypatch.setattr(QtWidgets.QErrorMessage, "showMessage", lambda *args: "")
+
+        # Trigger action
+        self.trigger_action(pydive_ui, picture_item, action_name)
+
+        # Check files have been created & models updated
+        new_files = []
+        self.helper_check_paths(action_name, new_files)
+        assert (
+            len(pydive_ui("pg_Malta_001").locations["Archive"]) == 2
+        ), "Archive still has 2 IMG001 pictures"
+
+        # Check display - Tree has been updated
+        assert pydive_ui("tree_Malta_001_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Malta_001_col2") == str(2), "2 in Temporary"
+        assert pydive_ui("tree_Malta_001_col3") == str(2), "2 in Archive"
+
     def test_pictures_tree_picture_group_convert(self, pydive_ui, qtbot):
         # Trigger action
         picture_item = pydive_ui("tree_Malta_002")  # Malta's IMG002
@@ -1005,6 +1104,36 @@ class TestUiPictures:
         assert pydive_ui("tree_Malta_002_col1") == str(0), "0 in Camera"
         assert pydive_ui("tree_Malta_002_col2") == str(2), "2 in Temporary"
         assert pydive_ui("tree_Malta_002_col3") == str(3), "3 in Archive"
+
+    def test_pictures_tree_picture_group_convert_process_error(
+        self, pydive_ui, qtbot, monkeypatch
+    ):
+        # Get tree item & picture groups
+        picture_item = pydive_ui("tree_Malta_002")  # Malta's IMG002
+        picture_group = pydive_ui("pg_Malta_002")
+        menu_name = "Convert images in Archive"
+        action_name = "Using DarkTherapee"
+        monkeypatch.setattr(
+            models.repository.Repository,
+            "generate_pictures",
+            self.raise_FileNotFoundError,
+        )
+        monkeypatch.setattr(QtWidgets.QErrorMessage, "showMessage", lambda *args: "")
+
+        # Trigger action
+        self.trigger_action(pydive_ui, picture_item, menu_name, action_name)
+
+        # Check files have been created & models updated
+        new_files = []
+        self.helper_check_paths(menu_name + " " + action_name, new_files)
+        assert (
+            len(picture_group.locations["Archive"]) == 2
+        ), "Archive still has 2 IMG002 pictures"
+
+        # Check display - Tree has been updated
+        assert pydive_ui("tree_Malta_002_col1") == str(0), "0 in Camera"
+        assert pydive_ui("tree_Malta_002_col2") == str(2), "2 in Temporary"
+        assert pydive_ui("tree_Malta_002_col3") == str(2), "2 in Archive"
 
     def test_pictures_tree_picture_group_change_trip(
         self, pydive_ui, qtbot, monkeypatch
