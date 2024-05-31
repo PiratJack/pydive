@@ -20,7 +20,8 @@ ChangeTripProcess
 ProcessSignals
     Defines signals when processes are completed or in error
 """
-import os
+
+import os, subprocess
 import shlex
 import shutil
 import gettext
@@ -141,16 +142,32 @@ class CopyProcess(QtCore.QRunnable, ProcessScaffold):
             return
 
         # Run the actual processes
-        os.makedirs(os.path.dirname(self.target_file), exist_ok=True)
-        shutil.copy2(self.source_file, self.target_file)
-        logger.info(
-            f"CopyProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name}"
-        )
-        self.signals.taskFinished.emit(
-            self.picture_group,
-            self.target_location,
-            self.target_file,
-        )
+        try:
+            os.makedirs(os.path.dirname(self.target_file), exist_ok=True)
+            shutil.copy2(self.source_file, self.target_file)
+        except Exception as e:
+            logger.warning(
+                f"CopyProcess error {self.source_file} to {self.target_file} - {e.args}"
+            )
+            self.signals.taskError.emit(
+                _("Error during copy"),
+                _(
+                    "Error during copy for {source_file} to {target_file}: {error}"
+                ).format(
+                    source_file=self.source_file,
+                    target_file=self.target_file,
+                    error=" ".join(e.args),
+                ),
+            )
+        else:
+            logger.info(
+                f"CopyProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.target_location.name}"
+            )
+            self.signals.taskFinished.emit(
+                self.picture_group,
+                self.target_location,
+                self.target_file,
+            )
 
     def __repr__(self):
         return f"Copy picture: {self.source_file} to {self.target_file}"
@@ -237,7 +254,19 @@ class GenerateProcess(QtCore.QRunnable, ProcessScaffold):
         if not os.path.exists(self.target_folder):
             os.makedirs(self.target_folder, exist_ok=True)
 
-        os.system(self.command)
+        process = subprocess.run(self.command, shell=True, capture_output=True)
+        if process.stderr.decode("utf-8") != "":
+            logger.warning(
+                f"GenerateProcess error {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name} - {process.stderr.decode('utf-8')}"
+            )
+            self.signals.taskError.emit(
+                _("Error during conversion"),
+                _("Error during conversion for {target_file}: {error}").format(
+                    error=process.stderr.decode("utf-8"), target_file=self.target_file
+                ),
+            )
+            return
+
         logger.info(
             f"GenerateProcess finished {self.picture_group.trip}/{self.picture_group.name}/{os.path.basename(self.source_file)} to {self.location.name}..{os.path.basename(self.target_file)}"
         )

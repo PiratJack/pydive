@@ -2,7 +2,7 @@ import os
 import sys
 import pytest
 import pyqtgraph
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))

@@ -108,6 +108,20 @@ msgid ""
 "%TARGET_FOLDER% will be replaced by the target file's folder path"
 msgstr ""
 
+msgid "Error during conversion"
+msgstr ""
+
+#, python-brace-format
+msgid "Error during conversion for {target_file}: {error}"
+msgstr ""
+
+msgid "Error during copy"
+msgstr ""
+
+#, python-brace-format
+msgid "Error during copy for {source_file} to {target_file}: {error}"
+msgstr ""
+
 msgid "Errors"
 msgstr ""
 

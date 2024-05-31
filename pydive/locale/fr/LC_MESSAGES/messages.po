@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.4.1\n"
+"X-Generator: Poedit 3.4.4\n"
 
 msgid "&gt;= 15 m/min (dangerous)"
 msgstr "&gt;= 15 m/min (dangereux)"
@@ -124,6 +124,20 @@ msgstr ""
 "%SOURCE_FILE% sera remplacé par le chemin complet du fichier source\n"
 "%TARGET_FILE% sera remplacé par le chemin complet du fichier cible\n"
 "%TARGET_FOLDER% sera remplacé par le chemin complet du dossier cible"
+
+msgid "Error during conversion"
+msgstr "Erreur de conversion"
+
+#, python-brace-format
+msgid "Error during conversion for {target_file}: {error}"
+msgstr "Erreur de conversion pour {target_file}: {error}"
+
+msgid "Error during copy"
+msgstr "Erreur de copie"
+
+#, python-brace-format
+msgid "Error during copy for {source_file} to {target_file}: {error}"
+msgstr "Erreur de copie de {source_file} vers {target_file}: {error}"
 
 msgid "Errors"
 msgstr "Erreurs"
