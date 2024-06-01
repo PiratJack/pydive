@@ -154,6 +154,23 @@ class TestRepository:
             pytest.fail(test)
         assert cm.value.args[0] == "recognition failed", test
 
+    def test_load_pictures_while_process_running(
+        self, pydive_repository, pydive_db, qtbot
+    ):
+        # Get picture group & trigger conversion
+        picture_group = pydive_repository.trips["Malta"]["IMG002"]
+        target_location = pydive_db.storagelocation_get_by_name("Archive")
+        pydive_repository.generate_pictures(
+            "Test", target_location, ["DT"], picture_group=picture_group
+        )
+
+        # Trigger picture load
+        with qtbot.waitSignal(picture_group.pictureAdded, timeout=2000):
+            pydive_repository.load_pictures()
+
+            # Check picture group has a running process
+            assert len(picture_group.tasks) == 1, "Task is added to picture group"
+
     # List of Repository.copy_pictures tests - "KO" denotes when a ValueError is raised
     # The copy with category is tested only in test_repository_copy_pictures_all_parameters
     # Since that parameter intervenes only at the end, it's not really useful to test all cases
