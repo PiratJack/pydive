@@ -37,16 +37,9 @@ def pytest_configure():
 
 @pytest.fixture
 def pydive_empty_db():
-    try:
-        os.remove(pytest.DATABASE_FILE)
-    except OSError:
-        pass
     database = models.database.Database(pytest.DATABASE_FILE)
 
     yield database
-
-    # Delete database
-    os.remove(pytest.DATABASE_FILE)
 
 
 @pytest.fixture
