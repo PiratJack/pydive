@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.CRITICAL)
 
 
 def pytest_configure():
-    pytest.DATABASE_FILE = "test.sqlite"
+    pytest.DATABASE_FILE = ":memory:"
     pytest.BASE_FOLDER = (
         "./test_images" + str(int(datetime.datetime.now().timestamp())) + "/"
     )
@@ -123,10 +123,11 @@ def pydive_db(pydive_empty_db):
         ]
     )
     pydive_empty_db.session.commit()
-    pydive_empty_db.session.close()
-    pydive_empty_db.engine.dispose()
 
     yield pydive_empty_db
+
+    pydive_empty_db.session.close()
+    pydive_empty_db.engine.dispose()
 
 
 @pytest.fixture
