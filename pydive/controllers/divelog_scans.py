@@ -13,6 +13,7 @@ PictureDisplay
 DivelogScanController
     Divelog scan split, organization & link to trips
 """
+
 import os
 import gettext
 import logging
@@ -334,6 +335,7 @@ class PictureContainer(QtWidgets.QWidget):
             self.ui["picture_display"].setPixmap(QtGui.QPixmap())
         else:
             self.ui["picture_display"].setPixmap(QtGui.QPixmap.fromImage(image))
+            self.ui["picture_display"].scale_image()
 
     def on_validate(self, target_folder, scan_file_split_mask):
         """Saves the image with matching EXIF data
@@ -431,6 +433,9 @@ class PictureDisplay(QtWidgets.QLabel):
             The resize event
         """
         super().resizeEvent(event)
+        self.scale_image()
+
+    def scale_image(self):
         self.pixmap().swap(
             QtGui.QPixmap.fromImage(self.original_image).scaled(
                 self.width(), self.height(), Qt.KeepAspectRatio
