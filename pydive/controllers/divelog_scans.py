@@ -186,8 +186,8 @@ class PictureGrid:
         Clears the display of images
     """
 
-    y_split = 1120
-    x_split = 755
+    y_split = 1143
+    x_split = 810
 
     def __init__(self, parent_controller):
         """Stores reference to parent controller + initializes the display
