@@ -358,18 +358,19 @@ class PictureContainer(QtWidgets.QWidget):
         filename = dive.start_date.strftime(scan_file_split_mask)
         file_path = os.path.join(target_folder, filename)
         error = None
+        self.ui["error_label"].setText("")
+        self.ui["error_label"].hide()
+
         if os.path.exists(file_path):
             error = _(f"File {filename} already exists")
-        if not self.original_image.save(file_path):
-            error = _(f"Could not save {filename}")
-
-        if error is not None:
             self.ui["error_label"].setText(error)
             self.ui["error_label"].show()
             return
-        else:
-            self.ui["error_label"].setText("")
-            self.ui["error_label"].hide()
+        if not self.original_image.save(file_path):
+            error = _(f"Could not save {filename}")
+            self.ui["error_label"].setText(error)
+            self.ui["error_label"].show()
+            return
 
         # Change EXIF data
         picture_data = piexif.load(file_path)
