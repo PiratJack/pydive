@@ -281,6 +281,7 @@ class Repository:
 
         # Determine the source: if same image exists, then it'll be a copy
         process_group = ProcessGroup(label)
+        errors = []
         for picture_group in picture_groups:
             # Assumption: 2 pictures with the same method and location are identical
             source_pictures = {}
@@ -309,7 +310,8 @@ class Repository:
 
             # Generate tasks for each copy
             if not source_pictures:
-                raise FileNotFoundError(_("No source image found"))
+                errors.append(picture_group)
+                continue
             for source_picture in source_pictures.values():
                 process = process_group.add_process(
                     "copy",
@@ -319,6 +321,10 @@ class Repository:
                     target_category=target_category,
                 )
                 process.signals.taskFinished.connect(self.add_picture)
+
+        # If # errors = # images, raise exception
+        if len(errors) == len(picture_groups):
+            raise FileNotFoundError(_(f"No source image found for any of the pictures"))
 
         process_group.run()
         self.process_groups.append(process_group)
@@ -378,6 +384,7 @@ class Repository:
 
         # Determine the source: find the RAW image
         process_group = ProcessGroup(label)
+        errors = []
         for picture_group in picture_groups:
             # Determine source (RAW) picture - filter by name + location (if provided)
             if source_location:
@@ -387,9 +394,8 @@ class Repository:
                     if p.location == source_location
                 ]
                 if not source_picture:
-                    raise FileNotFoundError(
-                        _("No source image found in specified location")
-                    )
+                    errors.append(picture_group)
+                    continue
             else:
                 source_picture = picture_group.pictures[""]
             source_picture = source_picture[0]
@@ -455,6 +461,10 @@ class Repository:
                     conversion_method=conversion_method,
                 )
                 process.signals.taskFinished.connect(self.add_picture)
+
+        # If # errors = # images, raise exception
+        if len(errors) == len(picture_groups):
+            raise FileNotFoundError(_(f"No source image found for any of the pictures"))
 
         process_group.run()
         self.process_groups.append(process_group)
