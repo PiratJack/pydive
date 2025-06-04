@@ -13,6 +13,7 @@ PictureDisplay
 DivelogScanController
     Divelog scan split, organization & link to trips
 """
+
 import os
 import gettext
 import logging
@@ -185,8 +186,8 @@ class PictureGrid:
         Clears the display of images
     """
 
-    y_split = 1120
-    x_split = 755
+    y_split = 1143
+    x_split = 810
 
     def __init__(self, parent_controller):
         """Stores reference to parent controller + initializes the display
@@ -334,6 +335,17 @@ class PictureContainer(QtWidgets.QWidget):
             self.ui["picture_display"].setPixmap(QtGui.QPixmap())
         else:
             self.ui["picture_display"].setPixmap(QtGui.QPixmap.fromImage(image))
+            self.ui["picture_display"].scale_image()
+
+        # Erase all text around the image
+        self.ui["error_label"].setText("")
+        self.ui["error_label"].hide()
+        self.setProperty("dive", None)
+
+        self.ui["label"].setProperty("class", "")
+        self.ui["label"].setText("")
+        self.ui["label"].style().unpolish(self.ui["label"])
+        self.ui["label"].style().polish(self.ui["label"])
 
     def on_validate(self, target_folder, scan_file_split_mask):
         """Saves the image with matching EXIF data
@@ -356,18 +368,19 @@ class PictureContainer(QtWidgets.QWidget):
         filename = dive.start_date.strftime(scan_file_split_mask)
         file_path = os.path.join(target_folder, filename)
         error = None
+        self.ui["error_label"].setText("")
+        self.ui["error_label"].hide()
+
         if os.path.exists(file_path):
             error = _(f"File {filename} already exists")
-        if not self.original_image.save(file_path):
-            error = _(f"Could not save {filename}")
-
-        if error is not None:
             self.ui["error_label"].setText(error)
             self.ui["error_label"].show()
             return
-        else:
-            self.ui["error_label"].setText("")
-            self.ui["error_label"].hide()
+        if not self.original_image.save(file_path):
+            error = _(f"Could not save {filename}")
+            self.ui["error_label"].setText(error)
+            self.ui["error_label"].show()
+            return
 
         # Change EXIF data
         picture_data = piexif.load(file_path)
@@ -431,6 +444,9 @@ class PictureDisplay(QtWidgets.QLabel):
             The resize event
         """
         super().resizeEvent(event)
+        self.scale_image()
+
+    def scale_image(self):
         self.pixmap().swap(
             QtGui.QPixmap.fromImage(self.original_image).scaled(
                 self.width(), self.height(), Qt.KeepAspectRatio
