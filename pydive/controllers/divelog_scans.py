@@ -337,6 +337,16 @@ class PictureContainer(QtWidgets.QWidget):
             self.ui["picture_display"].setPixmap(QtGui.QPixmap.fromImage(image))
             self.ui["picture_display"].scale_image()
 
+        # Erase all text around the image
+        self.ui["error_label"].setText("")
+        self.ui["error_label"].hide()
+        self.setProperty("dive", None)
+
+        self.ui["label"].setProperty("class", "")
+        self.ui["label"].setText("")
+        self.ui["label"].style().unpolish(self.ui["label"])
+        self.ui["label"].style().polish(self.ui["label"])
+
     def on_validate(self, target_folder, scan_file_split_mask):
         """Saves the image with matching EXIF data
 
